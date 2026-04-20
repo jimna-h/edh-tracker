@@ -442,58 +442,76 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
-    <div className="h-screen w-screen bg-[#000000] text-white overflow-hidden font-sans select-none relative p-4 md:p-10">
-      <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-8 md:gap-16 place-items-center">
-        {seats.map((s, i) => (
-          !gameStarted ? 
-            <SetupQuadrant 
-              key={i} id={i} seat={s} isFlipped={i < 2} 
-              playerDataMap={playerDataMap} onUpdate={updateSeat} 
-              onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex} 
-              onResetAll={handleResetAll} 
-              mulliganType={mulliganType} onSetMulligan={setMulliganType}
-            /> :
-            <Quadrant key={i} id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
-        ))}
-      </div>
+    /* 1. OUTER SLEEVE: Stays fixed to the phone screen */
+    <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
+      
+      /* 2. ROTATION BOX: Spins the content 90 degrees */
+      <div 
+        className="relative flex flex-col items-center justify-center"
+        style={{ 
+          width: '100vh',   // Swapping width/height to fit portrait
+          height: '100vw', 
+          transform: 'rotate(90deg)', 
+          transformOrigin: 'center center'
+        }}
+      >
+        
+        {/* --- ORIGINAL GRID START --- */}
+        <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-8 md:gap-16 place-items-center p-4 md:p-10">
+          {seats.map((s, i) => (
+            !gameStarted ? 
+              <SetupQuadrant 
+                key={i} id={i} seat={s} isFlipped={i < 2} 
+                playerDataMap={playerDataMap} onUpdate={updateSeat} 
+                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex} 
+                onResetAll={handleResetAll} 
+                mulliganType={mulliganType} onSetMulligan={setMulliganType}
+              /> :
+              <Quadrant key={i} id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+          ))}
+        </div>
+        {/* --- ORIGINAL GRID END --- */}
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex flex-col items-center">
-        {!gameStarted && (
-          <button 
-            onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-            disabled={(!allFilled && !hasPending) || isSyncing}
-            className={`pointer-events-auto font-black rounded-full text-lg md:text-2xl transition-all flex items-center justify-center text-center px-4
-              ${allFilled ? 'bg-white text-black scale-100 shadow-[0_0_60px_rgba(255,255,255,0.2)]' : 
-                hasPending ? 'bg-amber-500 text-black scale-100 shadow-[0_0_60px_rgba(245,158,11,0.3)]' :
-                'bg-white/5 text-white/10 scale-90 border border-white/5'}
-              ${isSyncing ? 'animate-pulse opacity-80' : ''}
-            `}
-            style={{ width: 'clamp(80px, 15vw, 240px)', height: 'clamp(80px, 15vw, 240px)' }}
-          >
-            {isSyncing ? 'SYNCING...' : (allFilled ? 'START' : hasPending ? `SYNC [${pendingGames.length}]` : 'SETUP')}
-          </button>
-        )}
+        {/* --- ORIGINAL BUTTONS START --- */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex flex-col items-center">
+          {!gameStarted && (
+            <button 
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+              disabled={(!allFilled && !hasPending) || isSyncing}
+              className={`pointer-events-auto font-black rounded-full text-lg md:text-2xl transition-all flex items-center justify-center text-center px-4
+                ${allFilled ? 'bg-white text-black scale-100 shadow-[0_0_60px_rgba(255,255,255,0.2)]' : 
+                  hasPending ? 'bg-amber-500 text-black scale-100 shadow-[0_0_60px_rgba(245,158,11,0.3)]' :
+                  'bg-white/5 text-white/10 scale-90 border border-white/5'}
+                ${isSyncing ? 'animate-pulse opacity-80' : ''}
+              `}
+              style={{ width: 'clamp(80px, 15vw, 240px)', height: 'clamp(80px, 15vw, 240px)' }}
+            >
+              {isSyncing ? 'SYNCING...' : (allFilled ? 'START' : hasPending ? `SYNC [${pendingGames.length}]` : 'SETUP')}
+            </button>
+          )}
 
-        {gameStarted && !allFinished && (
-          <button 
-            onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
-            className="pointer-events-auto rounded-full flex items-center justify-center active:scale-90 transition-all cursor-pointer touch-none bg-[#000000] border-none shadow-[0_0_100px_rgba(0,0,0,1)]"
-            style={{ width: 'clamp(90px, 22vw, 320px)', height: 'clamp(90px, 22vw, 320px)' }}
-          >
-            <span className="font-black tabular-nums leading-none tracking-tighter" style={{ fontSize: 'clamp(3rem, 10vw, 15rem)', color: '#FFFFFF' }}>{turn}</span>
-          </button>
-        )}
+          {gameStarted && !allFinished && (
+            <button 
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
+              className="pointer-events-auto rounded-full flex items-center justify-center active:scale-90 transition-all cursor-pointer touch-none bg-[#000000] border-none shadow-[0_0_100px_rgba(0,0,0,1)]"
+              style={{ width: 'clamp(90px, 22vw, 320px)', height: 'clamp(90px, 22vw, 320px)' }}
+            >
+              <span className="font-black tabular-nums leading-none tracking-tighter" style={{ fontSize: 'clamp(3rem, 10vw, 15rem)', color: '#FFFFFF' }}>{turn}</span>
+            </button>
+          )}
 
-        {gameStarted && allFinished && (
-          <button 
-            onClick={submitGame}
-            className="pointer-events-auto font-black rounded-full tracking-[0.2em] text-lg md:text-2xl bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.4)] active:scale-95 transition-all flex items-center justify-center text-center px-4"
-            style={{ width: 'clamp(100px, 25vw, 320px)', height: 'clamp(100px, 25vw, 320px)' }}
-          >
-            SUBMIT GAME
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+          {gameStarted && allFinished && (
+            <button 
+              onClick={submitGame}
+              className="pointer-events-auto font-black rounded-full tracking-[0.2em] text-lg md:text-2xl bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.4)] active:scale-95 transition-all flex items-center justify-center text-center px-4"
+              style={{ width: 'clamp(100px, 25vw, 320px)', height: 'clamp(100px, 25vw, 320px)' }}
+            >
+              SUBMIT GAME
+            </button>
+          )}
+        </div>
+        {/* --- ORIGINAL BUTTONS END --- */}
+
+      </div> {/* End of Rotation Box */}
+    </div>   /* End of Outer Sleeve */
+  );}
