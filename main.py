@@ -1,22 +1,36 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import gspread
-from google.oauth2.service_account import Credentials
+from google.oauth2.service_account import Credentials # Stick to this one
 import uuid 
 from datetime import datetime
+import os
+import json
 
 app = Flask(__name__)
 CORS(app) 
 
-# Google Sheets Config - IDs Restored
+# Google Sheets Config
 PLAYERS_ID = "1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g"
 STATS_ID = "18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I"
 
-creds = Credentials.from_service_account_file(
-    "service_account.json", 
-    scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-)
-client = gspread.authorize(creds)
+def get_gspread_client():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    
+    # Check if we are on Render
+    google_json = os.environ.get("GOOGLE_JSON")
+    
+    if google_json:
+        # Parse the JSON string from the environment variable
+        creds_dict = json.loads(google_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    else:
+        # Fallback for your local laptop
+        creds = Credentials.from_service_account_file("service_account.json", scopes=scopes)
+    
+    return gspread.authorize(creds)
+
+client = get_gspread_client()
 
 @app.route('/players', methods=['GET'])
 def get_players():
