@@ -4,3 +4,4 @@ google-auth
 pandas
 flask
 flask-cors
+gunicorn
