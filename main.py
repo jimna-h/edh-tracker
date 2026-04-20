@@ -1,0 +1,102 @@
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import gspread
+from google.oauth2.service_account import Credentials
+import uuid 
+from datetime import datetime
+
+app = Flask(__name__)
+CORS(app) 
+
+# Google Sheets Config - IDs Restored
+PLAYERS_ID = "1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g"
+STATS_ID = "18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I"
+
+creds = Credentials.from_service_account_file(
+    "service_account.json", 
+    scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+)
+client = gspread.authorize(creds)
+
+@app.route('/players', methods=['GET'])
+def get_players():
+    try:
+        sh = client.open_by_key(PLAYERS_ID)
+        data = {}
+        for ws in sh.worksheets():
+            rows = ws.get_all_values()
+            deck_list = []
+            for row in rows[1:]:
+                deck_name = row[0] if len(row) > 0 else ""
+                art_url = row[1] if len(row) > 1 else ""
+                # NEW: Grab Color_ID from the 3rd column
+                color_id = row[2] if len(row) > 2 else ""
+                
+                if deck_name:
+                    deck_list.append({
+                        "deck": deck_name,
+                        "artUrl": art_url,
+                        "colors": color_id,
+                    })
+            data[ws.title] = deck_list
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching players: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/submit', methods=['POST'])
+def submit_stats():
+    try:
+        data = request.json
+        sh = client.open_by_key(STATS_ID)
+        
+        summary_ws = sh.worksheet("Game_Summary")
+        performance_ws = sh.worksheet("Player_Performance")
+
+        game_id = f"G-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Find the winner (turn_died == 0)
+        winner = next((p for p in data['players'] if p['turn_died'] == 0), data['players'][0])
+        
+        # Log to Game_Summary
+        summary_row = [
+            game_id,
+            "Commander",           # Format
+            winner['player'],      # Winner Name
+            winner['deck'],        # Winner Deck
+            data['turn'],          # Total Turns
+            timestamp
+        ]
+        summary_ws.append_row(summary_row)
+
+        # Log each player to Player_Performance
+        rows_to_insert = []
+        for p in data['players']:
+            # Mapping including the new seat_position (Column I)
+            perf_row = [
+                game_id,
+                p['player'],
+                p['deck'],
+                p.get('stats', {}).get('startLands'),
+                p.get('stats', {}).get('lands'),
+                p.get('stats', {}).get('rocks'),
+                p.get('stats', {}).get('dorks'),
+                p['turn_died'],
+                p.get('seat_position'),
+                p.get('color_id')
+            ]
+            rows_to_insert.append(perf_row)
+
+        # Using append_rows for efficiency
+        performance_ws.append_rows(rows_to_insert)
+
+        print(f"Game {game_id} successfully logged with Seat Positions.")
+        return jsonify({"status": "success", "game_id": game_id})
+    
+    except Exception as e:
+        print(f"Error submitting game: {e}")
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(port=8000, debug=True, use_reloader=False)

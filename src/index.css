@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #000000;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: black;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar hiding for your questionnaire carousels */
+/* Ensure horizontal scrolling is smooth and flickable */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+  -webkit-overflow-scrolling: touch; /* Momentum scrolling for iOS */
+  touch-action: pan-x; /* Explicitly tell the browser to allow horizontal swipes */
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* This allows the PC mouse to "grab" the carousel if we add the JS below */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
