@@ -318,7 +318,7 @@ export default function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/players')
+    fetch('https://edh-backend.onrender.com/players')
       .then(r => r.json())
       .then(d => setPlayerDataMap(d))
       .catch(() => console.log("Offline: Using cached player data"));
@@ -401,7 +401,7 @@ export default function App() {
 
     for (const g of games) {
       try {
-        const r = await fetch('http://127.0.0.1:8000/submit', { 
+        const r = await fetch('https://edh-backend.onrender.com/submit', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(g) 
@@ -427,7 +427,7 @@ export default function App() {
       }))
     };
     try {
-      const r = await fetch('http://127.0.0.1:8000/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(gameData) });
+      const r = await fetch('https://edh-backend.onrender.com/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(gameData) });
       if (!r.ok) throw new Error();
     } catch (e) {
       const updated = [...pendingGames, gameData];
