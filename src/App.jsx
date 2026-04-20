@@ -442,21 +442,16 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
-    /* 1. OUTER SLEEVE: Stays fixed to the phone screen */
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
-      
-      /* 2. ROTATION BOX: Spins the content 90 degrees */
       <div 
         className="relative flex flex-col items-center justify-center"
         style={{ 
-          width: '100vh',   // Swapping width/height to fit portrait
+          width: '100vh',   
           height: '100vw', 
           transform: 'rotate(90deg)', 
           transformOrigin: 'center center'
         }}
       >
-        
-        {/* --- ORIGINAL GRID START --- */}
         <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-8 md:gap-16 place-items-center p-4 md:p-10">
           {seats.map((s, i) => (
             !gameStarted ? 
@@ -470,9 +465,7 @@ export default function App() {
               <Quadrant key={i} id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
           ))}
         </div>
-        {/* --- ORIGINAL GRID END --- */}
 
-        {/* --- ORIGINAL BUTTONS START --- */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex flex-col items-center">
           {!gameStarted && (
             <button 
@@ -510,8 +503,8 @@ export default function App() {
             </button>
           )}
         </div>
-        {/* --- ORIGINAL BUTTONS END --- */}
-
-      </div> {/* End of Rotation Box */}
-    </div>   /* End of Outer Sleeve */
-  );}
+      </div>
+    </div>
+  );
+  
+  }
