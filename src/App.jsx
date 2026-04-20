@@ -445,24 +445,20 @@ export default function App() {
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       <div 
         style={{ 
-          width: '100dvh',   // Using 'dvh' (dynamic) helps with mobile browser bars
-          height: '100dvw',  
+          width: '100vh', // The "width" of our app is the physical height of the phone
+          height: '100vw', // The "height" of our app is the physical width of the phone
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           transform: 'rotate(90deg)',
           transformOrigin: 'center center',
-          position: 'absolute', // Absolute ensures it ignores parent padding
-          top: '50%',
-          left: '50%',
-          marginTop: '-50vw', // These offsets force it to be mathematically centered
-          marginLeft: '-50vh'
+          position: 'fixed'
         }}
-        className="bg-black"
       >
-        {/* THE GAME GRID */}
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0 p-0 m-0">
+        {/* THE GAME GRID: Changed from fixed vh/vw to 100% to fill the space perfectly */}
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0 p-0">
           {seats.map((s, i) => (
+            /* Removed 'border' and 'gap' so the art touches the edges */
             <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
               {!gameStarted ? 
                 <SetupQuadrant 
@@ -484,21 +480,21 @@ export default function App() {
             <button 
               onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
               disabled={(!allFilled && !hasPending) || isSyncing}
-              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center
-                ${allFilled ? 'bg-white text-black shadow-[0_0_50px_rgba(255,255,255,0.4)]' : 
-                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_50px_rgba(245,158,11,0.5)]' :
+              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
+                ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' : 
+                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
                   'bg-white/5 text-white/20 border border-white/10'}
               `}
-              style={{ width: '130px', height: '130px' }}
+              style={{ width: '120px', height: '120px' }}
             >
-              <span className="text-sm font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
+              <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
             </button>
           )}
 
           {gameStarted && !allFinished && (
             <button 
               onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
-              className="pointer-events-auto rounded-full flex items-center justify-center bg-black shadow-[0_0_60px_rgba(0,0,0,1)] border border-white/5"
+              className="pointer-events-auto rounded-full flex items-center justify-center bg-black/80 shadow-[0_0_50px_rgba(0,0,0,1)]"
               style={{ width: '180px', height: '180px' }}
             >
               <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
@@ -508,8 +504,8 @@ export default function App() {
           {gameStarted && allFinished && (
             <button 
               onClick={submitGame}
-              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.6)]"
-              style={{ width: '160px', height: '160px' }}
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
+              style={{ width: '150px', height: '150px' }}
             >
               SUBMIT
             </button>
@@ -517,6 +513,5 @@ export default function App() {
         </div>
       </div>
     </div>
-  );
-  
+  );  
   }
