@@ -98,7 +98,7 @@ def submit_stats():
                 p.get('stats', {}).get('dorks'),
                 p['turn_died'],
                 p.get('seat_position'),
-                p.get('color_id')
+                p.get('colors')
             ]
             rows_to_insert.append(perf_row)
 
