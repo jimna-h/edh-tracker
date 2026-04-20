@@ -68,7 +68,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 drop-shadow-md">{title}</p>
-      <div
+      <div 
         ref={scrollRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -78,7 +78,27 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         {options.map((opt, i) => {
-          // ... your existing option rendering unchanged
+          const isObj = typeof opt === 'object' && opt !== null;
+          const hasArt = isObj && opt.artUrl;
+          const label = isObj ? (opt.deck || opt.name || "Unnamed") : opt;
+
+          return (
+            <button
+              key={`${title}-${i}`}
+              onClick={() => onSelect(opt)}
+              className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center active:scale-95 transition-all shadow-xl backdrop-blur-md overflow-hidden"
+            >
+              {hasArt && (
+                <>
+                  <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                  <div className="absolute inset-0 bg-black/30" />
+                </>
+              )}
+              <span className="relative z-10 text-lg md:text-2xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
+                {label}
+              </span>
+            </button>
+          );
         })}
       </div>
       {showBack && (
@@ -129,13 +149,14 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
+  // Wait for both firstSeatIndex AND seat.order to be set before advancing
   useEffect(() => {
-    if (firstSeatIndex !== null && step === 0) {
+    if (firstSeatIndex !== null && seat.order !== '' && step === 0) {
       setStep(1);
     } else if (firstSeatIndex === null) {
       setStep(0);
     }
-  }, [firstSeatIndex]);
+  }, [firstSeatIndex, seat.order]);
 
   const handleBack = () => {
     if (step === 1) onResetAll();
@@ -180,7 +201,18 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {/* STEP 2+: PLAYER AND DECK SELECTION (ONLY AFTER MULLIGAN) */}
-        {step === 1 && mulliganType && <SelectionCarousel title={`Seat ${seat.order}`} isFlipped={isFlipped} options={players} onBack={handleBack} onSelect={(val) => { onUpdate(id, 'name', val === "+ GUEST" ? (prompt("Enter Guest Name:") || "Guest") : val); setStep(2); }} />}
+        {step === 1 && mulliganType && (
+          <SelectionCarousel 
+            title={`Seat ${seat.order}`} 
+            isFlipped={isFlipped} 
+            options={players} 
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              onUpdate(id, 'name', val === "+ GUEST" ? (prompt("Enter Guest Name:") || "Guest") : val); 
+              setStep(2); 
+            }} 
+          />
+        )}
         
         {step === 2 && (
           <SelectionCarousel 
@@ -207,7 +239,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           <div className="flex flex-col items-center justify-between h-full w-full px-6 py-8 md:py-12 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] md:text-sm uppercase tracking-[0.6em]">Select Colors</p>
             <div className="flex-1 flex items-center justify-center w-full">
-                <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
+              <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
             </div>
             <div className="flex gap-4 w-full max-w-[420px]">
               <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">← Back</button>
@@ -216,9 +248,33 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           </div>
         )}
 
-        {step === 5 && <SelectionCarousel title="Borrow From?" isFlipped={isFlipped} options={Object.keys(playerDataMap).filter(n => n !== seat.name)} onBack={handleBack} onSelect={(owner) => { onUpdate(id, 'deckOwner', owner); setStep(6); }} />}
-        {step === 6 && <SelectionCarousel title={`${seat.deckOwner}'s Decks`} isFlipped={isFlipped} options={playerDataMap[seat.deckOwner]} onBack={handleBack} onSelect={(val) => { onUpdate(id, 'deck', val.deck); onUpdate(id, 'artUrl', val.artUrl); onUpdate(id, 'colors', val.colors || ''); setStep(3); }} />}
-        {step === 3 && <SelectionCarousel title="Starting Lands" isFlipped={isFlipped} options={[1, 2, 3, 4, 5, 6, 7]} onBack={handleBack} onSelect={(val) => { onUpdate(id, 'startLands', val); setStep(7); }} />}
+        {step === 5 && (
+          <SelectionCarousel 
+            title="Borrow From?" 
+            isFlipped={isFlipped} 
+            options={Object.keys(playerDataMap).filter(n => n !== seat.name)} 
+            onBack={handleBack} 
+            onSelect={(owner) => { onUpdate(id, 'deckOwner', owner); setStep(6); }} 
+          />
+        )}
+        {step === 6 && (
+          <SelectionCarousel 
+            title={`${seat.deckOwner}'s Decks`} 
+            isFlipped={isFlipped} 
+            options={playerDataMap[seat.deckOwner]} 
+            onBack={handleBack} 
+            onSelect={(val) => { onUpdate(id, 'deck', val.deck); onUpdate(id, 'artUrl', val.artUrl); onUpdate(id, 'colors', val.colors || ''); setStep(3); }} 
+          />
+        )}
+        {step === 3 && (
+          <SelectionCarousel 
+            title="Starting Lands" 
+            isFlipped={isFlipped} 
+            options={[1, 2, 3, 4, 5, 6, 7]} 
+            onBack={handleBack} 
+            onSelect={(val) => { onUpdate(id, 'startLands', val); setStep(7); }} 
+          />
+        )}
         
         {step === 7 && (
           <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
@@ -255,13 +311,13 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
         
         {player.status === 'questionnaire' && (
           <div className="w-full h-full flex items-center justify-center bg-black/20 backdrop-blur-3xl">
-             <SelectionCarousel 
-                title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
-                isFlipped={isFlipped} 
-                options={player.step === 0 ? Array.from({length: 31}, (_, i) => i) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} 
-                onBack={() => onBackStep(id)} 
-                onSelect={(val) => onLose(id, val)} 
-              />
+            <SelectionCarousel 
+              title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
+              isFlipped={isFlipped} 
+              options={player.step === 0 ? Array.from({length: 31}, (_, i) => i) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} 
+              onBack={() => onBackStep(id)} 
+              onSelect={(val) => onLose(id, val)} 
+            />
           </div>
         )}
 
@@ -349,17 +405,23 @@ export default function App() {
 
   const updateSeat = (id, field, value) => {
     setSeats(prev => {
-        const ns = [...prev];
-        if (field === 'startLands') ns[id].stats.startLands = value; 
-        else ns[id][field] = value;
-        return ns;
+      const ns = [...prev];
+      if (field === 'startLands') ns[id].stats.startLands = value; 
+      else ns[id][field] = value;
+      return ns;
     });
   };
 
   const handleLose = (id, val = null, isWin = false) => {
     const ns = [...seats];
-    if (isWin) { ns.forEach((p, idx) => { if (p.status === 'active') { p.status = 'questionnaire'; p.stats.turnDied = (idx === id) ? 0 : turn; } }); }
-    else {
+    if (isWin) { 
+      ns.forEach((p, idx) => { 
+        if (p.status === 'active') { 
+          p.status = 'questionnaire'; 
+          p.stats.turnDied = (idx === id) ? 0 : turn; 
+        } 
+      }); 
+    } else {
       const p = ns[id];
       if (p.status === 'active') { p.status = 'questionnaire'; p.stats.turnDied = turn; }
       else { p.stats[['lands', 'rocks', 'dorks'][p.step]] = val; p.step += 1; if (p.step > 2) p.status = 'done'; }
@@ -377,10 +439,8 @@ export default function App() {
   const syncPending = async () => {
     if (isSyncing || pendingGames.length === 0) return;
     setIsSyncing(true);
-
     const games = [...pendingGames];
     let remaining = [...games];
-
     for (const g of games) {
       try {
         const r = await fetch('https://edh-backend.onrender.com/submit', { 
@@ -409,14 +469,22 @@ export default function App() {
       }))
     };
     try {
-      const r = await fetch('https://edh-backend.onrender.com/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(gameData) });
+      const r = await fetch('https://edh-backend.onrender.com/submit', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(gameData) 
+      });
       if (!r.ok) throw new Error();
     } catch (e) {
       const updated = [...pendingGames, gameData];
       setPendingGames(updated);
       localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
     }
-    setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType('');
+    setGameStarted(false); 
+    setTurn(1); 
+    setSeats(initialSeats); 
+    setFirstSeatIndex(null); 
+    setMulliganType('');
   };
 
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
