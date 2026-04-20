@@ -75,7 +75,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onMouseUp={() => setIsDown(false)}
         onMouseLeave={() => setIsDown(false)}
         className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
-        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {options.map((opt, i) => {
           const isObj = typeof opt === 'object' && opt !== null;
@@ -149,7 +149,6 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
-  // Wait for both firstSeatIndex AND seat.order to be set before advancing
   useEffect(() => {
     if (firstSeatIndex !== null && seat.order !== '' && step === 0) {
       setStep(1);
@@ -506,6 +505,7 @@ export default function App() {
           top: '50%',
           left: '50%',
           translate: '-50% -50%',
+          touchAction: 'pan-y',
         }}
       >
         {/* THE GAME GRID */}
