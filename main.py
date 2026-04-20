@@ -8,7 +8,7 @@ import os
 import json
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Google Sheets Config
 PLAYERS_ID = "1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g"
