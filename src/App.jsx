@@ -50,6 +50,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
+  // Mouse handlers (desktop)
   const handleMouseDown = (e) => {
     setIsDown(true);
     setStartX(e.pageX - e.currentTarget.offsetLeft);
@@ -63,6 +64,20 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
+  // Touch handlers (mobile)
+  const handleTouchStart = (e) => {
+    setIsDown(true);
+    setStartX(e.touches[0].pageX - e.currentTarget.offsetLeft);
+    setScrollLeft(e.currentTarget.scrollLeft);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDown) return;
+    const x = e.touches[0].pageX - e.currentTarget.offsetLeft;
+    const walk = (x - startX) * (isFlipped ? -2 : 2);
+    if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 drop-shadow-md">{title}</p>
@@ -72,6 +87,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onMouseMove={handleMouseMove}
         onMouseUp={() => setIsDown(false)}
         onMouseLeave={() => setIsDown(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => setIsDown(false)}
         className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
       >
         {options.map((opt, i) => {
@@ -148,9 +166,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
   useEffect(() => {
     if (firstSeatIndex !== null && step === 0) {
-      setStep(1); // Move to the setup phase
+      setStep(1);
     } else if (firstSeatIndex === null) {
-      setStep(0); // Reset to "Goes First"
+      setStep(0);
     }
   }, [firstSeatIndex]);
 
@@ -220,7 +238,6 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           />
         )}
 
-        {/* (Steps 3-7 remain unchanged for land count and final confirmation) */}
         {step === 4 && (
           <div className="flex flex-col items-center justify-between h-full w-full px-6 py-8 md:py-12 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] md:text-sm uppercase tracking-[0.6em]">Select Colors</p>
@@ -442,80 +459,79 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
-  <div className="min-h-screen w-screen bg-black overflow-hidden">
-    <div
-      style={{
-        width: '100vh',
-        height: '100vw',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transform: 'rotate(90deg)',
-        transformOrigin: 'center center',
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        translate: '-50% -50%',
-      }}
-    >
-      {/* THE GAME GRID */}
+    <div className="min-h-screen w-screen bg-black overflow-hidden">
       <div
-        className="grid grid-cols-2 grid-rows-2 gap-0"
-        style={{ width: '100%', height: '100%' }}
+        style={{
+          width: '100vh',
+          height: '100vw',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: 'rotate(90deg)',
+          transformOrigin: 'center center',
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          translate: '-50% -50%',
+        }}
       >
-        {seats.map((s, i) => (
-          <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
-            {!gameStarted ?
-              <SetupQuadrant
-                id={i} seat={s} isFlipped={i < 2}
-                playerDataMap={playerDataMap} onUpdate={updateSeat}
-                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
-                onResetAll={handleResetAll}
-                mulliganType={mulliganType} onSetMulligan={setMulliganType}
-              /> :
-              <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
-            }
-          </div>
-        ))}
-      </div>
+        {/* THE GAME GRID */}
+        <div
+          className="grid grid-cols-2 grid-rows-2 gap-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          {seats.map((s, i) => (
+            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
+              {!gameStarted ?
+                <SetupQuadrant
+                  id={i} seat={s} isFlipped={i < 2}
+                  playerDataMap={playerDataMap} onUpdate={updateSeat}
+                  onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
+                  onResetAll={handleResetAll}
+                  mulliganType={mulliganType} onSetMulligan={setMulliganType}
+                /> :
+                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+              }
+            </div>
+          ))}
+        </div>
 
-      {/* THE CENTER UI */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-        {!gameStarted && (
-          <button
-            onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-            disabled={(!allFilled && !hasPending) || isSyncing}
-            className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
-              ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
-                hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
-                'bg-white/5 text-white/20 border border-white/10'}
-            `}
-            style={{ width: '120px', height: '120px' }}
-          >
-            <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
-          </button>
-        )}
-        {gameStarted && !allFinished && (
-          <button
-            onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-            className="pointer-events-auto rounded-full flex items-center justify-center bg-black/80 shadow-[0_0_50px_rgba(0,0,0,1)]"
-            style={{ width: '180px', height: '180px' }}
-          >
-            <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
-          </button>
-        )}
-        {gameStarted && allFinished && (
-          <button
-            onClick={submitGame}
-            className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
-            style={{ width: '150px', height: '150px' }}
-          >
-            SUBMIT
-          </button>
-        )}
+        {/* THE CENTER UI */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {!gameStarted && (
+            <button
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+              disabled={(!allFilled && !hasPending) || isSyncing}
+              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
+                ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
+                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
+                  'bg-white/5 text-white/20 border border-white/10'}
+              `}
+              style={{ width: '120px', height: '120px' }}
+            >
+              <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
+            </button>
+          )}
+          {gameStarted && !allFinished && (
+            <button
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+              className="pointer-events-auto rounded-full flex items-center justify-center bg-black/80 shadow-[0_0_50px_rgba(0,0,0,1)]"
+              style={{ width: '180px', height: '180px' }}
+            >
+              <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
+            </button>
+          )}
+          {gameStarted && allFinished && (
+            <button
+              onClick={submitGame}
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
+              style={{ width: '150px', height: '150px' }}
+            >
+              SUBMIT
+            </button>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
-  
-  }
+  );
+}
