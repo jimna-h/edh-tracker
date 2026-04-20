@@ -442,25 +442,24 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
-    /* 1. THE STABLE BASE: Fixed to the edges of the physical screen */
-    <div className="fixed inset-0 bg-black overflow-hidden">
-      
-      {/* 2. THE ROTATION BOX: Uses 100% to avoid math errors */}
+    <div className="min-h-screen w-screen bg-black overflow-hidden flex items-center justify-center">
       <div 
         style={{ 
-          width: '100dvh',   // dynamic height of phone
-          height: '100dvw',  // dynamic width of phone
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%) rotate(90deg)',
+          width: '100vw', 
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: 'rotate(90deg)',
           transformOrigin: 'center center',
+          position: 'fixed'
         }}
-        className="flex items-center justify-center bg-black"
       >
-        
-        {/* 3. THE GRID: Standard 2x2 filling the box */}
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0">
+        {/* THE GAME GRID: Changed to 'fixed' px-equivalent units to force the fit */}
+        <div 
+          className="grid grid-cols-2 grid-rows-2 gap-0" 
+          style={{ width: '100dvh', height: '100dvw' }}
+        >
           {seats.map((s, i) => (
             <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
               {!gameStarted ? 
@@ -477,46 +476,43 @@ export default function App() {
           ))}
         </div>
 
-        {/* 4. THE CENTER UI */}
+        {/* THE CENTER UI */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-          <div className="flex flex-col items-center">
-            {!gameStarted && (
-              <button 
-                onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-                disabled={(!allFilled && !hasPending) || isSyncing}
-                className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center
-                  ${allFilled ? 'bg-white text-black shadow-[0_0_50px_rgba(255,255,255,0.4)]' : 
-                    hasPending ? 'bg-amber-500 text-black shadow-[0_0_50px_rgba(245,158,11,0.5)]' :
-                    'bg-white/5 text-white/20 border border-white/10'}
-                `}
-                style={{ width: '130px', height: '130px' }}
-              >
-                <span className="text-sm font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
-              </button>
-            )}
+          {!gameStarted && (
+            <button 
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+              disabled={(!allFilled && !hasPending) || isSyncing}
+              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
+                ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' : 
+                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
+                  'bg-white/5 text-white/20 border border-white/10'}
+              `}
+              style={{ width: '120px', height: '120px' }}
+            >
+              <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
+            </button>
+          )}
 
-            {gameStarted && !allFinished && (
-              <button 
-                onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
-                className="pointer-events-auto rounded-full flex items-center justify-center bg-black shadow-[0_0_60px_rgba(0,0,0,1)] border border-white/5"
-                style={{ width: '180px', height: '180px' }}
-              >
-                <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
-              </button>
-            )}
+          {gameStarted && !allFinished && (
+            <button 
+              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
+              className="pointer-events-auto rounded-full flex items-center justify-center bg-black/80 shadow-[0_0_50px_rgba(0,0,0,1)]"
+              style={{ width: '180px', height: '180px' }}
+            >
+              <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
+            </button>
+          )}
 
-            {gameStarted && allFinished && (
-              <button 
-                onClick={submitGame}
-                className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.6)]"
-                style={{ width: '160px', height: '160px' }}
-              >
-                SUBMIT
-              </button>
-            )}
-          </div>
+          {gameStarted && allFinished && (
+            <button 
+              onClick={submitGame}
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
+              style={{ width: '150px', height: '150px' }}
+            >
+              SUBMIT
+            </button>
+          )}
         </div>
-
       </div>
     </div>
   );
