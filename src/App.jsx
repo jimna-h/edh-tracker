@@ -442,23 +442,25 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
+    /* 1. THE STABLE BASE: Fixed to the edges of the physical screen */
     <div className="fixed inset-0 bg-black overflow-hidden">
+      
+      {/* 2. THE ROTATION BOX: Uses 100% to avoid math errors */}
       <div 
         style={{ 
-          width: '100vh',   
-          height: '100vw',  
+          width: '100dvh',   // dynamic height of phone
+          height: '100dvw',  // dynamic width of phone
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%) rotate(90deg)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          transformOrigin: 'center center',
         }}
-        className="bg-black"
+        className="flex items-center justify-center bg-black"
       >
-        {/* THE GAME GRID */}
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0 p-0 m-0">
+        
+        {/* 3. THE GRID: Standard 2x2 filling the box */}
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0">
           {seats.map((s, i) => (
             <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
               {!gameStarted ? 
@@ -475,7 +477,7 @@ export default function App() {
           ))}
         </div>
 
-        {/* THE CENTER UI */}
+        {/* 4. THE CENTER UI */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           <div className="flex flex-col items-center">
             {!gameStarted && (
@@ -514,6 +516,7 @@ export default function App() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
