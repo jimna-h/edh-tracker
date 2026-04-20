@@ -444,64 +444,71 @@ export default function App() {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       <div 
-        className="relative flex flex-col items-center justify-center"
         style={{ 
           width: '100vh',   
           height: '100vw', 
           transform: 'rotate(90deg)', 
           transformOrigin: 'center center'
         }}
+        className="relative flex items-center justify-center"
       >
-        <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-8 md:gap-16 place-items-center p-4 md:p-10">
+        {/* THE GRID: Removed extra margins so it fills the rotation box perfectly */}
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-4 md:gap-8 p-2">
           {seats.map((s, i) => (
-            !gameStarted ? 
-              <SetupQuadrant 
-                key={i} id={i} seat={s} isFlipped={i < 2} 
-                playerDataMap={playerDataMap} onUpdate={updateSeat} 
-                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex} 
-                onResetAll={handleResetAll} 
-                mulliganType={mulliganType} onSetMulligan={setMulliganType}
-              /> :
-              <Quadrant key={i} id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
+              {!gameStarted ? 
+                <SetupQuadrant 
+                  id={i} seat={s} isFlipped={i < 2} 
+                  playerDataMap={playerDataMap} onUpdate={updateSeat} 
+                  onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex} 
+                  onResetAll={handleResetAll} 
+                  mulliganType={mulliganType} onSetMulligan={setMulliganType}
+                /> :
+                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+              }
+            </div>
           ))}
         </div>
 
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex flex-col items-center">
-          {!gameStarted && (
-            <button 
-              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-              disabled={(!allFilled && !hasPending) || isSyncing}
-              className={`pointer-events-auto font-black rounded-full text-lg md:text-2xl transition-all flex items-center justify-center text-center px-4
-                ${allFilled ? 'bg-white text-black scale-100 shadow-[0_0_60px_rgba(255,255,255,0.2)]' : 
-                  hasPending ? 'bg-amber-500 text-black scale-100 shadow-[0_0_60px_rgba(245,158,11,0.3)]' :
-                  'bg-white/5 text-white/10 scale-90 border border-white/5'}
-                ${isSyncing ? 'animate-pulse opacity-80' : ''}
-              `}
-              style={{ width: 'clamp(80px, 15vw, 240px)', height: 'clamp(80px, 15vw, 240px)' }}
-            >
-              {isSyncing ? 'SYNCING...' : (allFilled ? 'START' : hasPending ? `SYNC [${pendingGames.length}]` : 'SETUP')}
-            </button>
-          )}
+        {/* THE CENTER BUTTON: Simplified the positioning to stay dead-center */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          <div className="flex flex-col items-center">
+            {!gameStarted && (
+              <button 
+                onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+                disabled={(!allFilled && !hasPending) || isSyncing}
+                className={`pointer-events-auto font-black rounded-full text-lg md:text-2xl transition-all flex items-center justify-center text-center px-4
+                  ${allFilled ? 'bg-white text-black scale-100 shadow-[0_0_60px_rgba(255,255,255,0.4)]' : 
+                    hasPending ? 'bg-amber-500 text-black scale-100 shadow-[0_0_60px_rgba(245,158,11,0.5)]' :
+                    'bg-white/5 text-white/10 scale-90 border border-white/5'}
+                  ${isSyncing ? 'animate-pulse opacity-80' : ''}
+                `}
+                style={{ width: 'clamp(80px, 18vh, 200px)', height: 'clamp(80px, 18vh, 200px)' }}
+              >
+                {isSyncing ? 'SYNC' : (allFilled ? 'START' : hasPending ? `SYNC [${pendingGames.length}]` : 'SETUP')}
+              </button>
+            )}
 
-          {gameStarted && !allFinished && (
-            <button 
-              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
-              className="pointer-events-auto rounded-full flex items-center justify-center active:scale-90 transition-all cursor-pointer touch-none bg-[#000000] border-none shadow-[0_0_100px_rgba(0,0,0,1)]"
-              style={{ width: 'clamp(90px, 22vw, 320px)', height: 'clamp(90px, 22vw, 320px)' }}
-            >
-              <span className="font-black tabular-nums leading-none tracking-tighter" style={{ fontSize: 'clamp(3rem, 10vw, 15rem)', color: '#FFFFFF' }}>{turn}</span>
-            </button>
-          )}
+            {gameStarted && !allFinished && (
+              <button 
+                onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} 
+                className="pointer-events-auto rounded-full flex items-center justify-center active:scale-90 transition-all cursor-pointer touch-none bg-black border-none shadow-[0_0_80px_rgba(0,0,0,1)]"
+                style={{ width: 'clamp(90px, 25vh, 280px)', height: 'clamp(90px, 25vh, 280px)' }}
+              >
+                <span className="font-black tabular-nums leading-none tracking-tighter text-white" style={{ fontSize: 'clamp(3rem, 12vh, 12rem)' }}>{turn}</span>
+              </button>
+            )}
 
-          {gameStarted && allFinished && (
-            <button 
-              onClick={submitGame}
-              className="pointer-events-auto font-black rounded-full tracking-[0.2em] text-lg md:text-2xl bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.4)] active:scale-95 transition-all flex items-center justify-center text-center px-4"
-              style={{ width: 'clamp(100px, 25vw, 320px)', height: 'clamp(100px, 25vw, 320px)' }}
-            >
-              SUBMIT GAME
-            </button>
-          )}
+            {gameStarted && allFinished && (
+              <button 
+                onClick={submitGame}
+                className="pointer-events-auto font-black rounded-full tracking-widest text-lg md:text-2xl bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.6)] active:scale-95 transition-all flex items-center justify-center text-center"
+                style={{ width: 'clamp(100px, 22vh, 260px)', height: 'clamp(100px, 22vh, 260px)' }}
+              >
+                SUBMIT
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
