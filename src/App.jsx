@@ -442,24 +442,27 @@ export default function App() {
   const hasPending = pendingGames.length > 0;
 
   return (
-    /* OUTER WRAPPER: Forced to the physical dimensions of the phone */
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       <div 
         style={{ 
-          width: '100vh',   // The "width" of our app is the height of the phone
-          height: '100vw',  // The "height" of our app is the width of the phone
+          width: '100dvh',   // Using 'dvh' (dynamic) helps with mobile browser bars
+          height: '100dvw',  
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           transform: 'rotate(90deg)',
           transformOrigin: 'center center',
+          position: 'absolute', // Absolute ensures it ignores parent padding
+          top: '50%',
+          left: '50%',
+          marginTop: '-50vw', // These offsets force it to be mathematically centered
+          marginLeft: '-50vh'
         }}
-        className="relative bg-black"
+        className="bg-black"
       >
-        {/* THE GAME GRID: Now uses 100% of the rotated box */}
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0">
+        {/* THE GAME GRID */}
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-0 p-0 m-0">
           {seats.map((s, i) => (
-            /* Removed 'border' and 'gap' to get rid of the white lines */
             <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
               {!gameStarted ? 
                 <SetupQuadrant 
@@ -475,7 +478,7 @@ export default function App() {
           ))}
         </div>
 
-        {/* THE CENTER UI: Simplified to stay dead-center */}
+        {/* THE CENTER UI */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {!gameStarted && (
             <button 
@@ -505,7 +508,7 @@ export default function App() {
           {gameStarted && allFinished && (
             <button 
               onClick={submitGame}
-              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_50px_rgba(212,175,55,0.6)]"
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_60px_rgba(212,175,55,0.6)]"
               style={{ width: '160px', height: '160px' }}
             >
               SUBMIT
