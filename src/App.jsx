@@ -184,15 +184,18 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
 };
 
 // --- SETUP QUADRANT ---
-const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, ... }) => {
-  // 1. Since playerDataMap is now an array, mapping is direct and preserves order
+const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
+  const [step, setStep] = useState(0); 
+  const [tempColors, setTempColors] = useState([]);
+  
+  // 1. Correctly map the new ordered Array from the backend
   const playerOptions = playerDataMap.map(p => ({
     name: p.player_name,
     artUrl: p.pfp
   }));
   const players = [...playerOptions, "+ GUEST"];
 
-  // 2. Find the specific player data from the array when a seat name is selected
+  // 2. Find the player entry in the array to get their specific decks
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
   
