@@ -53,6 +53,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const mountTime = useRef(Date.now());
+  const handledTouch = useRef(false); // prevent onClick firing after touchend
 
   const handleMouseDown = (e) => {
     setIsDown(true);
@@ -72,6 +73,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     didScroll.current = false;
+    handledTouch.current = false;
   };
 
   const handleTouchMove = (e) => {
@@ -83,6 +85,10 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const handleTouchEnd = (e) => {
     if (didScroll.current) return;
     if (Date.now() - mountTime.current < 300) return;
+    e.preventDefault(); // stops the synthetic click from firing after touchend
+    e.stopPropagation();
+    if (handledTouch.current) return;
+    handledTouch.current = true;
     const touch = e.changedTouches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const button = el?.closest('[data-option-index]');
@@ -114,7 +120,11 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
             <button
               key={`${title}-${i}`}
               data-option-index={i}
-              onClick={() => !didScroll.current && onSelect(opt)}
+              onClick={(e) => {
+                // Desktop only — skip if this was a touch interaction
+                if (handledTouch.current) return;
+                if (!didScroll.current) onSelect(opt);
+              }}
               className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center active:scale-95 transition-all shadow-xl backdrop-blur-md overflow-hidden"
             >
               {hasArt && (
@@ -138,7 +148,6 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     </div>
   );
 };
-
 
   
 // --- QUADRANT WRAPPER ---
