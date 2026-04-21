@@ -637,11 +637,31 @@ export default function App() {
           {/* Change #1: black background, massive number */}
           {gameStarted && !allFinished && (
   <button
-    onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-    className="pointer-events-auto rounded-full flex items-center justify-center"
-    style={{ width: '180px', height: '180px', backgroundColor: '#000000', border: 'none', outline: 'none', boxShadow: 'none' }}
+    onPointerDown={handlePointerDown} 
+    onPointerUp={handlePointerUp}
+    // Added 'select-none' to prevent highlighting
+    className="pointer-events-auto rounded-full flex items-center justify-center border-none outline-none select-none"
+    style={{ 
+      width: '180px', 
+      height: '180px', 
+      backgroundColor: '#000000',
+      border: 'none',
+      outline: 'none',
+      WebkitTapHighlightColor: 'transparent', // Removes the grey box on mobile tap
+      userSelect: 'none' // Extra insurance for all browsers
+    }}
   >
-    <span className="font-black tabular-nums text-white" style={{ fontSize: '100px', lineHeight: 1 }}>{turn}</span>
+    <span 
+      className="font-black tabular-nums text-white select-none" 
+      style={{ 
+        fontSize: '100px', 
+        lineHeight: 1,
+        userSelect: 'none',
+        WebkitUserSelect: 'none' 
+      }}
+    >
+      {turn}
+    </span>
   </button>
 )}
           {gameStarted && allFinished && (
