@@ -193,7 +193,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     name: p.player_name,
     artUrl: p.pfp
   }));
-  const players = [...playerOptions, "+ GUEST"];
+  const players = [...playerDataMap.map(p => p.player_name), "+ GUEST"];
 
   // 2. Find the player entry in the array to get their specific decks
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
@@ -420,7 +420,7 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
 export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [turn, setTurn] = useState(1);
-  const [playerDataMap, setPlayerDataMap] = useState({});
+  const [playerDataMap, setPlayerDataMap] = useState([]);
   const [pendingGames, setPendingGames] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_games') || '[]'));
   const [firstSeatIndex, setFirstSeatIndex] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -544,9 +544,15 @@ export default function App() {
       turn,
       mulligan_type: mulliganType,
       players: seats.map(s => ({ 
-        player: s.name, deck: s.deck, turn_died: s.stats.turnDied, stats: s.stats, 
-        colors: s.colors, deck_owner: s.deckOwner || s.name, seat_position: s.order
-      }))
+  player: s.name, 
+  deck: s.deck, 
+  turn_died: s.stats.turnDied, 
+  stats: s.stats, 
+  colors: s.colors, 
+  // Look up the deck owner in the array instead of the old object map
+  deck_owner: s.deckOwner || s.name, 
+  seat_position: s.order
+}))
     };
     try {
       const r = await fetch('https://edh-backend.onrender.com/submit', { 
