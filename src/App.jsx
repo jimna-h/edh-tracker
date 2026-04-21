@@ -124,14 +124,15 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
           return (
             <button
-              key={`${title}-${i}`}
-              data-option-index={i}
-              onClick={(e) => {
-                if (handledTouch.current) return;
-                if (!didScroll.current) onSelect(opt);
-              }}
-              className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center active:scale-95 transition-all shadow-xl backdrop-blur-md overflow-hidden"
-            >
+  key={`${title}-${i}`}
+  data-option-index={i}
+  onClick={(e) => {
+    if (handledTouch.current) return;
+    if (!didScroll.current) onSelect(opt);
+  }}
+  className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden
+    active:scale-90 active:bg-white/30 active:border-white/60"
+>
               {hasArt && (
                 <>
                   <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
@@ -413,17 +414,18 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
         )}
         
         {player.status === 'questionnaire' && (
-          <div className="w-full h-full flex items-center justify-center bg-black/20 backdrop-blur-3xl">
-            <SelectionCarousel 
-              title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
-              isFlipped={isFlipped}
-              // Change #3: prepend Skip, Change #4: key forces remount+scroll reset
-              options={statOptions(player.step)}
-              onBack={() => onBackStep(id)} 
-              onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
-            />
-          </div>
-        )}
+  <div className="w-full h-full flex items-center justify-center backdrop-blur-3xl">
+    <div className="w-[90%] bg-black/60 border border-white/10 rounded-[2rem] py-6 px-2 shadow-2xl">
+      <SelectionCarousel 
+        title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
+        isFlipped={isFlipped}
+        options={statOptions(player.step)}
+        onBack={() => onBackStep(id)} 
+        onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
+      />
+    </div>
+  </div>
+)}
 
         {isOut && (
           <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
