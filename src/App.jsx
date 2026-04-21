@@ -503,23 +503,23 @@ export default function App() {
   };
 
   const handlePointerDown = (e) => {
-    e.preventDefault();
-    timerRef.current = setTimeout(() => { 
-      if (!gameStarted && pendingGames.length > 0) syncPending();
-      else setTurn(prev => Math.max(1, prev - 1)); 
-      timerRef.current = null; 
-    }, 400);
-  };
+  e.preventDefault();
+  timerRef.current = setTimeout(() => { 
+    setTurn(prev => Math.max(1, prev - 1)); 
+    timerRef.current = null; 
+  }, 400);
+};
 
-  const handlePointerUp = (e) => {
-    e.preventDefault();
-    if (timerRef.current) { 
-      clearTimeout(timerRef.current); 
-      if (gameStarted) setTurn(prev => prev + 1); 
-      else if (allFilled) setGameStarted(true);
-      timerRef.current = null; 
-    }
-  };
+const handlePointerUp = (e) => {
+  e.preventDefault();
+  if (timerRef.current) { 
+    clearTimeout(timerRef.current); 
+    if (gameStarted) setTurn(prev => prev + 1); 
+    else if (allFilled) setGameStarted(true);
+    else if (hasPending) syncPending(); // single tap to sync
+    timerRef.current = null; 
+  }
+};
 
   const updateSeat = (id, field, value) => {
     setSeats(prev => {
@@ -555,26 +555,28 @@ export default function App() {
   };
 
   const syncPending = async () => {
-    if (isSyncing || pendingGames.length === 0) return;
-    setIsSyncing(true);
-    const games = [...pendingGames];
-    let remaining = [...games];
-    for (const g of games) {
-      try {
-        const r = await fetch('https://edh-backend.onrender.com/submit', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify(g) 
-        });
-        if (r.ok) {
-          remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
-          setPendingGames(remaining);
-          localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
-        } else { break; }
-      } catch (e) { break; }
-    }
-    setIsSyncing(false);
-  };
+  if (isSyncing || pendingGames.length === 0) return;
+  setIsSyncing(true);
+  // Snapshot what we're trying to send right now
+  const games = [...pendingGames];
+  let remaining = [...pendingGames];
+  for (const g of games) {
+    try {
+      const r = await fetch('https://edh-backend.onrender.com/submit', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(g) 
+      });
+      if (r.ok) {
+        // Remove only this specific game by timestamp
+        remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
+        setPendingGames([...remaining]);
+        localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
+      } else { break; }
+    } catch (e) { break; }
+  }
+  setIsSyncing(false);
+};
 
   const submitGame = async () => {
   const gameData = {
@@ -599,21 +601,16 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(gameData) 
     });
-    
-    if (!r.ok) throw new Error("Server Offline");
-    
-    // Success!
-    alert("Game logged to Google Sheets!");
+    if (!r.ok) throw new Error("Server error");
+    // Online + success: no alert, just reset
   } catch (e) {
-    // Fail - Queue it up
+    // Offline: queue it and let the user know
     const updated = [...pendingGames, gameData];
     setPendingGames(updated);
     localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
-    
-    alert("Offline: Game saved locally. It will sync automatically when you have service!");
+    alert("Offline: Game saved locally. It will sync when you're back online!");
   } finally {
     setIsSyncing(false);
-    // Reset the UI state regardless so you can start a new game immediately
     setGameStarted(false); 
     setTurn(1); 
     setSeats(initialSeats); 
@@ -621,7 +618,7 @@ export default function App() {
     setMulliganType('');
   }
 };
-
+  
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
   const allFinished = seats.every(s => s.status === 'done');
   const hasPending = pendingGames.length > 0;
