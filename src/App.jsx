@@ -189,11 +189,13 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   const [tempColors, setTempColors] = useState([]);
   
   // 1. Correctly map the new ordered Array from the backend
-  const playerOptions = playerDataMap.map(p => ({
-    name: p.player_name,
-    artUrl: p.pfp
-  }));
-  const players = [...playerDataMap.map(p => p.player_name), "+ GUEST"];
+
+const playerOptions = playerDataMap.map(p => ({
+  name: p.player_name,
+  artUrl: p.pfp // This is the crucial link to your SelectionCarousel's hasArt check
+}));
+  
+const players = [...playerOptions, "+ GUEST"];
 
   // 2. Find the player entry in the array to get their specific decks
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
@@ -273,13 +275,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     options={players} 
     onBack={handleBack} 
     onSelect={(val) => { 
-      // FIX: Check if it's the new object or the "+ GUEST" string
-      const selectedName = (typeof val === 'object' && val !== null) ? val.name : val;
-      
-      if (selectedName === "+ GUEST") {
-        onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+      if (typeof val === 'object' && val !== null) {
+        // We found a real player
+        onUpdate(id, 'name', val.name); 
+        // We temporarily store their PFP so the UI can show it
+        onUpdate(id, 'pfpUrl', val.artUrl); 
       } else {
-        onUpdate(id, 'name', selectedName);
+        // It's a Guest
+        onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+        onUpdate(id, 'pfpUrl', ''); // Guests have no PFP
       }
       setStep(2); 
     }} 
