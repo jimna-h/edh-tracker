@@ -49,6 +49,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const didScroll = useRef(false);
 
   // Mouse only — let touch scroll natively
   const handleMouseDown = (e) => {
@@ -65,6 +68,21 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    didScroll.current = false;
+  };
+
+  const handleTouchMove = () => {
+    didScroll.current = true;
+  };
+
+  const handleOptionClick = (opt) => {
+    if (didScroll.current) return; // swallowed — was a scroll, not a tap
+    onSelect(opt);
+  };
+
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 drop-shadow-md">{title}</p>
@@ -74,6 +92,8 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onMouseMove={handleMouseMove}
         onMouseUp={() => setIsDown(false)}
         onMouseLeave={() => setIsDown(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
@@ -85,7 +105,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           return (
             <button
               key={`${title}-${i}`}
-              onClick={() => onSelect(opt)}
+              onClick={() => handleOptionClick(opt)}
               className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center active:scale-95 transition-all shadow-xl backdrop-blur-md overflow-hidden"
             >
               {hasArt && (
