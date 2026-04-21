@@ -1,7 +1,6 @@
 {
   "short_name": "EDH Tracker",
   "name": "EDH Tracker",
-  {
   "icons": [
     {
       "src": "icon.png",
@@ -15,8 +14,6 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
-}
   ],
   "start_url": ".",
   "display": "standalone",
