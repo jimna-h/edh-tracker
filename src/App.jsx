@@ -594,14 +594,14 @@ export default function App() {
           )}
           {/* Change #1: black background, massive number */}
           {gameStarted && !allFinished && (
-            <button
-              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-              className="pointer-events-auto rounded-full flex items-center justify-center bg-black shadow-[0_0_50px_rgba(0,0,0,1)] border border-white/10"
-              style={{ width: '180px', height: '180px' }}
-            >
-              <span className="font-black tabular-nums text-white" style={{ fontSize: '100px', lineHeight: 1 }}>{turn}</span>
-            </button>
-          )}
+  <button
+    onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+    className="pointer-events-auto rounded-full flex items-center justify-center border border-white/10"
+    style={{ width: '180px', height: '180px', backgroundColor: '#000000' }}
+  >
+    <span className="font-black tabular-nums text-white" style={{ fontSize: '100px', lineHeight: 1 }}>{turn}</span>
+  </button>
+)}
           {gameStarted && allFinished && (
             <button
               onClick={submitGame}
