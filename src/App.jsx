@@ -53,7 +53,13 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const mountTime = useRef(Date.now());
-  const handledTouch = useRef(false); // prevent onClick firing after touchend
+  const handledTouch = useRef(false);
+
+  // Scroll to start whenever options change (fix #4)
+  useEffect(() => {
+    mountTime.current = Date.now();
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+  }, [options]);
 
   const handleMouseDown = (e) => {
     setIsDown(true);
@@ -85,7 +91,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const handleTouchEnd = (e) => {
     if (didScroll.current) return;
     if (Date.now() - mountTime.current < 300) return;
-    e.preventDefault(); // stops the synthetic click from firing after touchend
+    e.preventDefault();
     e.stopPropagation();
     if (handledTouch.current) return;
     handledTouch.current = true;
@@ -121,7 +127,6 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
               key={`${title}-${i}`}
               data-option-index={i}
               onClick={(e) => {
-                // Desktop only — skip if this was a touch interaction
                 if (handledTouch.current) return;
                 if (!didScroll.current) onSelect(opt);
               }}
@@ -149,7 +154,6 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   );
 };
 
-  
 // --- QUADRANT WRAPPER ---
 const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
@@ -206,7 +210,6 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   return (
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
-        {/* STEP 0: TURN ORDER SELECTION */}
         {step === 0 && firstSeatIndex === null && (
           <button 
             onClick={() => onSetFirst(id)}
@@ -218,7 +221,6 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           </button>
         )}
 
-        {/* STEP 1: MULLIGAN SELECTION (FORCE LAST PLAYER) */}
         {step >= 1 && !mulliganType && (
           seat.order === 4 ? (
             <SelectionCarousel 
@@ -239,7 +241,6 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           )
         )}
 
-        {/* STEP 2+: PLAYER AND DECK SELECTION (ONLY AFTER MULLIGAN) */}
         {step === 1 && mulliganType && (
           <SelectionCarousel 
             title={`Seat ${seat.order}`} 
@@ -333,17 +334,24 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
+  // Change #3: "Skip" prepended before 0, then 0-30 for lands, 0-10 for rocks/dorks
+  const statOptions = (step) => {
+    if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i)];
+    return ['Skip', ...Array.from({length: 11}, (_, i) => i)];
+  };
+
   return (
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
         {player.status === 'active' && (
           <div className="flex flex-col items-center w-full px-4 md:px-10">
             <p style={hasArt ? textShadowStyle : {}} className="text-white/80 font-black text-[9px] md:text-[18px] uppercase tracking-[0.4em] mb-1 truncate max-w-full">{player.deck}</p>
-            <h2 style={hasArt ? textShadowStyle : {}} className="text-white text-2xl md:text-7xl font-black uppercase tracking-tighter text-center leading-[0.8] mb-4 md:mb-16">{player.name}</h2>
-            <div className={`flex w-full max-w-[180px] md:max-w-[360px] ${hasArt ? 'bg-black/50' : 'bg-black/[0.08]'} rounded-[1rem] md:rounded-[2.5rem] overflow-hidden backdrop-blur-xl border ${hasArt ? 'border-white/20' : 'border-transparent'}`}>
-              <button onClick={() => onLose(id)} className="flex-1 py-3 md:py-7 font-black text-[10px] md:text-[14px] text-white uppercase">Lose</button>
+            <h2 style={hasArt ? textShadowStyle : {}} className="text-white text-2xl md:text-7xl font-black uppercase tracking-tighter text-center leading-[0.8] mb-6 md:mb-20">{player.name}</h2>
+            {/* Change #2: bigger lose/win buttons */}
+            <div className={`flex w-full max-w-[220px] md:max-w-[400px] ${hasArt ? 'bg-black/50' : 'bg-black/[0.08]'} rounded-[1.2rem] md:rounded-[2.5rem] overflow-hidden backdrop-blur-xl border ${hasArt ? 'border-white/20' : 'border-transparent'}`}>
+              <button onClick={() => onLose(id)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Lose</button>
               <div className="w-[1px] bg-white/20 my-2 md:my-5" />
-              <button onClick={() => onLose(id, null, true)} className="flex-1 py-3 md:py-7 font-black text-[10px] md:text-[14px] text-white uppercase">Win</button>
+              <button onClick={() => onLose(id, null, true)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Win</button>
             </div>
           </div>
         )}
@@ -352,10 +360,11 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
           <div className="w-full h-full flex items-center justify-center bg-black/20 backdrop-blur-3xl">
             <SelectionCarousel 
               title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
-              isFlipped={isFlipped} 
-              options={player.step === 0 ? Array.from({length: 31}, (_, i) => i) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} 
+              isFlipped={isFlipped}
+              // Change #3: prepend Skip, Change #4: key forces remount+scroll reset
+              options={statOptions(player.step)}
               onBack={() => onBackStep(id)} 
-              onSelect={(val) => onLose(id, val)} 
+              onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
             />
           </div>
         )}
@@ -548,7 +557,6 @@ export default function App() {
           touchAction: 'pan-y',
         }}
       >
-        {/* THE GAME GRID */}
         <div
           className="grid grid-cols-2 grid-rows-2 gap-0"
           style={{ width: '100%', height: '100%' }}
@@ -569,7 +577,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* THE CENTER UI */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {!gameStarted && (
             <button
@@ -585,13 +592,14 @@ export default function App() {
               <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
             </button>
           )}
+          {/* Change #1: black background, massive number */}
           {gameStarted && !allFinished && (
             <button
               onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-              className="pointer-events-auto rounded-full flex items-center justify-center bg-black/80 shadow-[0_0_50px_rgba(0,0,0,1)]"
+              className="pointer-events-auto rounded-full flex items-center justify-center bg-black shadow-[0_0_50px_rgba(0,0,0,1)] border border-white/10"
               style={{ width: '180px', height: '180px' }}
             >
-              <span className="font-black tabular-nums text-white text-7xl">{turn}</span>
+              <span className="font-black tabular-nums text-white" style={{ fontSize: '100px', lineHeight: 1 }}>{turn}</span>
             </button>
           )}
           {gameStarted && allFinished && (
