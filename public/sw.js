@@ -1,42 +1,64 @@
-const CACHE_NAME = 'mtg-tracker-v1';
+const CACHE_NAME = 'mtg-tracker-v2';
 const IMAGE_CACHE = 'mtg-images-v1';
-
-// Assets to cache immediately on install (the app itself)
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  // Add your main JS and CSS bundles here if not using a bundler like Vite/CRA
-];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([
+      '/',
+      '/index.html',
+      '/manifest.json',
+    ]))
   );
   self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter(k => k !== CACHE_NAME && k !== IMAGE_CACHE)
+          .map(k => caches.delete(k))
+      )
+    )
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // STRATEGY: Cache-First for Images (Scryfall/Art URLs)
+  // Skip non-GET and backend API calls entirely
+  if (request.method !== 'GET') return;
+  if (url.hostname === 'edh-backend.onrender.com') return;
+
+  // Cache-first for images
   if (request.destination === 'image' || url.hostname.includes('scryfall')) {
     event.respondWith(
-      caches.open(IMAGE_CACHE).then((cache) => {
-        return cache.match(request).then((response) => {
-          return response || fetch(request).then((networkResponse) => {
-            cache.put(request, networkResponse.clone());
-            return networkResponse;
-          });
-        });
-      })
+      caches.open(IMAGE_CACHE).then((cache) =>
+        cache.match(request).then((cached) =>
+          cached || fetch(request).then((response) => {
+            cache.put(request, response.clone());
+            return response;
+          })
+        )
+      )
     );
     return;
   }
 
-  // STRATEGY: Network-First for everything else (API calls)
+  // Stale-while-revalidate for everything else (app shell + JS/CSS bundles)
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(request).then((cached) => {
+        const fetchPromise = fetch(request).then((response) => {
+          if (response.ok) cache.put(request, response.clone());
+          return response;
+        }).catch(() => cached);
+
+        return cached || fetchPromise;
+      })
+    )
   );
 });
