@@ -188,8 +188,17 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
-  const players = [...Object.keys(playerDataMap), "+ GUEST"];
-  const rawDecks = playerDataMap[seat.name] || [];
+  // 1. Transform the map into a list of objects for the player selection carousel
+  const playerOptions = Object.keys(playerDataMap).map(playerName => ({
+    name: playerName,
+    artUrl: playerDataMap[playerName].pfp // Uses the "PFP" deck URL from your sheet
+  }));
+  const players = [...playerOptions, "+ GUEST"];
+
+  // 2. Access the .decks property for the selected player
+  const playerEntry = playerDataMap[seat.name] || { decks: [], pfp: '' };
+  const rawDecks = playerEntry.decks || [];
+  
   const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
@@ -242,17 +251,19 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 1 && mulliganType && (
-          <SelectionCarousel 
-            title={`Seat ${seat.order}`} 
-            isFlipped={isFlipped} 
-            options={players} 
-            onBack={handleBack} 
-            onSelect={(val) => { 
-              onUpdate(id, 'name', val === "+ GUEST" ? (prompt("Enter Guest Name:") || "Guest") : val); 
-              setStep(2); 
-            }} 
-          />
-        )}
+  <SelectionCarousel 
+    title={`Seat ${seat.order}`} 
+    isFlipped={isFlipped} 
+    options={playerSelectionList} // Use the list with artUrls
+    onBack={handleBack} 
+    onSelect={(val) => { 
+      // Handle both object (existing player) and string ("+ GUEST")
+      const name = typeof val === 'object' ? val.name : (prompt("Enter Guest Name:") || "Guest");
+      onUpdate(id, 'name', name); 
+      setStep(2); 
+    }} 
+  />
+)}
         
         {step === 2 && (
           <SelectionCarousel 
