@@ -121,7 +121,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         {options.map((opt, i) => {
           const isObj = typeof opt === 'object' && opt !== null;
           const hasArt = isObj && opt.artUrl;
-          const label = isObj ? (opt.deck || opt.name || "Unnamed") : opt;
+          const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
           return (
             <button
               key={`${title}-${i}`}
@@ -250,16 +250,21 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           )
         )}
 
-        {step === 1 && mulliganType && (
+       {step === 1 && mulliganType && (
   <SelectionCarousel 
     title={`Seat ${seat.order}`} 
     isFlipped={isFlipped} 
-    options={playerSelectionList} // Use the list with artUrls
+    options={players} 
     onBack={handleBack} 
     onSelect={(val) => { 
-      // Handle both object (existing player) and string ("+ GUEST")
-      const name = typeof val === 'object' ? val.name : (prompt("Enter Guest Name:") || "Guest");
-      onUpdate(id, 'name', name); 
+      // FIX: Check if it's the new object or the "+ GUEST" string
+      const selectedName = (typeof val === 'object' && val !== null) ? val.name : val;
+      
+      if (selectedName === "+ GUEST") {
+        onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+      } else {
+        onUpdate(id, 'name', selectedName);
+      }
       setStep(2); 
     }} 
   />
