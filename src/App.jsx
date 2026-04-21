@@ -639,7 +639,7 @@ export default function App() {
   <button
     onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
     className="pointer-events-auto rounded-full flex items-center justify-center"
-    style={{ width: '180px', height: '180px', backgroundColor: '#000000' }}
+    style={{ width: '180px', height: '180px', backgroundColor: '#000000', border: 'none', outline: 'none', boxShadow: 'none' }}
   >
     <span className="font-black tabular-nums text-white" style={{ fontSize: '100px', lineHeight: 1 }}>{turn}</span>
   </button>
