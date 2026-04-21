@@ -325,23 +325,34 @@ const players = [...playerOptions, "+ GUEST"];
         )}
 
         {step === 5 && (
-          <SelectionCarousel 
-            title="Borrow From?" 
-            isFlipped={isFlipped} 
-            options={Object.keys(playerDataMap).filter(n => n !== seat.name)} 
-            onBack={handleBack} 
-            onSelect={(owner) => { onUpdate(id, 'deckOwner', owner); setStep(6); }} 
-          />
-        )}
-        {step === 6 && (
-          <SelectionCarousel 
-            title={`${seat.deckOwner}'s Decks`} 
-            isFlipped={isFlipped} 
-            options={playerDataMap[seat.deckOwner]} 
-            onBack={handleBack} 
-            onSelect={(val) => { onUpdate(id, 'deck', val.deck); onUpdate(id, 'artUrl', val.artUrl); onUpdate(id, 'colors', val.colors || ''); setStep(3); }} 
-          />
-        )}
+  <SelectionCarousel 
+    title="Borrow From?" 
+    isFlipped={isFlipped} 
+    options={playerDataMap
+      .filter(p => p.player_name !== seat.name)
+      .map(p => ({ name: p.player_name, artUrl: p.pfp }))
+    }
+    onBack={handleBack} 
+    onSelect={(val) => { 
+      onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
+      setStep(6); 
+    }} 
+  />
+)}
+{step === 6 && (
+  <SelectionCarousel 
+    title={`${seat.deckOwner}'s Decks`} 
+    isFlipped={isFlipped} 
+    options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
+    onBack={handleBack} 
+    onSelect={(val) => { 
+      onUpdate(id, 'deck', val.deck); 
+      onUpdate(id, 'artUrl', val.artUrl); 
+      onUpdate(id, 'colors', val.colors || ''); 
+      setStep(3); 
+    }} 
+  />
+)}
         {step === 3 && (
           <SelectionCarousel 
             title="Starting Lands" 
