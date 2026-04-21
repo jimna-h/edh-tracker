@@ -440,16 +440,30 @@ export default function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    fetch('https://edh-backend.onrender.com/players')
-      .then(r => r.json())
-      .then(d => setPlayerDataMap(d))
-      .catch(() => console.log("Offline: Using cached player data"));
+  // 1. Immediate Load from Cache
+  const cachedData = localStorage.getItem('mtg_player_cache');
+  if (cachedData) {
+    try {
+      setPlayerDataMap(JSON.parse(cachedData));
+    } catch (e) {
+      console.error("Cache corrupted:", e);
+    }
+  }
 
-    if (pendingGames.length > 0) syncPending();
+  // 2. Background Fetch to Update Cache
+  fetch('https://edh-backend.onrender.com/players')
+    .then(r => r.json())
+    .then(d => {
+      setPlayerDataMap(d);
+      localStorage.setItem('mtg_player_cache', JSON.stringify(d)); // Save for next time
+    })
+    .catch(() => console.log("Offline: Using cached player data"));
 
-    window.addEventListener('online', syncPending);
-    return () => window.removeEventListener('online', syncPending);
-  }, []);
+  if (pendingGames.length > 0) syncPending();
+
+  window.addEventListener('online', syncPending);
+  return () => window.removeEventListener('online', syncPending);
+}, []);
 
   const handleResetAll = () => {
     setFirstSeatIndex(null);
@@ -543,39 +557,50 @@ export default function App() {
   };
 
   const submitGame = async () => {
-    const gameData = {
-      timestamp: new Date().toISOString(),
-      turn,
-      mulligan_type: mulliganType,
-      players: seats.map(s => ({ 
-  player: s.name, 
-  deck: s.deck, 
-  turn_died: s.stats.turnDied, 
-  stats: s.stats, 
-  colors: s.colors, 
-  // Look up the deck owner in the array instead of the old object map
-  deck_owner: s.deckOwner || s.name, 
-  seat_position: s.order
-}))
-    };
-    try {
-      const r = await fetch('https://edh-backend.onrender.com/submit', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(gameData) 
-      });
-      if (!r.ok) throw new Error();
-    } catch (e) {
-      const updated = [...pendingGames, gameData];
-      setPendingGames(updated);
-      localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
-    }
+  const gameData = {
+    timestamp: new Date().toISOString(),
+    turn,
+    mulligan_type: mulliganType,
+    players: seats.map(s => ({ 
+      player: s.name, 
+      deck: s.deck, 
+      turn_died: s.stats.turnDied, 
+      stats: s.stats, 
+      colors: s.colors, 
+      deck_owner: s.deckOwner || s.name, 
+      seat_position: s.order
+    }))
+  };
+
+  try {
+    setIsSyncing(true);
+    const r = await fetch('https://edh-backend.onrender.com/submit', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(gameData) 
+    });
+    
+    if (!r.ok) throw new Error("Server Offline");
+    
+    // Success!
+    alert("Game logged to Google Sheets!");
+  } catch (e) {
+    // Fail - Queue it up
+    const updated = [...pendingGames, gameData];
+    setPendingGames(updated);
+    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+    
+    alert("Offline: Game saved locally. It will sync automatically when you have service!");
+  } finally {
+    setIsSyncing(false);
+    // Reset the UI state regardless so you can start a new game immediately
     setGameStarted(false); 
     setTurn(1); 
     setSeats(initialSeats); 
     setFirstSeatIndex(null); 
     setMulliganType('');
-  };
+  }
+};
 
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
   const allFinished = seats.every(s => s.status === 'done');
