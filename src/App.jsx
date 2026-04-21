@@ -184,19 +184,16 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
 };
 
 // --- SETUP QUADRANT ---
-const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
-  const [step, setStep] = useState(0); 
-  const [tempColors, setTempColors] = useState([]);
-  
-  // 1. Transform the map into a list of objects for the player selection carousel
-  const playerOptions = Object.keys(playerDataMap).map(playerName => ({
-    name: playerName,
-    artUrl: playerDataMap[playerName].pfp // Uses the "PFP" deck URL from your sheet
+const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, ... }) => {
+  // 1. Since playerDataMap is now an array, mapping is direct and preserves order
+  const playerOptions = playerDataMap.map(p => ({
+    name: p.player_name,
+    artUrl: p.pfp
   }));
   const players = [...playerOptions, "+ GUEST"];
 
-  // 2. Access the .decks property for the selected player
-  const playerEntry = playerDataMap[seat.name] || { decks: [], pfp: '' };
+  // 2. Find the specific player data from the array when a seat name is selected
+  const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
   
   const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
