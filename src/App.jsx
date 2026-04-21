@@ -52,8 +52,8 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const didScroll = useRef(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const mountTime = useRef(Date.now()); // track when this carousel mounted
 
-  // Mouse only — let touch scroll natively
   const handleMouseDown = (e) => {
     setIsDown(true);
     setStartX(e.pageX - e.currentTarget.offsetLeft);
@@ -82,6 +82,8 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 
   const handleTouchEnd = (e) => {
     if (didScroll.current) return;
+    // Ignore touch events that started before this carousel mounted
+    if (Date.now() - mountTime.current < 300) return;
     const touch = e.changedTouches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const button = el?.closest('[data-option-index]');
@@ -89,56 +91,6 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     const index = parseInt(button.dataset.optionIndex);
     if (!isNaN(index) && options[index] !== undefined) onSelect(options[index]);
   };
-
-  return (
-    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
-      <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 drop-shadow-md">{title}</p>
-      <div 
-        ref={scrollRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={() => setIsDown(false)}
-        onMouseLeave={() => setIsDown(false)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
-        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-      >
-        {options.map((opt, i) => {
-          const isObj = typeof opt === 'object' && opt !== null;
-          const hasArt = isObj && opt.artUrl;
-          const label = isObj ? (opt.deck || opt.name || "Unnamed") : opt;
-
-          return (
-            <button
-              key={`${title}-${i}`}
-              data-option-index={i}
-              onClick={() => !didScroll.current && onSelect(opt)}
-              className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center active:scale-95 transition-all shadow-xl backdrop-blur-md overflow-hidden"
-            >
-              {hasArt && (
-                <>
-                  <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                  <div className="absolute inset-0 bg-black/30" />
-                </>
-              )}
-              <span className="relative z-10 text-lg md:text-2xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
-                {label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      {showBack && (
-        <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-          ← Back
-        </button>
-      )}
-    </div>
-  );
-};
-
 // --- QUADRANT WRAPPER ---
 const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
