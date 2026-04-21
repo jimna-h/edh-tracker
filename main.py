@@ -76,7 +76,7 @@ def submit_stats():
         # Log to Game_Summary
         summary_row = [
             game_id,
-            data['mulliganType'],  # Mulligan Type
+            data.get('mulligan_type', ''),  # Mulligan Type
             winner['player'],      # Winner Name
             winner['deck'],        # Winner Deck
             data['turn'],          # Total Turns
