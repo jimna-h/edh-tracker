@@ -211,9 +211,25 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   }, [firstSeatIndex, seat.order]);
 
   const handleBack = () => {
-    if (step === 1) onResetAll();
-    else if (step === 6) { onUpdate(id, 'deckOwner', ''); setStep(1); }
-    else setStep(Math.max(0, step - 1));
+    if (step === 1) {
+      onResetAll();
+    } else if (step === 2) {
+      // If going back from Deck selection to Player selection, clear the name
+      onUpdate(id, 'name', '');
+      setStep(1);
+    } else if (step === 3 || step === 4 || step === 5 || step === 6) {
+      // Reset Art and Colors when moving back from deck-related steps
+      onUpdate(id, 'artUrl', '');
+      onUpdate(id, 'colors', '');
+      if (step === 6) {
+        onUpdate(id, 'deckOwner', '');
+        setStep(1);
+      } else {
+        setStep(2); // Go back to Deck selection
+      }
+    } else {
+      setStep(Math.max(0, step - 1));
+    }
   };
 
   return (
