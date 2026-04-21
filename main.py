@@ -40,23 +40,32 @@ def get_players():
         for ws in sh.worksheets():
             rows = ws.get_all_values()
             deck_list = []
+            pfp_url = "" # Initialize empty PFP
+            
             for row in rows[1:]:
                 deck_name = row[0] if len(row) > 0 else ""
                 art_url = row[1] if len(row) > 1 else ""
-                # NEW: Grab Color_ID from the 3rd column
                 color_id = row[2] if len(row) > 2 else ""
                 
-                if deck_name:
+                if deck_name.upper() == "PFP":
+                    pfp_url = art_url # Store the PFP URL
+                elif deck_name:
                     deck_list.append({
                         "deck": deck_name,
                         "artUrl": art_url,
                         "colors": color_id,
                     })
-            data[ws.title] = deck_list
+            
+            # Return both the deck list and the PFP for this worksheet (player)
+            data[ws.title] = {
+                "decks": deck_list,
+                "pfp": pfp_url
+            }
         return jsonify(data)
     except Exception as e:
         print(f"Error fetching players: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/submit', methods=['POST'])
 def submit_stats():
