@@ -36,11 +36,13 @@ client = get_gspread_client()
 def get_players():
     try:
         sh = client.open_by_key(PLAYERS_ID)
-        data = {}
+        # Using a list instead of a dict to preserve tab order
+        ordered_data = [] 
+        
         for ws in sh.worksheets():
             rows = ws.get_all_values()
             deck_list = []
-            pfp_url = "" # Initialize empty PFP
+            pfp_url = ""
             
             for row in rows[1:]:
                 deck_name = row[0] if len(row) > 0 else ""
@@ -48,7 +50,7 @@ def get_players():
                 color_id = row[2] if len(row) > 2 else ""
                 
                 if deck_name.upper() == "PFP":
-                    pfp_url = art_url # Store the PFP URL
+                    pfp_url = art_url
                 elif deck_name:
                     deck_list.append({
                         "deck": deck_name,
@@ -56,16 +58,17 @@ def get_players():
                         "colors": color_id,
                     })
             
-            # Return both the deck list and the PFP for this worksheet (player)
-            data[ws.title] = {
+            # Add each player as an object to the list
+            ordered_data.append({
+                "player_name": ws.title,
                 "decks": deck_list,
                 "pfp": pfp_url
-            }
-        return jsonify(data)
+            })
+            
+        return jsonify(ordered_data)
     except Exception as e:
         print(f"Error fetching players: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/submit', methods=['POST'])
 def submit_stats():
