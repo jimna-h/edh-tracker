@@ -8,7 +8,7 @@ const textShadowStyle = {
 // --- COLOR PICKER COMPONENT ---
 const ColorPicker = ({ selected = [], onToggle }) => {
   const colors = [
-    { id: 'W', bg: '#fffbeb', text: 'text-gray-800' }, 
+    { id: 'W', bg: '#fffbeb', text: 'text-gray-800' },
     { id: 'U', bg: '#3b82f6', text: 'text-white' },
     { id: 'B', bg: '#1f2937', text: 'text-white' },
     { id: 'R', bg: '#ef4444', text: 'text-white' },
@@ -364,12 +364,21 @@ const players = [...playerOptions, "+ GUEST"];
         )}
         
         {step === 7 && (
-          <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
-            <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">{seat.deck}</p>
-            <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">{seat.name}</h2>
-            <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
-          </div>
-        )}
+  <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
+    <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
+      {seat.deck}
+    </p>
+    {seat.deckOwner && seat.deckOwner !== seat.name && (
+      <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
+        borrowed from {seat.deckOwner}
+      </p>
+    )}
+    <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+      {seat.name}
+    </h2>
+    <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
+  </div>
+)}
       </QuadrantWrapper>
     </div>
   );
