@@ -474,7 +474,7 @@ export default function App() {
       if (!gameStarted && pendingGames.length > 0) syncPending();
       else setTurn(prev => Math.max(1, prev - 1)); 
       timerRef.current = null; 
-    }, 800);
+    }, 400);
   };
 
   const handlePointerUp = (e) => {
