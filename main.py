@@ -101,17 +101,18 @@ def submit_stats():
         for p in data['players']:
             # Mapping including the new seat_position (Column I)
             perf_row = [
-                game_id,
-                p['player'],
-                p['deck'],
-                p.get('stats', {}).get('startLands'),
-                p.get('stats', {}).get('lands'),
-                p.get('stats', {}).get('rocks'),
-                p.get('stats', {}).get('dorks'),
-                p['turn_died'],
-                p.get('seat_position'),
-                p.get('colors')
-            ]
+    game_id,
+    p.get('player', ''),
+    p.get('deck', ''),
+    p.get('deck_owner', p.get('player', '')),  # deck owner, falls back to player
+    p.get('stats', {}).get('startLands'),
+    p.get('stats', {}).get('lands'),
+    p.get('stats', {}).get('rocks'),
+    p.get('stats', {}).get('dorks'),
+    p.get('turn_died'),
+    p.get('seat_position'),
+    p.get('colors', '')
+]
             rows_to_insert.append(perf_row)
 
         # Using append_rows for efficiency
