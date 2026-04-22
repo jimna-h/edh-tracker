@@ -730,4 +730,30 @@ const handlePointerUp = (e) => {
       </div>
     </div>
   );
+
+  useEffect(() => {
+  let wakeLock = null;
+
+  const requestWakeLock = async () => {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+      console.log('Wake lock failed:', err);
+    }
+  };
+
+  // Re-acquire when tab becomes visible again
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  };
+
+  requestWakeLock();
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (wakeLock) wakeLock.release();
+  };
+}, []);
+  
 }
