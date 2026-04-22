@@ -453,6 +453,12 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
 
 // --- MAIN APP ---
 export default function App() {
+
+const IS_REAL = new URLSearchParams(window.location.search).get('key') === 'toski';
+const submitUrl = IS_REAL 
+  ? 'https://edh-backend.onrender.com/submit'
+  : 'https://edh-backend.onrender.com/submit-demo';
+  
   const [gameStarted, setGameStarted] = useState(false);
   const [turn, setTurn] = useState(1);
   const [playerDataMap, setPlayerDataMap] = useState([]);
@@ -628,7 +634,7 @@ const handlePointerUp = (e) => {
   let remaining = [...pendingGames];
   for (const g of games) {
     try {
-      const r = await fetch('https://edh-backend.onrender.com/submit', { 
+      const r = await fetch(submitUrl, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(g) 
@@ -662,7 +668,7 @@ const handlePointerUp = (e) => {
 
   try {
     setIsSyncing(true);
-    const r = await fetch('https://edh-backend.onrender.com/submit', { 
+    const r = await fetch(submitUrl, { 
       method: 'POST', 
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify(gameData) 
