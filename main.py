@@ -14,6 +14,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Google Sheets Config
 PLAYERS_ID = "1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g"
 STATS_ID = "18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I"
+STATS_ID_DEMO = "1Asvw6nIR0RojdwtQvT8QFc2NqEdm78zaE7qsGYafR0M"
 
 def get_gspread_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -130,6 +131,63 @@ def submit_stats():
     
     except Exception as e:
         print(f"Error submitting game: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/submit-demo', methods=['POST'])
+def submit_demo():
+    request_data = request.json
+    try:
+        client = get_gspread_client()
+        sh = client.open_by_key(STATS_ID_DEMO)
+        
+        summary_ws = sh.worksheet("Game_Summary")
+        performance_ws = sh.worksheet("Player_Performance")
+
+        game_id = f"G-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
+        
+        raw_ts = request_data.get('timestamp', '')
+        try:
+            dt = datetime.fromisoformat(raw_ts.replace('Z', '+00:00'))
+            local_tz = pytz.timezone('America/Denver')
+            timestamp = dt.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        winner = next((p for p in request_data['players'] if p['turn_died'] == 0), request_data['players'][0])
+        
+        summary_row = [
+            game_id,
+            request_data.get('mulligan_type', ''),
+            winner.get('seat_position'),
+            winner.get('player', ''),
+            winner.get('deck', ''),
+            request_data.get('turn', 0),
+            timestamp
+        ]
+        summary_ws.append_row(summary_row)
+
+        rows_to_insert = []
+        for p in request_data['players']:
+            perf_row = [
+                game_id,
+                p.get('player', ''),
+                p.get('deck', ''),
+                p.get('deck_owner', p.get('player', '')),
+                p.get('stats', {}).get('startLands'),
+                p.get('stats', {}).get('lands'),
+                p.get('stats', {}).get('rocks'),
+                p.get('stats', {}).get('dorks'),
+                p.get('turn_died'),
+                p.get('seat_position'),
+                p.get('colors', '')
+            ]
+            rows_to_insert.append(perf_row)
+
+        performance_ws.append_rows(rows_to_insert)
+        return jsonify({"status": "success", "game_id": game_id})
+    
+    except Exception as e:
+        print(f"Error submitting demo game: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
