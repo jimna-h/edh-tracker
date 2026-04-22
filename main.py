@@ -100,7 +100,7 @@ def submit_stats():
     winner.get('player', ''),
     winner.get('deck', ''),
     data.get('turn', 0),
-    data.get('timestamp', timestamp)
+    timestamp
 ]
         summary_ws.append_row(summary_row)
 
