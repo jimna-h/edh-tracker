@@ -106,13 +106,8 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       <p 
-  className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white"
-  style={{ 
-    backgroundColor: 'rgba(0,0,0,0.7)', 
-    padding: '6px 24px', 
-    borderRadius: '999px',
-    backdropFilter: 'blur(8px)',
-  }}
+  className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white px-6 py-2 rounded-full"
+  style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
 >
   {title}
 </p>
@@ -424,7 +419,7 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
         )}
         
         {player.status === 'questionnaire' && (
-  <div className="w-full h-full flex items-center justify-center bg-black/20 backdrop-blur-3xl">
+  <div className="w-full h-full flex items-center justify-center">
     <SelectionCarousel 
       title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
       isFlipped={isFlipped}
