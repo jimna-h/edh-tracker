@@ -105,7 +105,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
-      <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 drop-shadow-md">{title}</p>
+      <div className="bg-black/50 border border-white/10 rounded-full px-5 py-2 mb-4 md:mb-8">
+  <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] drop-shadow-md">{title}</p>
+</div>
       <div
         ref={scrollRef}
         onMouseDown={handleMouseDown}
@@ -414,16 +416,14 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
         )}
         
         {player.status === 'questionnaire' && (
-  <div className="w-full h-full flex items-center justify-center backdrop-blur-3xl">
-    <div className="w-[90%] bg-black/60 border border-white/10 rounded-[2rem] py-6 px-2 shadow-2xl">
-      <SelectionCarousel 
-        title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
-        isFlipped={isFlipped}
-        options={statOptions(player.step)}
-        onBack={() => onBackStep(id)} 
-        onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
-      />
-    </div>
+  <div className="w-full h-full flex items-center justify-center bg-black/20 backdrop-blur-3xl">
+    <SelectionCarousel 
+      title={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]} 
+      isFlipped={isFlipped}
+      options={statOptions(player.step)}
+      onBack={() => onBackStep(id)} 
+      onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
+    />
   </div>
 )}
 
