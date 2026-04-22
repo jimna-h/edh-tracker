@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 import os
 import json
+import pytz
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -78,13 +79,18 @@ def submit_stats():
         
         summary_ws = sh.worksheet("Game_Summary")
         performance_ws = sh.worksheet("Player_Performance")
-
         game_id = f"G-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
+        
+        raw_ts = data.get('timestamp', '')
+        try:
+            dt = datetime.fromisoformat(raw_ts.replace('Z', '+00:00'))
+            local_tz = pytz.timezone('America/Denver')
+            timestamp = dt.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         # Find the winner (turn_died == 0)
         winner = next((p for p in data['players'] if p['turn_died'] == 0), data['players'][0])
-        
         # Log to Game_Summary
         summary_row = [
     game_id,
