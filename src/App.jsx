@@ -105,7 +105,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
-      <div className="bg-black/50 border border-white/10 rounded-full px-5 py-2 mb-4 md:mb-8">
+      <div className="bg-black/60 rounded-full px-10 py-2 mb-4 md:mb-8">
   <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] drop-shadow-md">{title}</p>
 </div>
       <div
