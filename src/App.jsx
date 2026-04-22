@@ -105,9 +105,17 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
-      <div className="bg-black/60 rounded-full mb-4 md:mb-8" style={{ padding: '6px 40px' }}>
-  <p className="text-white/60 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] drop-shadow-md">{title}</p>
-</div>
+      <p 
+  className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white"
+  style={{ 
+    backgroundColor: 'rgba(0,0,0,0.7)', 
+    padding: '6px 24px', 
+    borderRadius: '999px',
+    backdropFilter: 'blur(8px)',
+  }}
+>
+  {title}
+</p>
       <div
         ref={scrollRef}
         onMouseDown={handleMouseDown}
