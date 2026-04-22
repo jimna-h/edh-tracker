@@ -87,13 +87,14 @@ def submit_stats():
         
         # Log to Game_Summary
         summary_row = [
-            game_id,
-            data.get('mulligan_type', ''),  # Mulligan Type
-            winner['player'],      # Winner Name
-            winner['deck'],        # Winner Deck
-            data['turn'],          # Total Turns
-            timestamp
-        ]
+    game_id,
+    data.get('mulligan_type', ''),
+    winner.get('seat_position'),
+    winner.get('player', ''),
+    winner.get('deck', ''),
+    data.get('turn', 0),
+    data.get('timestamp', timestamp)
+]
         summary_ws.append_row(summary_row)
 
         # Log each player to Player_Performance
