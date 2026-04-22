@@ -496,6 +496,40 @@ export default function App() {
   return () => window.removeEventListener('online', syncPending);
 }, []);
 
+  // --- WAKE LOCK ---
+  useEffect(() => {
+    let wakeLock = null;
+
+    const requestWakeLock = async () => {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake lock acquired');
+      } catch (err) {
+        console.log('Wake lock failed:', err.name, err.message);
+      }
+    };
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      requestWakeLock();
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+    };
+
+    document.addEventListener('pointerdown', handleFirstInteraction);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) wakeLock.release();
+    };
+  }, []);
+
   const handleResetAll = () => {
     setFirstSeatIndex(null);
     setMulliganType('');
@@ -731,37 +765,6 @@ const handlePointerUp = (e) => {
     </div>
   );
 
-  useEffect(() => {
-  let wakeLock = null;
 
-  const requestWakeLock = async () => {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake lock acquired');
-    } catch (err) {
-      console.log('Wake lock failed:', err.name, err.message);
-    }
-  };
-
-  const handleVisibilityChange = async () => {
-    if (document.visibilityState === 'visible') {
-      await requestWakeLock();
-    }
-  };
-
-  const handleFirstInteraction = () => {
-    requestWakeLock();
-    document.removeEventListener('pointerdown', handleFirstInteraction);
-  };
-
-  document.addEventListener('pointerdown', handleFirstInteraction);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-  return () => {
-    document.removeEventListener('pointerdown', handleFirstInteraction);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    if (wakeLock) wakeLock.release();
-  };
-}, []);
   
 }
