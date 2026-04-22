@@ -737,20 +737,28 @@ const handlePointerUp = (e) => {
   const requestWakeLock = async () => {
     try {
       wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake lock acquired');
     } catch (err) {
-      console.log('Wake lock failed:', err);
+      console.log('Wake lock failed:', err.name, err.message);
     }
   };
 
-  // Re-acquire when tab becomes visible again
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') requestWakeLock();
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible') {
+      await requestWakeLock();
+    }
   };
 
-  requestWakeLock();
+  const handleFirstInteraction = () => {
+    requestWakeLock();
+    document.removeEventListener('pointerdown', handleFirstInteraction);
+  };
+
+  document.addEventListener('pointerdown', handleFirstInteraction);
   document.addEventListener('visibilitychange', handleVisibilityChange);
 
   return () => {
+    document.removeEventListener('pointerdown', handleFirstInteraction);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     if (wakeLock) wakeLock.release();
   };
