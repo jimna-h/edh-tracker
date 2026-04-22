@@ -496,40 +496,61 @@ export default function App() {
   return () => window.removeEventListener('online', syncPending);
 }, []);
 
-  // --- WAKE LOCK ---
   useEffect(() => {
-    let wakeLock = null;
+  let wakeLock = null;
+  let audioContext = null;
+  let silentSource = null;
 
-    const requestWakeLock = async () => {
+  const startSilentAudio = () => {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+      silentSource = audioContext.createBufferSource();
+      silentSource.buffer = buffer;
+      silentSource.loop = true;
+      silentSource.connect(audioContext.destination);
+      silentSource.start();
+    } catch (err) {
+      console.log('Silent audio failed:', err);
+    }
+  };
+
+  const requestWakeLock = async () => {
+    if ('wakeLock' in navigator) {
       try {
         wakeLock = await navigator.wakeLock.request('screen');
         console.log('Wake lock acquired');
+        return;
       } catch (err) {
-        console.log('Wake lock failed:', err.name, err.message);
+        console.log('Wake lock failed, using audio fallback');
       }
-    };
+    }
+    startSilentAudio();
+  };
 
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        await requestWakeLock();
-      }
-    };
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible') {
+      await requestWakeLock();
+      if (audioContext?.state === 'suspended') audioContext.resume();
+    }
+  };
 
-    const handleFirstInteraction = () => {
-      requestWakeLock();
-      document.removeEventListener('pointerdown', handleFirstInteraction);
-    };
+  const handleFirstInteraction = () => {
+    requestWakeLock();
+    document.removeEventListener('pointerdown', handleFirstInteraction);
+  };
 
-    document.addEventListener('pointerdown', handleFirstInteraction);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('pointerdown', handleFirstInteraction);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => {
-      document.removeEventListener('pointerdown', handleFirstInteraction);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLock) wakeLock.release();
-    };
-  }, []);
-
+  return () => {
+    document.removeEventListener('pointerdown', handleFirstInteraction);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (wakeLock) wakeLock.release();
+    if (silentSource) silentSource.stop();
+    if (audioContext) audioContext.close();
+  };
+}, []);
   const handleResetAll = () => {
     setFirstSeatIndex(null);
     setMulliganType('');
