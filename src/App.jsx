@@ -127,15 +127,15 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
           return (
             <button
-              key={`${title}-${i}`}
-              data-option-index={i}
-              onClick={(e) => {
-                if (handledTouch.current) return;
-                if (!didScroll.current) onSelect(opt);
-              }}
-              className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden active:scale-90 active:brightness-150"
-              style={{ backgroundColor: buttonColor || 'rgba(255,255,255,0.1)' }}
-            >
+  key={`${title}-${i}`}
+  data-option-index={i}
+  onClick={(e) => {
+    if (handledTouch.current) return;
+    if (!didScroll.current) onSelect(opt);
+  }}
+  className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden active:scale-90 active:brightness-150"
+  style={buttonColor ? { backgroundColor: buttonColor } : {}}
+>
               {hasArt && (
                 <>
                   <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
