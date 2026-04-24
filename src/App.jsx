@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -55,7 +55,6 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const mountTime = useRef(Date.now());
   const handledTouch = useRef(false);
 
-  // Scroll to start whenever options change (fix #4)
   useEffect(() => {
     mountTime.current = Date.now();
     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
@@ -106,10 +105,11 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       {title && (
-  <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white/60 drop-shadow-md">
-    {title}
-  </p>
-)}      <div
+        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white/60 drop-shadow-md">
+          {title}
+        </p>
+      )}
+      <div
         ref={scrollRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -127,15 +127,15 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
           return (
             <button
-  key={`${title}-${i}`}
-  data-option-index={i}
-  onClick={(e) => {
-    if (handledTouch.current) return;
-    if (!didScroll.current) onSelect(opt);
-  }}
-  className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] bg-white/10 border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden
-    active:scale-90 active:bg-white/30 active:border-white/60"
->
+              key={`${title}-${i}`}
+              data-option-index={i}
+              onClick={(e) => {
+                if (handledTouch.current) return;
+                if (!didScroll.current) onSelect(opt);
+              }}
+              className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden active:scale-90 active:brightness-150"
+              style={{ backgroundColor: buttonColor || 'rgba(255,255,255,0.1)' }}
+            >
               {hasArt && (
                 <>
                   <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
@@ -192,19 +192,14 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
-  // 1. Correctly map the new ordered Array from the backend
+  const playerOptions = playerDataMap.map(p => ({
+    name: p.player_name,
+    artUrl: p.pfp
+  }));
+  const players = [...playerOptions, "+ GUEST"];
 
-const playerOptions = playerDataMap.map(p => ({
-  name: p.player_name,
-  artUrl: p.pfp // This is the crucial link to your SelectionCarousel's hasArt check
-}));
-  
-const players = [...playerOptions, "+ GUEST"];
-
-  // 2. Find the player entry in the array to get their specific decks
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
-  
   const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
@@ -220,18 +215,16 @@ const players = [...playerOptions, "+ GUEST"];
     if (step === 1) {
       onResetAll();
     } else if (step === 2) {
-      // If going back from Deck selection to Player selection, clear the name
       onUpdate(id, 'name', '');
       setStep(1);
     } else if (step === 3 || step === 4 || step === 5 || step === 6) {
-      // Reset Art and Colors when moving back from deck-related steps
       onUpdate(id, 'artUrl', '');
       onUpdate(id, 'colors', '');
       if (step === 6) {
         onUpdate(id, 'deckOwner', '');
         setStep(1);
       } else {
-        setStep(2); // Go back to Deck selection
+        setStep(2);
       }
     } else {
       setStep(Math.max(0, step - 1));
@@ -272,27 +265,24 @@ const players = [...playerOptions, "+ GUEST"];
           )
         )}
 
-       {step === 1 && mulliganType && (
-  <SelectionCarousel 
-    title={`Seat ${seat.order}`} 
-    isFlipped={isFlipped} 
-    options={players} 
-    onBack={handleBack} 
-    onSelect={(val) => { 
-      if (typeof val === 'object' && val !== null) {
-        // We found a real player
-        onUpdate(id, 'name', val.name); 
-        // We temporarily store their PFP so the UI can show it
-        onUpdate(id, 'pfpUrl', val.artUrl); 
-      } else {
-        // It's a Guest
-        onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
-        onUpdate(id, 'pfpUrl', ''); // Guests have no PFP
-      }
-      setStep(2); 
-    }} 
-  />
-)}
+        {step === 1 && mulliganType && (
+          <SelectionCarousel 
+            title={`Seat ${seat.order}`} 
+            isFlipped={isFlipped} 
+            options={players} 
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              if (typeof val === 'object' && val !== null) {
+                onUpdate(id, 'name', val.name); 
+                onUpdate(id, 'pfpUrl', val.artUrl); 
+              } else {
+                onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+                onUpdate(id, 'pfpUrl', '');
+              }
+              setStep(2); 
+            }} 
+          />
+        )}
         
         {step === 2 && (
           <SelectionCarousel 
@@ -329,34 +319,34 @@ const players = [...playerOptions, "+ GUEST"];
         )}
 
         {step === 5 && (
-  <SelectionCarousel 
-    title="Borrow From?" 
-    isFlipped={isFlipped} 
-    options={playerDataMap
-      .filter(p => p.player_name !== seat.name)
-      .map(p => ({ name: p.player_name, artUrl: p.pfp }))
-    }
-    onBack={handleBack} 
-    onSelect={(val) => { 
-      onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
-      setStep(6); 
-    }} 
-  />
-)}
-{step === 6 && (
-  <SelectionCarousel 
-    title={`${seat.deckOwner}'s Decks`} 
-    isFlipped={isFlipped} 
-    options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
-    onBack={handleBack} 
-    onSelect={(val) => { 
-      onUpdate(id, 'deck', val.deck); 
-      onUpdate(id, 'artUrl', val.artUrl); 
-      onUpdate(id, 'colors', val.colors || ''); 
-      setStep(3); 
-    }} 
-  />
-)}
+          <SelectionCarousel 
+            title="Borrow From?" 
+            isFlipped={isFlipped} 
+            options={playerDataMap
+              .filter(p => p.player_name !== seat.name)
+              .map(p => ({ name: p.player_name, artUrl: p.pfp }))
+            }
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
+              setStep(6); 
+            }} 
+          />
+        )}
+        {step === 6 && (
+          <SelectionCarousel 
+            title={`${seat.deckOwner}'s Decks`} 
+            isFlipped={isFlipped} 
+            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              onUpdate(id, 'deck', val.deck); 
+              onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'colors', val.colors || ''); 
+              setStep(3); 
+            }} 
+          />
+        )}
         {step === 3 && (
           <SelectionCarousel 
             title="Starting Lands" 
@@ -368,21 +358,21 @@ const players = [...playerOptions, "+ GUEST"];
         )}
         
         {step === 7 && (
-  <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
-    <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
-      {seat.deck}
-    </p>
-    {seat.deckOwner && seat.deckOwner !== seat.name && (
-      <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
-        borrowed from {seat.deckOwner}
-      </p>
-    )}
-    <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
-      {seat.name}
-    </h2>
-    <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
-  </div>
-)}
+          <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
+            <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
+              {seat.deck}
+            </p>
+            {seat.deckOwner && seat.deckOwner !== seat.name && (
+              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
+                borrowed from {seat.deckOwner}
+              </p>
+            )}
+            <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+              {seat.name}
+            </h2>
+            <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
+          </div>
+        )}
       </QuadrantWrapper>
     </div>
   );
@@ -394,11 +384,13 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
-  // Change #3: "Skip" prepended before 0, then 0-30 for lands, 0-10 for rocks/dorks
   const statOptions = (step) => {
     if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i)];
     return ['Skip', ...Array.from({length: 11}, (_, i) => i)];
   };
+
+  // lands = dark green, rocks = brown, dorks = light green
+  const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
 
   return (
     <div className="w-full h-full flex items-center justify-center">
@@ -407,7 +399,6 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
           <div className="flex flex-col items-center w-full px-4 md:px-10">
             <p style={hasArt ? textShadowStyle : {}} className="text-white/80 font-black text-[9px] md:text-[18px] uppercase tracking-[0.4em] mb-1 truncate max-w-full">{player.deck}</p>
             <h2 style={hasArt ? textShadowStyle : {}} className="text-white text-2xl md:text-7xl font-black uppercase tracking-tighter text-center leading-[0.8] mb-6 md:mb-20">{player.name}</h2>
-            {/* Change #2: bigger lose/win buttons */}
             <div className={`flex w-full max-w-[220px] md:max-w-[400px] ${hasArt ? 'bg-black/50' : 'bg-black/[0.08]'} rounded-[1.2rem] md:rounded-[2.5rem] overflow-hidden backdrop-blur-xl border ${hasArt ? 'border-white/20' : 'border-transparent'}`}>
               <button onClick={() => onLose(id)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Lose</button>
               <div className="w-[1px] bg-white/20 my-2 md:my-5" />
@@ -417,24 +408,25 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
         )}
         
         {player.status === 'questionnaire' && (
-  <div className="w-full h-full flex items-center justify-center">
-    <div className="flex flex-col items-center w-full">
-      <p className="text-white font-black text-[10px] uppercase tracking-[0.4em] mb-3"
-        style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}
-      >
-        {['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
-      </p>
-      <SelectionCarousel 
-        title=""
-        showBack={true}
-        isFlipped={isFlipped}
-        options={statOptions(player.step)}
-        onBack={() => onBackStep(id)} 
-        onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
-      />
-    </div>
-  </div>
-)}
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="flex flex-col items-center w-full">
+              <p className="text-white font-black text-[10px] uppercase tracking-[0.4em] mb-3"
+                style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}
+              >
+                {['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+              </p>
+              <SelectionCarousel 
+                title=""
+                showBack={true}
+                isFlipped={isFlipped}
+                options={statOptions(player.step)}
+                buttonColor={statColors[player.step]}
+                onBack={() => onBackStep(id)} 
+                onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
+              />
+            </div>
+          </div>
+        )}
 
         {isOut && (
           <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
@@ -452,13 +444,12 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
 };
 
 // --- MAIN APP ---
-export default function App() {
-
 const IS_REAL = new URLSearchParams(window.location.search).get('key') === 'toski';
 const submitUrl = IS_REAL 
   ? 'https://edh-backend.onrender.com/submit'
   : 'https://edh-backend.onrender.com/submit-demo';
-  
+
+export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [turn, setTurn] = useState(1);
   const [playerDataMap, setPlayerDataMap] = useState([]);
@@ -477,86 +468,85 @@ const submitUrl = IS_REAL
   const timerRef = useRef(null);
 
   useEffect(() => {
-  // 1. Immediate Load from Cache
-  const cachedData = localStorage.getItem('mtg_player_cache');
-  if (cachedData) {
-    try {
-      setPlayerDataMap(JSON.parse(cachedData));
-    } catch (e) {
-      console.error("Cache corrupted:", e);
-    }
-  }
-
-  // 2. Background Fetch to Update Cache
-  fetch('https://edh-backend.onrender.com/players')
-    .then(r => r.json())
-    .then(d => {
-      setPlayerDataMap(d);
-      localStorage.setItem('mtg_player_cache', JSON.stringify(d)); // Save for next time
-    })
-    .catch(() => console.log("Offline: Using cached player data"));
-
-  if (pendingGames.length > 0) syncPending();
-
-  window.addEventListener('online', syncPending);
-  return () => window.removeEventListener('online', syncPending);
-}, []);
-
-  useEffect(() => {
-  let wakeLock = null;
-  let audioContext = null;
-  let silentSource = null;
-
-  const startSilentAudio = () => {
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
-      silentSource = audioContext.createBufferSource();
-      silentSource.buffer = buffer;
-      silentSource.loop = true;
-      silentSource.connect(audioContext.destination);
-      silentSource.start();
-    } catch (err) {
-      console.log('Silent audio failed:', err);
-    }
-  };
-
-  const requestWakeLock = async () => {
-    if ('wakeLock' in navigator) {
+    const cachedData = localStorage.getItem('mtg_player_cache');
+    if (cachedData) {
       try {
-        wakeLock = await navigator.wakeLock.request('screen');
-        console.log('Wake lock acquired');
-        return;
-      } catch (err) {
-        console.log('Wake lock failed, using audio fallback');
+        setPlayerDataMap(JSON.parse(cachedData));
+      } catch (e) {
+        console.error("Cache corrupted:", e);
       }
     }
-    startSilentAudio();
-  };
 
-  const handleVisibilityChange = async () => {
-    if (document.visibilityState === 'visible') {
-      await requestWakeLock();
-      if (audioContext?.state === 'suspended') audioContext.resume();
-    }
-  };
+    fetch('https://edh-backend.onrender.com/players')
+      .then(r => r.json())
+      .then(d => {
+        setPlayerDataMap(d);
+        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+      })
+      .catch(() => console.log("Offline: Using cached player data"));
 
-  const handleFirstInteraction = () => {
-    requestWakeLock();
-    document.removeEventListener('pointerdown', handleFirstInteraction);
-  };
+    if (pendingGames.length > 0) syncPending();
 
-  document.addEventListener('pointerdown', handleFirstInteraction);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', syncPending);
+    return () => window.removeEventListener('online', syncPending);
+  }, []);
 
-  return () => {
-    document.removeEventListener('pointerdown', handleFirstInteraction);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    if (wakeLock) wakeLock.release();
-    if (silentSource) silentSource.stop();
-    if (audioContext) audioContext.close();
-  };
-}, []);
+  useEffect(() => {
+    let wakeLock = null;
+    let audioContext = null;
+    let silentSource = null;
+
+    const startSilentAudio = () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+        silentSource = audioContext.createBufferSource();
+        silentSource.buffer = buffer;
+        silentSource.loop = true;
+        silentSource.connect(audioContext.destination);
+        silentSource.start();
+      } catch (err) {
+        console.log('Silent audio failed:', err);
+      }
+    };
+
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake lock acquired');
+          return;
+        } catch (err) {
+          console.log('Wake lock failed, using audio fallback');
+        }
+      }
+      startSilentAudio();
+    };
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await requestWakeLock();
+        if (audioContext?.state === 'suspended') audioContext.resume();
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      requestWakeLock();
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+    };
+
+    document.addEventListener('pointerdown', handleFirstInteraction);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) wakeLock.release();
+      if (silentSource) silentSource.stop();
+      if (audioContext) audioContext.close();
+    };
+  }, []);
+
   const handleResetAll = () => {
     setFirstSeatIndex(null);
     setMulliganType('');
@@ -575,23 +565,23 @@ const submitUrl = IS_REAL
   };
 
   const handlePointerDown = (e) => {
-  e.preventDefault();
-  timerRef.current = setTimeout(() => { 
-    setTurn(prev => Math.max(1, prev - 1)); 
-    timerRef.current = null; 
-  }, 400);
-};
+    e.preventDefault();
+    timerRef.current = setTimeout(() => { 
+      setTurn(prev => Math.max(1, prev - 1)); 
+      timerRef.current = null; 
+    }, 400);
+  };
 
-const handlePointerUp = (e) => {
-  e.preventDefault();
-  if (timerRef.current) { 
-    clearTimeout(timerRef.current); 
-    if (gameStarted) setTurn(prev => prev + 1); 
-    else if (allFilled) setGameStarted(true);
-    else if (hasPending) syncPending(); // single tap to sync
-    timerRef.current = null; 
-  }
-};
+  const handlePointerUp = (e) => {
+    e.preventDefault();
+    if (timerRef.current) { 
+      clearTimeout(timerRef.current); 
+      if (gameStarted) setTurn(prev => prev + 1); 
+      else if (allFilled) setGameStarted(true);
+      else if (hasPending) syncPending();
+      timerRef.current = null; 
+    }
+  };
 
   const updateSeat = (id, field, value) => {
     setSeats(prev => {
@@ -627,69 +617,65 @@ const handlePointerUp = (e) => {
   };
 
   const syncPending = async () => {
-  if (isSyncing || pendingGames.length === 0) return;
-  setIsSyncing(true);
-  // Snapshot what we're trying to send right now
-  const games = [...pendingGames];
-  let remaining = [...pendingGames];
-  for (const g of games) {
+    if (isSyncing || pendingGames.length === 0) return;
+    setIsSyncing(true);
+    const games = [...pendingGames];
+    let remaining = [...pendingGames];
+    for (const g of games) {
+      try {
+        const r = await fetch(submitUrl, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(g) 
+        });
+        if (r.ok) {
+          remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
+          setPendingGames([...remaining]);
+          localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
+        } else { break; }
+      } catch (e) { break; }
+    }
+    setIsSyncing(false);
+  };
+
+  const submitGame = async () => {
+    const gameData = {
+      timestamp: new Date().toISOString(),
+      turn,
+      mulligan_type: mulliganType,
+      players: seats.map(s => ({ 
+        player: s.name, 
+        deck: s.deck, 
+        turn_died: s.stats.turnDied, 
+        stats: s.stats, 
+        colors: s.colors, 
+        deck_owner: s.deckOwner || s.name, 
+        seat_position: s.order
+      }))
+    };
+
     try {
+      setIsSyncing(true);
       const r = await fetch(submitUrl, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(g) 
+        body: JSON.stringify(gameData) 
       });
-      if (r.ok) {
-        // Remove only this specific game by timestamp
-        remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
-        setPendingGames([...remaining]);
-        localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
-      } else { break; }
-    } catch (e) { break; }
-  }
-  setIsSyncing(false);
-};
-
-  const submitGame = async () => {
-  const gameData = {
-    timestamp: new Date().toISOString(),
-    turn,
-    mulligan_type: mulliganType,
-    players: seats.map(s => ({ 
-      player: s.name, 
-      deck: s.deck, 
-      turn_died: s.stats.turnDied, 
-      stats: s.stats, 
-      colors: s.colors, 
-      deck_owner: s.deckOwner || s.name, 
-      seat_position: s.order
-    }))
+      if (!r.ok) throw new Error("Server error");
+    } catch (e) {
+      const updated = [...pendingGames, gameData];
+      setPendingGames(updated);
+      localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+      alert("Offline: Game saved locally. It will sync when you're back online!");
+    } finally {
+      setIsSyncing(false);
+      setGameStarted(false); 
+      setTurn(1); 
+      setSeats(initialSeats); 
+      setFirstSeatIndex(null); 
+      setMulliganType('');
+    }
   };
-
-  try {
-    setIsSyncing(true);
-    const r = await fetch(submitUrl, { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify(gameData) 
-    });
-    if (!r.ok) throw new Error("Server error");
-    // Online + success: no alert, just reset
-  } catch (e) {
-    // Offline: queue it and let the user know
-    const updated = [...pendingGames, gameData];
-    setPendingGames(updated);
-    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
-    alert("Offline: Game saved locally. It will sync when you're back online!");
-  } finally {
-    setIsSyncing(false);
-    setGameStarted(false); 
-    setTurn(1); 
-    setSeats(initialSeats); 
-    setFirstSeatIndex(null); 
-    setMulliganType('');
-  }
-};
   
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
   const allFinished = seats.every(s => s.status === 'done');
@@ -748,28 +734,28 @@ const handlePointerUp = (e) => {
               <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
             </button>
           )}
-          {/* Change #1: black background, massive number */}
           {gameStarted && !allFinished && (
-  <button
-  onPointerDown={handlePointerDown} 
-  onPointerUp={handlePointerUp}
-  className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
-  style={{ 
-    width: '180px', 
-    height: '180px', 
-    backgroundColor: '#000000',
-    WebkitTapHighlightColor: 'transparent',
-    userSelect: 'none'
-  }}
->
-  <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: '12px' }}>Turn</span>
-  <span 
-    className="font-black tabular-nums text-white select-none" 
-    style={{ fontSize: '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
-  >
-    {turn}
-  </span>
-</button>)}
+            <button
+              onPointerDown={handlePointerDown} 
+              onPointerUp={handlePointerUp}
+              className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
+              style={{ 
+                width: '180px', 
+                height: '180px', 
+                backgroundColor: '#000000',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none'
+              }}
+            >
+              <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: '12px' }}>Turn</span>
+              <span 
+                className="font-black tabular-nums text-white select-none" 
+                style={{ fontSize: '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
+              >
+                {turn}
+              </span>
+            </button>
+          )}
           {gameStarted && allFinished && (
             <button
               onClick={submitGame}
@@ -783,7 +769,4 @@ const handlePointerUp = (e) => {
       </div>
     </div>
   );
-
-
-  
 }
