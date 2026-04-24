@@ -133,7 +133,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
-  className="relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl backdrop-blur-md overflow-hidden active:scale-90 active:brightness-150"
+  className={`relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
   style={buttonColor ? { backgroundColor: buttonColor } : {}}
 >
               {hasArt && (
