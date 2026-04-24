@@ -751,33 +751,25 @@ const handlePointerUp = (e) => {
           {/* Change #1: black background, massive number */}
           {gameStarted && !allFinished && (
   <button
-    onPointerDown={handlePointerDown} 
-    onPointerUp={handlePointerUp}
-    // Added 'select-none' to prevent highlighting
-    className="pointer-events-auto rounded-full flex items-center justify-center border-none outline-none select-none"
-    style={{ 
-      width: '180px', 
-      height: '180px', 
-      backgroundColor: '#000000',
-      border: 'none',
-      outline: 'none',
-      WebkitTapHighlightColor: 'transparent', // Removes the grey box on mobile tap
-      userSelect: 'none' // Extra insurance for all browsers
-    }}
+  onPointerDown={handlePointerDown} 
+  onPointerUp={handlePointerUp}
+  className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
+  style={{ 
+    width: '180px', 
+    height: '180px', 
+    backgroundColor: '#000000',
+    WebkitTapHighlightColor: 'transparent',
+    userSelect: 'none'
+  }}
+>
+  <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: '12px' }}>Turn</span>
+  <span 
+    className="font-black tabular-nums text-white select-none" 
+    style={{ fontSize: '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
   >
-    <span 
-      className="font-black tabular-nums text-white select-none" 
-      style={{ 
-        fontSize: '100px', 
-        lineHeight: 1,
-        userSelect: 'none',
-        WebkitUserSelect: 'none' 
-      }}
-    >
-      {turn}
-    </span>
-  </button>
-)}
+    {turn}
+  </span>
+</button>)}
           {gameStarted && allFinished && (
             <button
               onClick={submitGame}
