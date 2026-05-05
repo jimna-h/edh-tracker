@@ -378,35 +378,276 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   );
 };
 
+// --- COMMANDER DAMAGE GRID ---
+// Shows 3 small counters (one per opponent). Tap = +1, hold 600ms = reset to 0.
+const CmdDamageGrid = ({ damage, onDamageChange, opponents, hasArt }) => {
+  const holdTimers = useRef({});
+
+  const handleDown = (opId) => {
+    holdTimers.current[opId] = setTimeout(() => {
+      onDamageChange(opId, -(damage[opId] || 0)); // reset
+      holdTimers.current[opId] = null;
+    }, 600);
+  };
+
+  const handleUp = (opId) => {
+    if (holdTimers.current[opId]) {
+      clearTimeout(holdTimers.current[opId]);
+      holdTimers.current[opId] = null;
+      onDamageChange(opId, 1); // tap = increment
+    }
+  };
+
+  const handleLeave = (opId) => {
+    clearTimeout(holdTimers.current[opId]);
+    holdTimers.current[opId] = null;
+  };
+
+  const bgBase = hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.10)';
+  const bgDanger = 'rgba(180,20,20,0.75)';
+
+  return (
+    <div
+      className="grid gap-[3px] select-none"
+      style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 'clamp(52px,13vw,80px)', height: 'clamp(52px,13vw,80px)' }}
+    >
+      {opponents.map((op, i) => {
+        const val = damage[op.id] || 0;
+        const isDanger = val >= 21;
+        return (
+          <div
+            key={op.id}
+            onPointerDown={() => handleDown(op.id)}
+            onPointerUp={() => handleUp(op.id)}
+            onPointerLeave={() => handleLeave(op.id)}
+            onPointerCancel={() => handleLeave(op.id)}
+            className="rounded-[6px] flex items-center justify-center cursor-pointer select-none"
+            style={{
+              backgroundColor: isDanger ? bgDanger : bgBase,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              touchAction: 'none',
+              userSelect: 'none',
+            }}
+          >
+            <span
+              className="font-black tabular-nums leading-none select-none"
+              style={{
+                fontSize: 'clamp(11px, 2.8vw, 18px)',
+                color: isDanger ? '#ffffff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)',
+              }}
+            >
+              {val}
+            </span>
+          </div>
+        );
+      })}
+      {/* 4th cell — always empty placeholder to keep grid square */}
+      <div className="rounded-[6px]" style={{ backgroundColor: 'transparent' }} />
+    </div>
+  );
+};
+
 // --- GAMEPLAY QUADRANT ---
-const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
+// Layout (Lifetap-style):
+//   • Entire LEFT half  = tap to subtract life (hold = fast repeat)
+//   • Entire RIGHT half = tap to add life (hold = fast repeat)
+//   • Life number: huge, dead-center
+//   • Player name pill: bottom-center
+//   • Lose / Win pills: flanking the name
+//   • Commander damage grid: top corner (opposite side from name)
+const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
+
+  // Tap-and-hold life change
+  const timerRef = useRef(null);
+  const repeatRef = useRef(null);
+  const [flash, setFlash] = useState(null); // 'left' | 'right' | null
+
+  const startRepeat = (delta) => {
+    timerRef.current = setTimeout(() => {
+      repeatRef.current = setInterval(() => onLifeChange(id, delta), 80);
+      timerRef.current = null;
+    }, 350);
+  };
+
+  const stopRepeat = (delta) => {
+    const wasInitialTimer = !!timerRef.current;
+    clearTimeout(timerRef.current);
+    clearInterval(repeatRef.current);
+    timerRef.current = null;
+    repeatRef.current = null;
+    setFlash(null);
+    if (wasInitialTimer) onLifeChange(id, delta); // single tap
+  };
+
+  const cancelRepeat = () => {
+    clearTimeout(timerRef.current);
+    clearInterval(repeatRef.current);
+    timerRef.current = null;
+    repeatRef.current = null;
+    setFlash(null);
+  };
 
   const statOptions = (step) => {
     if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i)];
     return ['Skip', ...Array.from({length: 11}, (_, i) => i)];
   };
-
-  // lands = dark green, rocks = brown, dorks = light green
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
+
+  const life = player.stats.life;
+  const isLow = life <= 10;
+  const isDead = life <= 0;
+  const lifeColor = isDead ? '#ef4444' : isLow ? '#f97316' : (hasArt ? '#ffffff' : '#111111');
+  const lifeShadow = hasArt
+    ? `0px 2px 24px rgba(0,0,0,0.95), 0 0 50px ${isDead ? 'rgba(239,68,68,0.5)' : isLow ? 'rgba(249,115,22,0.35)' : 'transparent'}`
+    : isDead ? '0 0 16px rgba(239,68,68,0.4)' : 'none';
+
+  // overlay flash color
+  const flashBg = flash === 'left'
+    ? 'rgba(0,0,0,0.12)'
+    : flash === 'right'
+    ? 'rgba(255,255,255,0.10)'
+    : 'transparent';
 
   return (
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
+
+        {/* ── ACTIVE STATE ── */}
         {player.status === 'active' && (
-          <div className="flex flex-col items-center w-full px-4 md:px-10">
-            <p style={hasArt ? textShadowStyle : {}} className="text-white/80 font-black text-[9px] md:text-[18px] uppercase tracking-[0.4em] mb-1 truncate max-w-full">{player.deck}</p>
-            <h2 style={hasArt ? textShadowStyle : {}} className="text-white text-2xl md:text-7xl font-black uppercase tracking-tighter text-center leading-[0.8] mb-6 md:mb-20">{player.name}</h2>
-            <div className={`flex w-full max-w-[220px] md:max-w-[400px] ${hasArt ? 'bg-black/50' : 'bg-black/[0.08]'} rounded-[1.2rem] md:rounded-[2.5rem] overflow-hidden backdrop-blur-xl border ${hasArt ? 'border-white/20' : 'border-transparent'}`}>
-              <button onClick={() => onLose(id)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Lose</button>
-              <div className="w-[1px] bg-white/20 my-2 md:my-5" />
-              <button onClick={() => onLose(id, null, true)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Win</button>
+          <div className="relative w-full h-full overflow-hidden" style={{ touchAction: 'none' }}>
+
+            {/* LEFT half — subtract life */}
+            <div
+              className="absolute inset-y-0 left-0 z-10"
+              style={{ width: '50%', touchAction: 'none', backgroundColor: flash === 'left' ? flashBg : 'transparent', transition: 'background-color 0.1s' }}
+              onPointerDown={(e) => { e.preventDefault(); setFlash('left'); startRepeat(-1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopRepeat(-1); }}
+              onPointerLeave={cancelRepeat}
+              onPointerCancel={cancelRepeat}
+            />
+
+            {/* RIGHT half — add life */}
+            <div
+              className="absolute inset-y-0 right-0 z-10"
+              style={{ width: '50%', touchAction: 'none', backgroundColor: flash === 'right' ? flashBg : 'transparent', transition: 'background-color 0.1s' }}
+              onPointerDown={(e) => { e.preventDefault(); setFlash('right'); startRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopRepeat(1); }}
+              onPointerLeave={cancelRepeat}
+              onPointerCancel={cancelRepeat}
+            />
+
+            {/* ── LIFE NUMBER — centered ── */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span
+                className="font-black tabular-nums leading-none select-none"
+                style={{
+                  fontSize: 'clamp(72px, 18vw, 140px)',
+                  color: lifeColor,
+                  textShadow: lifeShadow,
+                  transition: 'color 0.25s',
+                }}
+              >
+                {life}
+              </span>
             </div>
+
+            {/* ── TOP-LEFT: Commander damage grid ── */}
+            <div className="absolute z-20 pointer-events-auto" style={{ top: 'clamp(8px,2vw,16px)', left: 'clamp(8px,2vw,16px)' }}>
+              <CmdDamageGrid
+                damage={player.stats.cmdDamage || {}}
+                onDamageChange={(opId, delta) => onCmdDamage(id, opId, delta)}
+                opponents={opponents.filter(o => o.id !== id)}
+                hasArt={hasArt}
+              />
+            </div>
+
+            {/* ── BOTTOM CENTER: name pill + Lose/Win ── */}
+            <div
+              className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center pointer-events-auto"
+              style={{ paddingBottom: 'clamp(8px,2vw,16px)', gap: 'clamp(4px,1vw,8px)' }}
+            >
+              {/* name + deck */}
+              <div
+                className="flex flex-col items-center"
+                style={{
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  borderRadius: '999px',
+                  padding: 'clamp(3px,0.8vw,6px) clamp(10px,2.5vw,20px)',
+                }}
+              >
+                <span
+                  className="font-black uppercase tracking-tight leading-none select-none text-center"
+                  style={{
+                    fontSize: 'clamp(11px, 2.8vw, 20px)',
+                    color: hasArt ? '#ffffff' : '#111111',
+                  }}
+                >
+                  {player.name}
+                </span>
+                {player.deck && (
+                  <span
+                    className="font-bold uppercase tracking-widest leading-none select-none text-center truncate"
+                    style={{
+                      fontSize: 'clamp(7px, 1.6vw, 11px)',
+                      color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)',
+                      maxWidth: 'clamp(80px,20vw,160px)',
+                    }}
+                  >
+                    {player.deck}
+                  </span>
+                )}
+              </div>
+
+              {/* Lose / Win pills */}
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onLose(id); }}
+                  className="font-black uppercase tracking-widest select-none"
+                  style={{
+                    fontSize: 'clamp(8px,2vw,12px)',
+                    padding: 'clamp(4px,1vw,7px) clamp(12px,3vw,22px)',
+                    borderRadius: '999px',
+                    backgroundColor: hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.10)',
+                    color: hasArt ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(8px)',
+                    border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                  }}
+                >
+                  Lose
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }}
+                  className="font-black uppercase tracking-widest select-none"
+                  style={{
+                    fontSize: 'clamp(8px,2vw,12px)',
+                    padding: 'clamp(4px,1vw,7px) clamp(12px,3vw,22px)',
+                    borderRadius: '999px',
+                    backgroundColor: hasArt ? 'rgba(212,175,55,0.75)' : 'rgba(212,175,55,0.85)',
+                    color: '#000000',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  Win
+                </button>
+              </div>
+            </div>
+
+            {/* ── SUBTLE +/− HINTS top center ── */}
+            <div className="absolute top-0 left-0 right-0 flex justify-between pointer-events-none" style={{ padding: 'clamp(6px,1.5vw,12px) clamp(14px,3.5vw,28px)' }}>
+              <span className="font-black select-none" style={{ fontSize: 'clamp(13px,3vw,20px)', color: hasArt ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)' }}>−</span>
+              <span className="font-black select-none" style={{ fontSize: 'clamp(13px,3vw,20px)', color: hasArt ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)' }}>+</span>
+            </div>
+
           </div>
         )}
-        
+
+        {/* ── QUESTIONNAIRE STATE ── */}
         {player.status === 'questionnaire' && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="flex flex-col items-center w-full">
@@ -428,6 +669,7 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
           </div>
         )}
 
+        {/* ── OUT / WINNER STATE ── */}
         {isOut && (
           <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
             <div className="opacity-10 scale-75 md:scale-150">
@@ -438,6 +680,7 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
             {!isWinner && <p className="absolute mt-12 md:mt-24 text-white/40 font-black text-[12px] md:text-[20px] uppercase tracking-[0.4em]">Eliminated Turn {player.stats.turnDied}</p>}
           </div>
         )}
+
       </QuadrantWrapper>
     </div>
   );
@@ -462,7 +705,7 @@ export default function App() {
 
   const initialSeats = Array(4).fill(null).map((_, i) => ({ 
     id: i, name: '', deck: '', artUrl: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
-    stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0 } 
+    stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0, life: 40, cmdDamage: {} } 
   }));
   const [seats, setSeats] = useState(initialSeats);
   const timerRef = useRef(null);
@@ -592,6 +835,26 @@ export default function App() {
     });
   };
 
+  const handleLifeChange = (id, delta) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      ns[id].stats.life = ns[id].stats.life + delta;
+      return ns;
+    });
+  };
+
+  const handleCmdDamage = (targetId, sourceId, delta) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      const current = ns[targetId].stats.cmdDamage[sourceId] || 0;
+      ns[targetId].stats.cmdDamage = {
+        ...ns[targetId].stats.cmdDamage,
+        [sourceId]: Math.max(0, current + delta),
+      };
+      return ns;
+    });
+  };
+
   const handleLose = (id, val = null, isWin = false) => {
     const ns = [...seats];
     if (isWin) { 
@@ -713,7 +976,7 @@ export default function App() {
                   onResetAll={handleResetAll}
                   mulliganType={mulliganType} onSetMulligan={setMulliganType}
                 /> :
-                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((s,idx) => ({ id: idx, name: s.name }))} />
               }
             </div>
           ))}
