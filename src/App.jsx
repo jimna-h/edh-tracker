@@ -5,7 +5,7 @@ const textShadowStyle = {
   textShadow: '0px 2px 10px rgba(0,0,0,0.9), 0px 0px 20px rgba(0,0,0,0.5)' 
 };
 
-// --- COLOR PICKER COMPONENT ---
+// --- COLOR PICKER COMPONENT --- 
 const ColorPicker = ({ selected = [], onToggle }) => { 
   const colors = [
     { id: 'W', bg: '#fffbeb', text: 'text-gray-800' },
