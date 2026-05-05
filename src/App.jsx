@@ -180,7 +180,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
       )}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2">
+      <div className="relative z-10 w-full h-full">
         {children}
       </div>
     </div>
@@ -235,14 +235,16 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
         {step === 0 && firstSeatIndex === null && (
-          <button 
-            onClick={() => onSetFirst(id)}
-            className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
-          >
-            <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
-              <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
-            </div>
-          </button>
+          <div className="w-full h-full flex items-center justify-center">
+            <button 
+              onClick={() => onSetFirst(id)}
+              className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+            >
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
+                <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
+              </div>
+            </button>
+          </div>
         )}
 
         {step >= 1 && !mulliganType && (
@@ -258,9 +260,11 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               }} 
             />
           ) : (
-            <div className="text-center animate-pulse">
-              <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
-              <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center animate-pulse">
+                <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
+                <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+              </div>
             </div>
           )
         )}
@@ -358,19 +362,21 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
         
         {step === 7 && (
-          <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
-            <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
-              {seat.deck}
-            </p>
-            {seat.deckOwner && seat.deckOwner !== seat.name && (
-              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
-                borrowed from {seat.deckOwner}
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
+              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
+                {seat.deck}
               </p>
-            )}
-            <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
-              {seat.name}
-            </h2>
-            <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
+              {seat.deckOwner && seat.deckOwner !== seat.name && (
+                <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
+                  borrowed from {seat.deckOwner}
+                </p>
+              )}
+              <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+                {seat.name}
+              </h2>
+              <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
+            </div>
           </div>
         )}
       </QuadrantWrapper>
@@ -713,7 +719,7 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
 
         {/* ── OUT / WINNER STATE ── */}
         {isOut && (
-          <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
+          <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
             <div className="opacity-10 scale-75 md:scale-150">
               <h1 className="text-[5rem] md:text-[11rem] font-black italic uppercase tracking-tighter -rotate-12" style={{ color: isWinner ? '#D4AF37' : '#FFFFFF' }}>
                 {isWinner ? 'WINNER' : 'OUT'}
