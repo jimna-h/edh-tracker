@@ -518,69 +518,83 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
 
         {/* ── ACTIVE STATE ── */}
         {player.status === 'active' && (
-          // NOTE: The outer app container applies rotate(90deg) with width=100vh, height=100vw.
-          // So each quadrant cell in CSS is TALL (portrait), but appears LANDSCAPE on screen.
-          // "left/right" in CSS = "top/bottom" on screen.
-          // "top/bottom" in CSS = "right/left" on screen (outer edge / inner edge toward center).
-          // Font sizing: use vh units — after rotation, 1vh = 1% of screen WIDTH (the dominant dimension).
-          <div className="relative w-full h-full overflow-hidden" style={{ touchAction: 'none' }}>
+          // The outer container is rotate(90deg), so each quadrant div is CSS-PORTRAIT
+          // but appears LANDSCAPE on screen. Lifetap uses the exact same portrait layout:
+          //   CSS TOP    = visual LEFT side of the landscape quadrant  → subtract life (−)
+          //   CSS BOTTOM = visual RIGHT side of the landscape quadrant → add life (+)
+          //   CSS LEFT   = visual TOP edge (outer / away from center)
+          //   CSS RIGHT  = visual BOTTOM edge (inner / toward center)
+          // Name pill goes on CSS right side (vertically centered) = visual bottom/inner edge
+          // Cmd damage goes on CSS left side (top-left corner) = visual top outer corner
+          // − label at CSS top-center, + label at CSS bottom-center
+          <div className="absolute inset-0 overflow-hidden" style={{ touchAction: 'none' }}>
 
-            {/* LEFT half (CSS) = TOP half on screen = subtract life */}
+            {/* ── TAP ZONE: CSS top half → visual left half → subtract life ── */}
             <div
               className="absolute inset-x-0 top-0 z-10"
-              style={{
-                height: '50%',
-                touchAction: 'none',
-                backgroundColor: flash === 'left' ? 'rgba(0,0,0,0.15)' : 'transparent',
-                transition: 'background-color 0.1s',
-              }}
-              onPointerDown={(e) => { e.preventDefault(); setFlash('left'); startRepeat(-1); }}
+              style={{ height: '50%', touchAction: 'none' }}
+              onPointerDown={(e) => { e.preventDefault(); setFlash('sub'); startRepeat(-1); }}
               onPointerUp={(e) => { e.preventDefault(); stopRepeat(-1); }}
               onPointerLeave={cancelRepeat}
               onPointerCancel={cancelRepeat}
             />
 
-            {/* RIGHT half (CSS) = BOTTOM half on screen = add life */}
+            {/* ── TAP ZONE: CSS bottom half → visual right half → add life ── */}
             <div
               className="absolute inset-x-0 bottom-0 z-10"
-              style={{
-                height: '50%',
-                touchAction: 'none',
-                backgroundColor: flash === 'right' ? 'rgba(255,255,255,0.10)' : 'transparent',
-                transition: 'background-color 0.1s',
-              }}
-              onPointerDown={(e) => { e.preventDefault(); setFlash('right'); startRepeat(1); }}
+              style={{ height: '50%', touchAction: 'none' }}
+              onPointerDown={(e) => { e.preventDefault(); setFlash('add'); startRepeat(1); }}
               onPointerUp={(e) => { e.preventDefault(); stopRepeat(1); }}
               onPointerLeave={cancelRepeat}
               onPointerCancel={cancelRepeat}
             />
 
-            {/* ── LIFE NUMBER — dead center, huge ── */}
+            {/* ── Flash feedback ── */}
+            {flash && (
+              <div className="absolute inset-0 z-[8] pointer-events-none" style={{
+                background: flash === 'sub'
+                  ? 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 60%)'
+                  : 'linear-gradient(to top, rgba(255,255,255,0.15) 0%, transparent 60%)',
+              }} />
+            )}
+
+            {/* ── LIFE NUMBER — centered in full cell ── */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[5]">
-              <span
-                className="font-black tabular-nums leading-none select-none"
-                style={{
-                  // vh = screen width after rotation. 25vh on a 390px screen = ~98px. Good.
-                  fontSize: 'clamp(80px, 25vh, 160px)',
-                  color: lifeColor,
-                  textShadow: lifeShadow,
-                  transition: 'color 0.25s',
-                }}
-              >
+              <span style={{
+                // This div is CSS-portrait. Its width ≈ 50vw, height ≈ 50vh (half screen each).
+                // We want the number to dominate the visible landscape width (≈ 50vh after rotation).
+                // Use a percentage of the element's own width: since width ≈ 50vw, 55vw ≈ full width.
+                // But vw/vh are viewport-relative and don't change with CSS transform.
+                // On a 390px wide phone: 50vw = 195px wide cell. We want ~140px font. That's 72vw — too big.
+                // The cell height ≈ 50vh = on 844px tall phone = 422px. 30vh = 253px — too big.
+                // The cell width ≈ 50vw. After rotate(90deg), it appears as height on screen.
+                // Screen landscape view: each quadrant appears ~195px tall × ~422px wide.
+                // Life number should be ~120–140px = ~62–72% of 195px visible height.
+                // 50vw * 0.65 ≈ 32.5vw. Let's use 30vw as the font size.
+                fontSize: 'clamp(80px, 30vw, 160px)',
+                fontWeight: 900,
+                lineHeight: 1,
+                color: lifeColor,
+                textShadow: lifeShadow,
+                transition: 'color 0.25s',
+                userSelect: 'none',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
                 {life}
               </span>
             </div>
 
-            {/* ── −/+ hints at true visual top/bottom (CSS left/right) ── */}
-            {/* After rotation: CSS "left" edge = visual top, CSS "right" edge = visual bottom */}
-            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-[5]" style={{ paddingLeft: '10px' }}>
-              <span style={{ fontSize: 'clamp(16px,4vh,28px)', color: hasArt ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.13)', fontWeight: 900 }}>−</span>
-            </div>
-            <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none z-[5]" style={{ paddingRight: '10px' }}>
-              <span style={{ fontSize: 'clamp(16px,4vh,28px)', color: hasArt ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.13)', fontWeight: 900 }}>+</span>
+            {/* ── − label: CSS top-center = visual left-center of landscape view ── */}
+            <div className="absolute top-0 inset-x-0 flex justify-center items-start pointer-events-none z-[5]" style={{ paddingTop: '10px' }}>
+              <span style={{ fontSize: 'clamp(16px, 6vw, 28px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)', lineHeight: 1 }}>−</span>
             </div>
 
-            {/* ── Commander damage: CSS top-left = visual outer-top corner ── */}
+            {/* ── + label: CSS bottom-center = visual right-center of landscape view ── */}
+            <div className="absolute bottom-0 inset-x-0 flex justify-center items-end pointer-events-none z-[5]" style={{ paddingBottom: '10px' }}>
+              <span style={{ fontSize: 'clamp(16px, 6vw, 28px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)', lineHeight: 1 }}>+</span>
+            </div>
+
+            {/* ── Commander damage grid: CSS top-left corner = visual outer-top of landscape view ── */}
             <div className="absolute z-20 pointer-events-auto" style={{ top: '10px', left: '10px' }}>
               <CmdDamageGrid
                 damage={player.stats.cmdDamage || {}}
@@ -590,90 +604,86 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
               />
             </div>
 
-            {/* ── Player name + deck + Lose/Win: CSS bottom = visual inner edge (toward screen center) ── */}
+            {/* ── Name pill: CSS right edge, vertically centered = visual inner (toward center) side ── */}
             <div
-              className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center pointer-events-auto"
-              style={{ paddingBottom: '10px', gap: '5px' }}
+              className="absolute inset-y-0 right-0 z-20 flex flex-col items-center justify-center pointer-events-auto"
+              style={{ paddingRight: '10px', gap: '5px' }}
             >
-              {/* Name pill */}
-              <div
-                style={{
-                  backgroundColor: hasArt ? 'rgba(0,0,0,0.60)' : 'rgba(255,255,255,0.80)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  borderRadius: '999px',
-                  padding: '4px 14px 5px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  maxWidth: '85%',
-                }}
-              >
-                <span
-                  className="font-black uppercase tracking-tight leading-tight select-none text-center"
-                  style={{
-                    fontSize: 'clamp(12px, 3.5vh, 22px)',
-                    color: hasArt ? '#ffffff' : '#111111',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '100%',
-                  }}
-                >
+              {/* Name + deck pill */}
+              <div style={{
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '14px',
+                padding: '8px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '2px',
+                maxWidth: '80px',
+              }}>
+                <span style={{
+                  fontSize: 'clamp(10px, 4vw, 16px)',
+                  fontWeight: 900,
+                  color: hasArt ? '#fff' : '#111',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1.1,
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                  wordBreak: 'break-word',
+                  hyphens: 'auto',
+                }}>
                   {player.name}
                 </span>
                 {player.deck && (
-                  <span
-                    className="font-bold uppercase leading-tight select-none text-center"
-                    style={{
-                      fontSize: 'clamp(7px, 1.8vh, 11px)',
-                      letterSpacing: '0.12em',
-                      color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '100%',
-                    }}
-                  >
+                  <span style={{
+                    fontSize: 'clamp(6px, 2.5vw, 9px)',
+                    fontWeight: 700,
+                    color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                    letterSpacing: '0.05em',
+                    lineHeight: 1.1,
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    wordBreak: 'break-word',
+                  }}>
                     {player.deck}
                   </span>
                 )}
               </div>
 
-              {/* Lose / Win */}
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onLose(id); }}
-                  className="font-black uppercase select-none"
-                  style={{
-                    fontSize: 'clamp(9px, 2.2vh, 13px)',
-                    letterSpacing: '0.1em',
-                    padding: '5px 18px',
-                    borderRadius: '999px',
-                    backgroundColor: hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.10)',
-                    color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                    backdropFilter: 'blur(8px)',
-                    border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-                  }}
-                >
-                  Lose
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }}
-                  className="font-black uppercase select-none"
-                  style={{
-                    fontSize: 'clamp(9px, 2.2vh, 13px)',
-                    letterSpacing: '0.1em',
-                    padding: '5px 18px',
-                    borderRadius: '999px',
-                    backgroundColor: 'rgba(212,175,55,0.85)',
-                    color: '#000000',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  Win
-                </button>
-              </div>
+              {/* Lose button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onLose(id); }}
+                style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)',
+                  fontWeight: 900,
+                  letterSpacing: '0.08em',
+                  padding: '6px 10px',
+                  borderRadius: '10px',
+                  textTransform: 'uppercase',
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.58)' : 'rgba(0,0,0,0.10)',
+                  color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                  minWidth: '52px',
+                }}
+              >Lose</button>
+
+              {/* Win button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }}
+                style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)',
+                  fontWeight: 900,
+                  letterSpacing: '0.08em',
+                  padding: '6px 10px',
+                  borderRadius: '10px',
+                  textTransform: 'uppercase',
+                  backgroundColor: 'rgba(212,175,55,0.9)',
+                  color: '#000',
+                  minWidth: '52px',
+                }}
+              >Win</button>
             </div>
 
           </div>
