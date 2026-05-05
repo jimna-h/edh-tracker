@@ -442,110 +442,118 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
         {player.status === 'active' && (
           <div className="flex flex-col items-center w-full h-full" style={{ touchAction: 'none' }}>
 
-            {/* CSS top half = visual left half = subtract life */}
-            <div className="flex-1 w-full flex items-center justify-center relative"
+            {/* CSS top zone = visual left = subtract. Small, just holds the − hint */}
+            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 14%' }}
               onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
               onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
               onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
             >
-              {/* Cmd damage grid — top-left of this half */}
-              <div className="absolute top-0 left-0" style={{ zIndex: 20 }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-              >
-                <div className="grid gap-[3px]" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 62, height: 62 }}>
-                  {myOpponents.map((op) => {
-                    const val = (player.stats.cmdDamage || {})[op.id] || 0;
-                    const danger = val >= 21;
-                    return (
-                      <div key={op.id}
-                        className="rounded-[5px] flex items-center justify-center"
-                        style={{
-                          backgroundColor: danger ? 'rgba(180,20,20,0.8)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.10)'),
-                          touchAction: 'none', userSelect: 'none', cursor: 'pointer',
-                        }}
-                        onPointerDown={(e) => { e.stopPropagation(); startCmd(op.id); }}
-                        onPointerUp={(e) => { e.stopPropagation(); stopCmd(op.id); }}
-                        onPointerLeave={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
-                        onPointerCancel={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
-                      >
-                        <span style={{ fontSize: 13, fontWeight: 900, color: danger ? '#fff' : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), userSelect: 'none' }}>{val}</span>
-                      </div>
-                    );
-                  })}
-                  {myOpponents.length < 4 && <div />}
-                </div>
+              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(13px, 5vw, 20px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)' }}>−</span>
+            </div>
+
+            {/* Life number zone — split into top-tap (subtract) and bottom-tap (add) with number centered */}
+            <div className="w-full relative" style={{ flex: '0 0 44%' }}>
+              {/* Top half = subtract */}
+              <div className="absolute inset-x-0 top-0" style={{ height: '50%', touchAction: 'none' }}
+                onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
+                onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
+                onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+              />
+              {/* Bottom half = add */}
+              <div className="absolute inset-x-0 bottom-0" style={{ height: '50%', touchAction: 'none' }}
+                onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
+                onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+                onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+              />
+              {/* Number — centered, pointer-events none so taps pass to zones above */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span style={{
+                  fontSize: 'clamp(52px, 20vw, 110px)',
+                  fontWeight: 900, lineHeight: 1,
+                  color: lifeColor,
+                  textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none',
+                  transition: 'color 0.2s', userSelect: 'none',
+                }}>{life}</span>
               </div>
-              {/* − hint */}
-              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' }}>−</span>
             </div>
 
-            {/* Life number — centered between the two halves */}
-            <div className="flex items-center justify-center pointer-events-none select-none" style={{ zIndex: 5 }}>
-              <span style={{
-                fontSize: 'clamp(70px, 30vw, 150px)',
-                fontWeight: 900, lineHeight: 1,
-                color: lifeColor,
-                textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none',
-                transition: 'color 0.2s',
-                userSelect: 'none',
-              }}>{life}</span>
-            </div>
-
-            {/* CSS bottom half = visual right half = add life */}
-            <div className="flex-1 w-full flex flex-col items-center justify-end pb-2 gap-1"
-              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
-              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            {/* Bottom info row: [cmd grid] [Lose] [name] [Win] — all in one row */}
+            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 28%', gap: 6, paddingLeft: 6, paddingRight: 6 }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
             >
-              {/* + hint */}
-              <div className="flex-1 flex items-center justify-center pointer-events-none">
-                <span className="select-none" style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' }}>+</span>
+              {/* Cmd damage 2×2 grid */}
+              <div className="grid gap-[3px] shrink-0" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 54, height: 54 }}>
+                {myOpponents.map((op) => {
+                  const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                  const danger = val >= 21;
+                  return (
+                    <div key={op.id}
+                      className="rounded-[5px] flex items-center justify-center"
+                      style={{
+                        backgroundColor: danger ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.10)'),
+                        touchAction: 'none', userSelect: 'none', cursor: 'pointer',
+                      }}
+                      onPointerDown={(e) => { e.stopPropagation(); startCmd(op.id); }}
+                      onPointerUp={(e) => { e.stopPropagation(); stopCmd(op.id); }}
+                      onPointerLeave={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                      onPointerCancel={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                    >
+                      <span style={{ fontSize: 12, fontWeight: 900, color: danger ? '#fff' : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), userSelect: 'none' }}>{val}</span>
+                    </div>
+                  );
+                })}
+                {myOpponents.length < 4 && <div />}
               </div>
-              {/* Name pill */}
+
+              {/* Lose button */}
+              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
+                padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+              }}>Lose</button>
+
+              {/* Name + deck pill */}
               <div style={{
                 backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
                 backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-                borderRadius: 999, padding: '4px 14px',
+                borderRadius: 999, padding: '4px 10px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                maxWidth: '88%',
-              }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-              >
+                flex: 1, minWidth: 0,
+              }}>
                 <span style={{
-                  fontSize: 'clamp(11px, 4vw, 18px)', fontWeight: 900,
+                  fontSize: 'clamp(10px, 3.5vw, 16px)', fontWeight: 900,
                   color: hasArt ? '#fff' : '#111', textTransform: 'uppercase',
                   letterSpacing: '-0.01em', lineHeight: 1.2,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
                   userSelect: 'none',
                 }}>{player.name}</span>
                 {player.deck && <span style={{
-                  fontSize: 'clamp(6px, 2.5vw, 9px)', fontWeight: 700,
+                  fontSize: 'clamp(6px, 2vw, 9px)', fontWeight: 700,
                   color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                  textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1,
+                  textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
                   userSelect: 'none',
                 }}>{player.deck}</span>}
               </div>
-              {/* Lose / Win */}
-              <div style={{ display: 'flex', gap: 6 }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-              >
-                <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
-                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.08em',
-                  padding: '5px 16px', borderRadius: 999, textTransform: 'uppercase',
-                  backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
-                  color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                  border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-                }}>Lose</button>
-                <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
-                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.08em',
-                  padding: '5px 16px', borderRadius: 999, textTransform: 'uppercase',
-                  backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
-                }}>Win</button>
-              </div>
+
+              {/* Win button */}
+              <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
+                padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
+                backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
+              }}>Win</button>
+            </div>
+
+            {/* CSS bottom zone = visual right = add. Holds the + hint */}
+            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 14%' }}
+              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            >
+              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(13px, 5vw, 20px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)' }}>+</span>
             </div>
 
           </div>
