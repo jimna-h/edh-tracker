@@ -440,38 +440,51 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
         {player.status === 'active' && (
-          // This div fills the wrapper's flex container. It is itself relative-positioned
-          // so we can layer tap zones (absolute) over a flex layout underneath.
-          // The quadrant div in CSS is PORTRAIT (tall+narrow) but appears LANDSCAPE on screen
-          // due to the parent rotate(90deg). Lifetap uses the same portrait layout:
-          //   CSS top half   = visual LEFT half  → subtract life
-          //   CSS bottom half = visual RIGHT half → add life
-          //   CSS left edge  = visual TOP edge   → − hint
-          //   CSS right edge = visual BOTTOM edge → + hint
-          //   CSS top-left corner = visual outer-top corner → cmd damage grid
-          //   CSS bottom, centered = visual inner side → name pill + buttons
-          <div className="relative w-full h-full" style={{ touchAction: 'none' }}>
+          <div className="flex flex-col items-center w-full h-full" style={{ touchAction: 'none' }}>
 
-            {/* ── Tap zones (z-10, pointer-events on) ── */}
-            {/* CSS top half = visual left = subtract */}
-            <div className="absolute inset-x-0 top-0 z-10" style={{ height: '50%', touchAction: 'none' }}
+            {/* CSS top half = visual left half = subtract life */}
+            <div className="flex-1 w-full flex items-center justify-center relative"
               onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
               onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
               onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-            />
-            {/* CSS bottom half = visual right = add */}
-            <div className="absolute inset-x-0 bottom-0 z-10" style={{ height: '50%', touchAction: 'none' }}
-              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
-              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-            />
+            >
+              {/* Cmd damage grid — top-left of this half */}
+              <div className="absolute top-0 left-0" style={{ zIndex: 20 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+              >
+                <div className="grid gap-[3px]" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 62, height: 62 }}>
+                  {myOpponents.map((op) => {
+                    const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                    const danger = val >= 21;
+                    return (
+                      <div key={op.id}
+                        className="rounded-[5px] flex items-center justify-center"
+                        style={{
+                          backgroundColor: danger ? 'rgba(180,20,20,0.8)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.10)'),
+                          touchAction: 'none', userSelect: 'none', cursor: 'pointer',
+                        }}
+                        onPointerDown={(e) => { e.stopPropagation(); startCmd(op.id); }}
+                        onPointerUp={(e) => { e.stopPropagation(); stopCmd(op.id); }}
+                        onPointerLeave={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                        onPointerCancel={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                      >
+                        <span style={{ fontSize: 13, fontWeight: 900, color: danger ? '#fff' : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), userSelect: 'none' }}>{val}</span>
+                      </div>
+                    );
+                  })}
+                  {myOpponents.length < 4 && <div />}
+                </div>
+              </div>
+              {/* − hint */}
+              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' }}>−</span>
+            </div>
 
-            {/* ── Life number — absolute center ── */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 5 }}>
+            {/* Life number — centered between the two halves */}
+            <div className="flex items-center justify-center pointer-events-none select-none" style={{ zIndex: 5 }}>
               <span style={{
                 fontSize: 'clamp(70px, 30vw, 150px)',
-                fontWeight: 900,
-                lineHeight: 1,
+                fontWeight: 900, lineHeight: 1,
                 color: lifeColor,
                 textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none',
                 transition: 'color 0.2s',
@@ -479,52 +492,27 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
               }}>{life}</span>
             </div>
 
-            {/* ── − hint: CSS left edge center = visual top edge ── */}
-            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ zIndex: 5, paddingLeft: 8 }}>
-              <span style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)', userSelect: 'none' }}>−</span>
-            </div>
-            {/* ── + hint: CSS right edge center = visual bottom edge ── */}
-            <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none" style={{ zIndex: 5, paddingRight: 8 }}>
-              <span style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)', userSelect: 'none' }}>+</span>
-            </div>
-
-            {/* ── Cmd damage grid: CSS top-left = visual outer-top corner ── */}
-            <div className="absolute" style={{ top: 10, left: 10, zIndex: 20 }}>
-              <div className="grid gap-[3px]" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 62, height: 62 }}>
-                {myOpponents.map((op) => {
-                  const val = (player.stats.cmdDamage || {})[op.id] || 0;
-                  const danger = val >= 21;
-                  return (
-                    <div key={op.id}
-                      className="rounded-[5px] flex items-center justify-center"
-                      style={{
-                        backgroundColor: danger ? 'rgba(180,20,20,0.8)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.10)'),
-                        touchAction: 'none', userSelect: 'none', cursor: 'pointer',
-                      }}
-                      onPointerDown={() => startCmd(op.id)}
-                      onPointerUp={() => stopCmd(op.id)}
-                      onPointerLeave={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
-                      onPointerCancel={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: 900, color: danger ? '#fff' : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), userSelect: 'none' }}>{val}</span>
-                    </div>
-                  );
-                })}
-                {/* Empty 4th cell to complete 2×2 grid */}
-                {myOpponents.length < 4 && <div />}
+            {/* CSS bottom half = visual right half = add life */}
+            <div className="flex-1 w-full flex flex-col items-center justify-end pb-2 gap-1"
+              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            >
+              {/* + hint */}
+              <div className="flex-1 flex items-center justify-center pointer-events-none">
+                <span className="select-none" style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)' }}>+</span>
               </div>
-            </div>
-
-            {/* ── Name pill + Lose/Win: CSS bottom-center = visual inner side ── */}
-            <div className="absolute bottom-0 inset-x-0 flex flex-col items-center" style={{ zIndex: 20, paddingBottom: 10, gap: 5 }}>
-              {/* Name + deck */}
+              {/* Name pill */}
               <div style={{
                 backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
                 backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                 borderRadius: 999, padding: '4px 14px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 maxWidth: '88%',
-              }}>
+              }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+              >
                 <span style={{
                   fontSize: 'clamp(11px, 4vw, 18px)', fontWeight: 900,
                   color: hasArt ? '#fff' : '#111', textTransform: 'uppercase',
@@ -541,7 +529,10 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
                 }}>{player.deck}</span>}
               </div>
               {/* Lose / Win */}
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+              >
                 <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
                   fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.08em',
                   padding: '5px 16px', borderRadius: 999, textTransform: 'uppercase',
