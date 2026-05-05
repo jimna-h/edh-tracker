@@ -180,7 +180,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
       )}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2">
+      <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-2">
         {children}
       </div>
     </div>
