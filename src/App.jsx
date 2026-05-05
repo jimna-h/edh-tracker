@@ -180,7 +180,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
       )}
-      <div className="relative z-10 w-full h-full">
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2">
         {children}
       </div>
     </div>
@@ -235,16 +235,14 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
         {step === 0 && firstSeatIndex === null && (
-          <div className="w-full h-full flex items-center justify-center">
-            <button 
-              onClick={() => onSetFirst(id)}
-              className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
-            >
-              <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
-                <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
-              </div>
-            </button>
-          </div>
+          <button 
+            onClick={() => onSetFirst(id)}
+            className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+          >
+            <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
+              <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
+            </div>
+          </button>
         )}
 
         {step >= 1 && !mulliganType && (
@@ -260,11 +258,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               }} 
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="text-center animate-pulse">
-                <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
-                <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
-              </div>
+            <div className="text-center animate-pulse">
+              <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
+              <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
             </div>
           )
         )}
@@ -362,21 +358,19 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
         
         {step === 7 && (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
-              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
-                {seat.deck}
+          <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
+            <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
+              {seat.deck}
+            </p>
+            {seat.deckOwner && seat.deckOwner !== seat.name && (
+              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
+                borrowed from {seat.deckOwner}
               </p>
-              {seat.deckOwner && seat.deckOwner !== seat.name && (
-                <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
-                  borrowed from {seat.deckOwner}
-                </p>
-              )}
-              <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
-                {seat.name}
-              </h2>
-              <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
-            </div>
+            )}
+            <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+              {seat.name}
+            </h2>
+            <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
           </div>
         )}
       </QuadrantWrapper>
@@ -384,117 +378,50 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   );
 };
 
-// --- COMMANDER DAMAGE GRID ---
-// Shows 3 small counters (one per opponent). Tap = +1, hold 600ms = reset to 0.
-const CmdDamageGrid = ({ damage, onDamageChange, opponents, hasArt }) => {
-  const holdTimers = useRef({});
-
-  const handleDown = (opId) => {
-    holdTimers.current[opId] = setTimeout(() => {
-      onDamageChange(opId, -(damage[opId] || 0)); // reset
-      holdTimers.current[opId] = null;
-    }, 600);
-  };
-
-  const handleUp = (opId) => {
-    if (holdTimers.current[opId]) {
-      clearTimeout(holdTimers.current[opId]);
-      holdTimers.current[opId] = null;
-      onDamageChange(opId, 1); // tap = increment
-    }
-  };
-
-  const handleLeave = (opId) => {
-    clearTimeout(holdTimers.current[opId]);
-    holdTimers.current[opId] = null;
-  };
-
-  const bgBase = hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.10)';
-  const bgDanger = 'rgba(180,20,20,0.75)';
-
-  return (
-    <div
-      className="grid gap-[3px] select-none"
-      style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 'clamp(52px,12vh,76px)', height: 'clamp(52px,12vh,76px)' }}
-    >
-      {opponents.map((op, i) => {
-        const val = damage[op.id] || 0;
-        const isDanger = val >= 21;
-        return (
-          <div
-            key={op.id}
-            onPointerDown={() => handleDown(op.id)}
-            onPointerUp={() => handleUp(op.id)}
-            onPointerLeave={() => handleLeave(op.id)}
-            onPointerCancel={() => handleLeave(op.id)}
-            className="rounded-[6px] flex items-center justify-center cursor-pointer select-none"
-            style={{
-              backgroundColor: isDanger ? bgDanger : bgBase,
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              touchAction: 'none',
-              userSelect: 'none',
-            }}
-          >
-            <span
-              className="font-black tabular-nums leading-none select-none"
-              style={{
-                fontSize: 'clamp(11px, 2.8vh, 17px)',
-                color: isDanger ? '#ffffff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)',
-              }}
-            >
-              {val}
-            </span>
-          </div>
-        );
-      })}
-      {/* 4th cell — always empty placeholder to keep grid square */}
-      <div className="rounded-[6px]" style={{ backgroundColor: 'transparent' }} />
-    </div>
-  );
-};
-
 // --- GAMEPLAY QUADRANT ---
-// Layout (Lifetap-style):
-//   • Entire LEFT half  = tap to subtract life (hold = fast repeat)
-//   • Entire RIGHT half = tap to add life (hold = fast repeat)
-//   • Life number: huge, dead-center
-//   • Player name pill: bottom-center
-//   • Lose / Win pills: flanking the name
-//   • Commander damage grid: top corner (opposite side from name)
 const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
-  // Tap-and-hold life change
-  const timerRef = useRef(null);
-  const repeatRef = useRef(null);
-  const [flash, setFlash] = useState(null); // 'left' | 'right' | null
-
-  const startRepeat = (delta) => {
-    timerRef.current = setTimeout(() => {
-      repeatRef.current = setInterval(() => onLifeChange(id, delta), 80);
-      timerRef.current = null;
+  // Life tap-and-hold
+  const lifeTimerRef = useRef(null);
+  const lifeRepeatRef = useRef(null);
+  const startLifeRepeat = (delta) => {
+    lifeTimerRef.current = setTimeout(() => {
+      lifeRepeatRef.current = setInterval(() => onLifeChange(id, delta), 80);
+      lifeTimerRef.current = null;
     }, 350);
   };
-
-  const stopRepeat = (delta) => {
-    const wasInitialTimer = !!timerRef.current;
-    clearTimeout(timerRef.current);
-    clearInterval(repeatRef.current);
-    timerRef.current = null;
-    repeatRef.current = null;
-    setFlash(null);
-    if (wasInitialTimer) onLifeChange(id, delta); // single tap
+  const stopLifeRepeat = (delta) => {
+    const wasTap = !!lifeTimerRef.current;
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
+    if (wasTap) onLifeChange(id, delta);
+  };
+  const cancelLifeRepeat = () => {
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
   };
 
-  const cancelRepeat = () => {
-    clearTimeout(timerRef.current);
-    clearInterval(repeatRef.current);
-    timerRef.current = null;
-    repeatRef.current = null;
-    setFlash(null);
+  // Cmd damage tap-and-hold (hold 600ms = reset)
+  const cmdTimers = useRef({});
+  const startCmd = (opId) => {
+    cmdTimers.current[opId] = setTimeout(() => {
+      onCmdDamage(id, opId, 'reset');
+      cmdTimers.current[opId] = null;
+    }, 600);
+  };
+  const stopCmd = (opId) => {
+    if (cmdTimers.current[opId]) {
+      clearTimeout(cmdTimers.current[opId]);
+      cmdTimers.current[opId] = null;
+      onCmdDamage(id, opId, 1);
+    }
   };
 
   const statOptions = (step) => {
@@ -503,199 +430,136 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
   };
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
 
-  const life = player.stats.life;
+  const life = player.stats.life ?? 40;
   const isLow = life <= 10;
   const isDead = life <= 0;
   const lifeColor = isDead ? '#ef4444' : isLow ? '#f97316' : (hasArt ? '#ffffff' : '#111111');
-  const lifeShadow = hasArt
-    ? `0px 2px 24px rgba(0,0,0,0.95), 0 0 50px ${isDead ? 'rgba(239,68,68,0.5)' : isLow ? 'rgba(249,115,22,0.35)' : 'transparent'}`
-    : isDead ? '0 0 16px rgba(239,68,68,0.4)' : 'none';
-
-  // overlay flash color
-  const flashBg = flash === 'left'
-    ? 'rgba(0,0,0,0.12)'
-    : flash === 'right'
-    ? 'rgba(255,255,255,0.10)'
-    : 'transparent';
+  const myOpponents = (opponents || []).filter(o => o.id !== id);
 
   return (
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
-
-        {/* ── ACTIVE STATE ── */}
         {player.status === 'active' && (
-          // The outer container is rotate(90deg), so each quadrant div is CSS-PORTRAIT
-          // but appears LANDSCAPE on screen. Lifetap uses the exact same portrait layout:
-          //   CSS TOP    = visual LEFT side of the landscape quadrant  → subtract life (−)
-          //   CSS BOTTOM = visual RIGHT side of the landscape quadrant → add life (+)
-          //   CSS LEFT   = visual TOP edge (outer / away from center)
-          //   CSS RIGHT  = visual BOTTOM edge (inner / toward center)
-          // Name pill goes on CSS right side (vertically centered) = visual bottom/inner edge
-          // Cmd damage goes on CSS left side (top-left corner) = visual top outer corner
-          // − label at CSS top-center, + label at CSS bottom-center
-          <div className="absolute inset-0 overflow-hidden" style={{ touchAction: 'none' }}>
+          // This div fills the wrapper's flex container. It is itself relative-positioned
+          // so we can layer tap zones (absolute) over a flex layout underneath.
+          // The quadrant div in CSS is PORTRAIT (tall+narrow) but appears LANDSCAPE on screen
+          // due to the parent rotate(90deg). Lifetap uses the same portrait layout:
+          //   CSS top half   = visual LEFT half  → subtract life
+          //   CSS bottom half = visual RIGHT half → add life
+          //   CSS left edge  = visual TOP edge   → − hint
+          //   CSS right edge = visual BOTTOM edge → + hint
+          //   CSS top-left corner = visual outer-top corner → cmd damage grid
+          //   CSS bottom, centered = visual inner side → name pill + buttons
+          <div className="relative w-full h-full" style={{ touchAction: 'none' }}>
 
-            {/* ── TAP ZONE: CSS top half → visual left half → subtract life ── */}
-            <div
-              className="absolute inset-x-0 top-0 z-10"
-              style={{ height: '50%', touchAction: 'none' }}
-              onPointerDown={(e) => { e.preventDefault(); setFlash('sub'); startRepeat(-1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopRepeat(-1); }}
-              onPointerLeave={cancelRepeat}
-              onPointerCancel={cancelRepeat}
+            {/* ── Tap zones (z-10, pointer-events on) ── */}
+            {/* CSS top half = visual left = subtract */}
+            <div className="absolute inset-x-0 top-0 z-10" style={{ height: '50%', touchAction: 'none' }}
+              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            />
+            {/* CSS bottom half = visual right = add */}
+            <div className="absolute inset-x-0 bottom-0 z-10" style={{ height: '50%', touchAction: 'none' }}
+              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
             />
 
-            {/* ── TAP ZONE: CSS bottom half → visual right half → add life ── */}
-            <div
-              className="absolute inset-x-0 bottom-0 z-10"
-              style={{ height: '50%', touchAction: 'none' }}
-              onPointerDown={(e) => { e.preventDefault(); setFlash('add'); startRepeat(1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopRepeat(1); }}
-              onPointerLeave={cancelRepeat}
-              onPointerCancel={cancelRepeat}
-            />
-
-            {/* ── Flash feedback ── */}
-            {flash && (
-              <div className="absolute inset-0 z-[8] pointer-events-none" style={{
-                background: flash === 'sub'
-                  ? 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 60%)'
-                  : 'linear-gradient(to top, rgba(255,255,255,0.15) 0%, transparent 60%)',
-              }} />
-            )}
-
-            {/* ── LIFE NUMBER — centered in full cell ── */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[5]">
+            {/* ── Life number — absolute center ── */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 5 }}>
               <span style={{
-                // This div is CSS-portrait. Its width ≈ 50vw, height ≈ 50vh (half screen each).
-                // We want the number to dominate the visible landscape width (≈ 50vh after rotation).
-                // Use a percentage of the element's own width: since width ≈ 50vw, 55vw ≈ full width.
-                // But vw/vh are viewport-relative and don't change with CSS transform.
-                // On a 390px wide phone: 50vw = 195px wide cell. We want ~140px font. That's 72vw — too big.
-                // The cell height ≈ 50vh = on 844px tall phone = 422px. 30vh = 253px — too big.
-                // The cell width ≈ 50vw. After rotate(90deg), it appears as height on screen.
-                // Screen landscape view: each quadrant appears ~195px tall × ~422px wide.
-                // Life number should be ~120–140px = ~62–72% of 195px visible height.
-                // 50vw * 0.65 ≈ 32.5vw. Let's use 30vw as the font size.
-                fontSize: 'clamp(80px, 30vw, 160px)',
+                fontSize: 'clamp(70px, 30vw, 150px)',
                 fontWeight: 900,
                 lineHeight: 1,
                 color: lifeColor,
-                textShadow: lifeShadow,
-                transition: 'color 0.25s',
+                textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none',
+                transition: 'color 0.2s',
                 userSelect: 'none',
-                fontVariantNumeric: 'tabular-nums',
-              }}>
-                {life}
-              </span>
+              }}>{life}</span>
             </div>
 
-            {/* ── − label: CSS top-center = visual left-center of landscape view ── */}
-            <div className="absolute top-0 inset-x-0 flex justify-center items-start pointer-events-none z-[5]" style={{ paddingTop: '10px' }}>
-              <span style={{ fontSize: 'clamp(16px, 6vw, 28px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)', lineHeight: 1 }}>−</span>
+            {/* ── − hint: CSS left edge center = visual top edge ── */}
+            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ zIndex: 5, paddingLeft: 8 }}>
+              <span style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)', userSelect: 'none' }}>−</span>
+            </div>
+            {/* ── + hint: CSS right edge center = visual bottom edge ── */}
+            <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none" style={{ zIndex: 5, paddingRight: 8 }}>
+              <span style={{ fontSize: 'clamp(14px, 6vw, 24px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)', userSelect: 'none' }}>+</span>
             </div>
 
-            {/* ── + label: CSS bottom-center = visual right-center of landscape view ── */}
-            <div className="absolute bottom-0 inset-x-0 flex justify-center items-end pointer-events-none z-[5]" style={{ paddingBottom: '10px' }}>
-              <span style={{ fontSize: 'clamp(16px, 6vw, 28px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)', lineHeight: 1 }}>+</span>
+            {/* ── Cmd damage grid: CSS top-left = visual outer-top corner ── */}
+            <div className="absolute" style={{ top: 10, left: 10, zIndex: 20 }}>
+              <div className="grid gap-[3px]" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 62, height: 62 }}>
+                {myOpponents.map((op) => {
+                  const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                  const danger = val >= 21;
+                  return (
+                    <div key={op.id}
+                      className="rounded-[5px] flex items-center justify-center"
+                      style={{
+                        backgroundColor: danger ? 'rgba(180,20,20,0.8)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.10)'),
+                        touchAction: 'none', userSelect: 'none', cursor: 'pointer',
+                      }}
+                      onPointerDown={() => startCmd(op.id)}
+                      onPointerUp={() => stopCmd(op.id)}
+                      onPointerLeave={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                      onPointerCancel={() => { clearTimeout(cmdTimers.current[op.id]); cmdTimers.current[op.id] = null; }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 900, color: danger ? '#fff' : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), userSelect: 'none' }}>{val}</span>
+                    </div>
+                  );
+                })}
+                {/* Empty 4th cell to complete 2×2 grid */}
+                {myOpponents.length < 4 && <div />}
+              </div>
             </div>
 
-            {/* ── Commander damage grid: CSS top-left corner = visual outer-top of landscape view ── */}
-            <div className="absolute z-20 pointer-events-auto" style={{ top: '10px', left: '10px' }}>
-              <CmdDamageGrid
-                damage={player.stats.cmdDamage || {}}
-                onDamageChange={(opId, delta) => onCmdDamage(id, opId, delta)}
-                opponents={opponents.filter(o => o.id !== id)}
-                hasArt={hasArt}
-              />
-            </div>
-
-            {/* ── Name pill: CSS right edge, vertically centered = visual inner (toward center) side ── */}
-            <div
-              className="absolute inset-y-0 right-0 z-20 flex flex-col items-center justify-center pointer-events-auto"
-              style={{ paddingRight: '10px', gap: '5px' }}
-            >
-              {/* Name + deck pill */}
+            {/* ── Name pill + Lose/Win: CSS bottom-center = visual inner side ── */}
+            <div className="absolute bottom-0 inset-x-0 flex flex-col items-center" style={{ zIndex: 20, paddingBottom: 10, gap: 5 }}>
+              {/* Name + deck */}
               <div style={{
                 backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                borderRadius: '14px',
-                padding: '8px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '2px',
-                maxWidth: '80px',
+                backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                borderRadius: 999, padding: '4px 14px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                maxWidth: '88%',
               }}>
                 <span style={{
-                  fontSize: 'clamp(10px, 4vw, 16px)',
-                  fontWeight: 900,
-                  color: hasArt ? '#fff' : '#111',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1.1,
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
-                  wordBreak: 'break-word',
-                  hyphens: 'auto',
-                }}>
-                  {player.name}
-                </span>
-                {player.deck && (
-                  <span style={{
-                    fontSize: 'clamp(6px, 2.5vw, 9px)',
-                    fontWeight: 700,
-                    color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                    letterSpacing: '0.05em',
-                    lineHeight: 1.1,
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                    wordBreak: 'break-word',
-                  }}>
-                    {player.deck}
-                  </span>
-                )}
+                  fontSize: 'clamp(11px, 4vw, 18px)', fontWeight: 900,
+                  color: hasArt ? '#fff' : '#111', textTransform: 'uppercase',
+                  letterSpacing: '-0.01em', lineHeight: 1.2,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                  userSelect: 'none',
+                }}>{player.name}</span>
+                {player.deck && <span style={{
+                  fontSize: 'clamp(6px, 2.5vw, 9px)', fontWeight: 700,
+                  color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                  userSelect: 'none',
+                }}>{player.deck}</span>}
               </div>
-
-              {/* Lose button */}
-              <button
-                onClick={(e) => { e.stopPropagation(); onLose(id); }}
-                style={{
-                  fontSize: 'clamp(8px, 3vw, 11px)',
-                  fontWeight: 900,
-                  letterSpacing: '0.08em',
-                  padding: '6px 10px',
-                  borderRadius: '10px',
-                  textTransform: 'uppercase',
-                  backgroundColor: hasArt ? 'rgba(0,0,0,0.58)' : 'rgba(0,0,0,0.10)',
+              {/* Lose / Win */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.08em',
+                  padding: '5px 16px', borderRadius: 999, textTransform: 'uppercase',
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
                   color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                  backdropFilter: 'blur(8px)',
                   border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-                  minWidth: '52px',
-                }}
-              >Lose</button>
-
-              {/* Win button */}
-              <button
-                onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }}
-                style={{
-                  fontSize: 'clamp(8px, 3vw, 11px)',
-                  fontWeight: 900,
-                  letterSpacing: '0.08em',
-                  padding: '6px 10px',
-                  borderRadius: '10px',
-                  textTransform: 'uppercase',
-                  backgroundColor: 'rgba(212,175,55,0.9)',
-                  color: '#000',
-                  minWidth: '52px',
-                }}
-              >Win</button>
+                }}>Lose</button>
+                <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.08em',
+                  padding: '5px 16px', borderRadius: 999, textTransform: 'uppercase',
+                  backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
+                }}>Win</button>
+              </div>
             </div>
 
           </div>
         )}
-
-        {/* ── QUESTIONNAIRE STATE ── */}
+        
         {player.status === 'questionnaire' && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="flex flex-col items-center w-full">
@@ -717,9 +581,8 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
           </div>
         )}
 
-        {/* ── OUT / WINNER STATE ── */}
         {isOut && (
-          <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
+          <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
             <div className="opacity-10 scale-75 md:scale-150">
               <h1 className="text-[5rem] md:text-[11rem] font-black italic uppercase tracking-tighter -rotate-12" style={{ color: isWinner ? '#D4AF37' : '#FFFFFF' }}>
                 {isWinner ? 'WINNER' : 'OUT'}
@@ -728,7 +591,6 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
             {!isWinner && <p className="absolute mt-12 md:mt-24 text-white/40 font-black text-[12px] md:text-[20px] uppercase tracking-[0.4em]">Eliminated Turn {player.stats.turnDied}</p>}
           </div>
         )}
-
       </QuadrantWrapper>
     </div>
   );
@@ -886,19 +748,17 @@ export default function App() {
   const handleLifeChange = (id, delta) => {
     setSeats(prev => {
       const ns = [...prev];
-      ns[id].stats.life = ns[id].stats.life + delta;
+      ns[id] = { ...ns[id], stats: { ...ns[id].stats, life: (ns[id].stats.life ?? 40) + delta } };
       return ns;
     });
   };
 
-  const handleCmdDamage = (targetId, sourceId, delta) => {
+  const handleCmdDamage = (targetId, sourceId, deltaOrReset) => {
     setSeats(prev => {
       const ns = [...prev];
-      const current = ns[targetId].stats.cmdDamage[sourceId] || 0;
-      ns[targetId].stats.cmdDamage = {
-        ...ns[targetId].stats.cmdDamage,
-        [sourceId]: Math.max(0, current + delta),
-      };
+      const current = ns[targetId].stats.cmdDamage || {};
+      const newVal = deltaOrReset === 'reset' ? 0 : Math.max(0, (current[sourceId] || 0) + deltaOrReset);
+      ns[targetId] = { ...ns[targetId], stats: { ...ns[targetId].stats, cmdDamage: { ...current, [sourceId]: newVal } } };
       return ns;
     });
   };
@@ -1024,7 +884,7 @@ export default function App() {
                   onResetAll={handleResetAll}
                   mulliganType={mulliganType} onSetMulligan={setMulliganType}
                 /> :
-                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((s,idx) => ({ id: idx, name: s.name }))} />
+                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name }))} />
               }
             </div>
           ))}
