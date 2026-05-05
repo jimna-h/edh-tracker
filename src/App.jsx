@@ -442,30 +442,69 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
         {player.status === 'active' && (
           <div className="flex flex-col items-center w-full h-full" style={{ touchAction: 'none' }}>
 
-            {/* CSS top zone = visual left = subtract. Small, just holds the − hint */}
-            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 14%' }}
-              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
-              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-            >
-              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(13px, 5vw, 20px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)' }}>−</span>
+            {/* ROW 1 (CSS top = visual LEFT side): Lose — Name — Win + left-half tap zone */}
+            <div className="w-full flex items-center justify-center relative" style={{ flex: '0 0 28%' }}>
+              {/* Left half tap = life down (visual left = CSS top-half of this row doesn't matter; 
+                  we split the WHOLE quadrant left/right using absolute overlays on the outer div) */}
+              {/* Lose — Name pill — Win */}
+              <div className="w-full flex items-center justify-center" style={{ gap: 6, paddingLeft: 6, paddingRight: 6 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+              >
+                <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
+                  padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                  color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                  border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                }}>Lose</button>
+
+                <div style={{
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
+                  backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                  borderRadius: 999, padding: '4px 10px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  flex: 1, minWidth: 0,
+                }}>
+                  <span style={{
+                    fontSize: 'clamp(10px, 3.5vw, 16px)', fontWeight: 900,
+                    color: hasArt ? '#fff' : '#111', textTransform: 'uppercase',
+                    letterSpacing: '-0.01em', lineHeight: 1.2,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                    userSelect: 'none',
+                  }}>{player.name}</span>
+                  {player.deck && <span style={{
+                    fontSize: 'clamp(6px, 2vw, 9px)', fontWeight: 700,
+                    color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+                    textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                    userSelect: 'none',
+                  }}>{player.deck}</span>}
+                </div>
+
+                <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                  fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
+                  padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
+                  backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
+                }}>Win</button>
+              </div>
             </div>
 
-            {/* Life number zone — split into top-tap (subtract) and bottom-tap (add) with number centered */}
+            {/* ROW 2 (CSS middle = visual CENTER): Life number — left half = down, right half = up */}
             <div className="w-full relative" style={{ flex: '0 0 44%' }}>
-              {/* Top half = subtract */}
-              <div className="absolute inset-x-0 top-0" style={{ height: '50%', touchAction: 'none' }}
+              {/* Left half = life down */}
+              <div className="absolute top-0 bottom-0 left-0" style={{ width: '50%', touchAction: 'none' }}
                 onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
               />
-              {/* Bottom half = add */}
-              <div className="absolute inset-x-0 bottom-0" style={{ height: '50%', touchAction: 'none' }}
+              {/* Right half = life up */}
+              <div className="absolute top-0 bottom-0 right-0" style={{ width: '50%', touchAction: 'none' }}
                 onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
               />
-              {/* Number — centered, pointer-events none so taps pass to zones above */}
+              {/* Life number centered, pointer-events-none */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span style={{
                   fontSize: 'clamp(52px, 20vw, 110px)',
@@ -475,14 +514,20 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
                   transition: 'color 0.2s', userSelect: 'none',
                 }}>{life}</span>
               </div>
+              {/* − hint left edge, + hint right edge */}
+              <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: 6 }}>
+                <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>−</span>
+              </div>
+              <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none" style={{ paddingRight: 6 }}>
+                <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>+</span>
+              </div>
             </div>
 
-            {/* Bottom info row: [cmd grid] [Lose] [name] [Win] — all in one row */}
-            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 28%', gap: 6, paddingLeft: 6, paddingRight: 6 }}
+            {/* ROW 3 (CSS bottom = visual RIGHT side): Commander damage grid */}
+            <div className="w-full flex items-center justify-start" style={{ flex: '0 0 28%', paddingLeft: 8, paddingRight: 8 }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
             >
-              {/* Cmd damage 2×2 grid */}
               <div className="grid gap-[3px] shrink-0" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 54, height: 54 }}>
                 {myOpponents.map((op) => {
                   const val = (player.stats.cmdDamage || {})[op.id] || 0;
@@ -505,55 +550,6 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
                 })}
                 {myOpponents.length < 4 && <div />}
               </div>
-
-              {/* Lose button */}
-              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
-                fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
-                padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
-                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
-                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-              }}>Lose</button>
-
-              {/* Name + deck pill */}
-              <div style={{
-                backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-                borderRadius: 999, padding: '4px 10px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                flex: 1, minWidth: 0,
-              }}>
-                <span style={{
-                  fontSize: 'clamp(10px, 3.5vw, 16px)', fontWeight: 900,
-                  color: hasArt ? '#fff' : '#111', textTransform: 'uppercase',
-                  letterSpacing: '-0.01em', lineHeight: 1.2,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
-                  userSelect: 'none',
-                }}>{player.name}</span>
-                {player.deck && <span style={{
-                  fontSize: 'clamp(6px, 2vw, 9px)', fontWeight: 700,
-                  color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                  textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
-                  userSelect: 'none',
-                }}>{player.deck}</span>}
-              </div>
-
-              {/* Win button */}
-              <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
-                fontSize: 'clamp(8px, 3vw, 11px)', fontWeight: 900, letterSpacing: '0.06em',
-                padding: '6px 10px', borderRadius: 999, textTransform: 'uppercase', flexShrink: 0,
-                backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
-              }}>Win</button>
-            </div>
-
-            {/* CSS bottom zone = visual right = add. Holds the + hint */}
-            <div className="w-full flex items-center justify-center" style={{ flex: '0 0 14%' }}
-              onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
-              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
-              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-            >
-              <span className="pointer-events-none select-none" style={{ fontSize: 'clamp(13px, 5vw, 20px)', fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)' }}>+</span>
             </div>
 
           </div>
