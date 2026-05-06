@@ -489,7 +489,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
                 border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
 
-            {/* ROW 2 (48%) — Life number centered, left=−/subtract, right=+/add */}
+            {/* ROW 2 (48%) — Life number centered, left=subtract, right=add */}
             <div style={{ height: '48%', position: 'relative', width: '100%' }}>
               {/* Left half tap zone */}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 8, zIndex: 1 }}
