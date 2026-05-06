@@ -442,14 +442,11 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         {player.status === 'active' && (
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none' }}>
 
-            {/* ROW 1 - Name/Lose/Win bar
-                CSS flexDirection 'column' = vertical stack in CSS = horizontal row on screen after 90deg rotation */}
+            {/* ROW 1 - [Lose] [Name] [Win] across the full CSS-top = visual left edge of quadrant */}
             <div style={{
                 flex: '0 0 auto',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 6,
-                paddingTop: (seatIndex === 1 || seatIndex === 3) ? 95 : 10,
-                paddingBottom: (seatIndex === 0 || seatIndex === 2) ? 95 : 10,
+                display: 'flex', flexDirection: 'row', alignItems: 'center',
+                gap: 6, padding: '8px 10px',
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
@@ -462,13 +459,14 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
               }}>Lose</button>
               <div style={{
+                flex: 1, minWidth: 0,
                 backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
                 backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                 borderRadius: 999, padding: '5px 14px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
               }}>
-                <span style={{ fontSize: 13, fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', userSelect: 'none' }}>{player.name}</span>
-                {player.deck && <span style={{ fontSize: 8, fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', userSelect: 'none' }}>{player.deck}</span>}
+                <span style={{ fontSize: 13, fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.name}</span>
+                {player.deck && <span style={{ fontSize: 8, fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.deck}</span>}
               </div>
               <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
                 flexShrink: 0, fontSize: 11, fontWeight: 900,
