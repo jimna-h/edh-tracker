@@ -1140,11 +1140,7 @@ export default function App() {
           style={{ width: '100%', height: '100%' }}
         >
           {seats.map((s, i) => (
-            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ position: 'relative' }}>
-              {/* Spin highlight overlay */}
-              {!gameStarted && spinHighlight === i && (
-                <div className="absolute inset-0 z-50 pointer-events-none" style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '1.5rem' }} />
-              )}
+            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
               {!gameStarted ?
                 <SetupQuadrant
                   id={i} seat={s} isFlipped={i < 2}
@@ -1160,6 +1156,19 @@ export default function App() {
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {/* Spin highlights — positioned over each quadrant */}
+          {spinHighlight !== null && [0,1,2,3].map(i => (
+            <div key={i} className="absolute pointer-events-none" style={{
+              top: i < 2 ? '2%' : '52%',
+              left: (i === 0 || i === 2) ? '2%' : '52%',
+              width: '46%', height: '46%',
+              borderRadius: '1.5rem',
+              border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : 'none',
+              backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
+              boxShadow: spinHighlight === i ? '0 0 40px rgba(255,255,255,0.4), inset 0 0 40px rgba(255,255,255,0.1)' : 'none',
+              transition: 'all 0.06s ease',
+            }} />
+          ))}
           {/* Reset confirm modal */}
           {showResetConfirm && (
             <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
