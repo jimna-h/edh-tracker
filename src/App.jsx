@@ -490,6 +490,87 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   );
 };
 
+// --- STAT PICKER ---
+// Same left/right tap pattern as life tracking
+const StatPicker = ({ label, color, onConfirm, onBack }) => {
+  const [value, setValue] = useState(0);
+  const [activeHalf, setActiveHalf] = useState(null);
+  const timerRef = useRef(null);
+  const repeatRef = useRef(null);
+
+  const change = (delta) => setValue(prev => Math.max(0, prev + delta));
+
+  const startRepeat = (delta) => {
+    change(delta);
+    timerRef.current = setTimeout(() => {
+      repeatRef.current = setInterval(() => change(delta), 80);
+      timerRef.current = null;
+    }, 350);
+  };
+  const stopRepeat = () => {
+    clearTimeout(timerRef.current);
+    clearInterval(repeatRef.current);
+    timerRef.current = null;
+    repeatRef.current = null;
+    setActiveHalf(null);
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full h-full" style={{ touchAction: 'none' }}>
+      {/* Label */}
+      <div className="flex-none flex items-center justify-center" style={{ paddingTop: 10, paddingBottom: 6 }}>
+        <p className="text-white font-black text-[9px] uppercase tracking-[0.4em]"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '4px 16px', borderRadius: '999px' }}>
+          {label}
+        </p>
+      </div>
+
+      {/* Tap zones + value display */}
+      <div className="relative flex-1 w-full" style={{ touchAction: 'none' }}>
+        {/* Left = decrease */}
+        <div className="absolute inset-y-0 left-0 flex items-center justify-start"
+          style={{ width: '50%', touchAction: 'none', paddingLeft: 12,
+            backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.2)' : 'transparent',
+            transition: 'background-color 0.08s' }}
+          onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
+          onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+          onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+        >
+          <span style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.7)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
+        </div>
+        {/* Right = increase */}
+        <div className="absolute inset-y-0 right-0 flex items-center justify-end"
+          style={{ width: '50%', touchAction: 'none', paddingRight: 12,
+            backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.2)' : 'transparent',
+            transition: 'background-color 0.08s' }}
+          onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
+          onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+          onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+        >
+          <span style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.7)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
+        </div>
+        {/* Value centered */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+        </div>
+      </div>
+
+      {/* Confirm / Skip / Back */}
+      <div className="flex-none flex items-center justify-center gap-3" style={{ paddingBottom: 10 }}>
+        <button onClick={onBack}
+          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Back</button>
+        <button onClick={() => onConfirm(null)}
+          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Skip</button>
+        <button onClick={() => onConfirm(value)}
+          style={{ fontSize: 10, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 18px', borderRadius: 999, backgroundColor: color, border: 'none' }}
+        >OK</button>
+      </div>
+    </div>
+  );
+};
+
 // --- GAMEPLAY QUADRANT ---
 const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
@@ -541,23 +622,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
   const [cmdModal, setCmdModal] = useState(null);
   const [cmdHeld, setCmdHeld] = useState(false); // when true, all cells show +/- zones
 
-  const statOptions = (step) => {
-    if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i), '30+'];
-    return ['Skip', ...Array.from({length: 11}, (_, i) => i), '10+'];
-  };
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
-
-  const handleStatSelect = (val) => {
-    if (val === 'Skip') { onLose(id, null); return; }
-    if (typeof val === 'string' && val.endsWith('+')) {
-      const min = parseInt(val) + 1;
-      const entered = prompt(`Enter exact count (${min}+):`);
-      const num = parseInt(entered);
-      if (!isNaN(num) && num >= min) onLose(id, num);
-      return;
-    }
-    onLose(id, val);
-  };
 
   const life = player.stats.life ?? 40;
   const isLow = life <= 10;
@@ -766,22 +831,12 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         
         {player.status === 'questionnaire' && (
           <div className="w-full h-full flex items-center justify-center">
-            <div className="flex flex-col items-center w-full">
-              <p className="text-white font-black text-[10px] uppercase tracking-[0.4em] mb-3"
-                style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}
-              >
-                {['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
-              </p>
-              <SelectionCarousel 
-                title=""
-                showBack={true}
-                isFlipped={isFlipped}
-                options={statOptions(player.step)}
-                buttonColor={statColors[player.step]}
-                onBack={() => onBackStep(id)} 
-                onSelect={(val) => handleStatSelect(val)} 
-              />
-            </div>
+            <StatPicker
+              label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+              color={statColors[player.step]}
+              onConfirm={(val) => onLose(id, val)}
+              onBack={() => onBackStep(id)}
+            />
           </div>
         )}
 
