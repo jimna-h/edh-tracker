@@ -384,7 +384,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
 // --- CMD DAMAGE CELL ---
 const CmdCell = ({ label, value, danger, isSelf, onChange }) => {
-  const bg = danger ? 'rgba(180,20,20,0.9)' : isSelf ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)';
+  const bg = danger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)';
   const textColor = danger ? '#fff' : 'rgba(255,255,255,0.9)';
 
   return (
