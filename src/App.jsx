@@ -163,17 +163,11 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
   const hasPartner = !!artUrlPartner && typeof artUrlPartner === 'string' && artUrlPartner.startsWith('http');
   
-  const bgStyle = hasArt && !isOut ? (
-    hasPartner ? {
-      backgroundImage: `url(${artUrl})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    } : {
-      backgroundImage: `url(${artUrl})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }
-  ) : {};
+  const bgStyle = hasArt && !isOut ? {
+    backgroundImage: `url(${artUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  } : {};
   
   return (
     <div 
@@ -756,6 +750,15 @@ export default function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+    const CACHE_VERSION = 'v2_artUrlPartner';
+    const cachedVersion = localStorage.getItem('mtg_cache_version');
+    
+    // Clear stale cache if version doesn't match
+    if (cachedVersion !== CACHE_VERSION) {
+      localStorage.removeItem('mtg_player_cache');
+      localStorage.setItem('mtg_cache_version', CACHE_VERSION);
+    }
+    
     const cachedData = localStorage.getItem('mtg_player_cache');
     if (cachedData) {
       try {
