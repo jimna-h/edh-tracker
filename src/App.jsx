@@ -151,7 +151,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
       </div>
       {showBack && (
         <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-          ← Back
+          - Back
         </button>
       )}
     </div>
@@ -180,7 +180,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
       `}
       style={bgStyle}
     >
-      {/* Partner commander — clips to show on correct visual side accounting for isFlipped */}
+      {/* Partner commander - clips to show on correct visual side accounting for isFlipped */}
       {hasArt && hasPartner && !isOut && (
         <div className="absolute inset-0" style={{
           backgroundImage: `url(${artUrlPartner})`,
@@ -329,7 +329,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
             </div>
             <div className="flex gap-4 w-full max-w-[420px]">
-              <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">← Back</button>
+              <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">- Back</button>
               <button onClick={() => { onUpdate(id, 'colors', tempColors.join('')); setStep(3); }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
             </div>
           </div>
@@ -496,7 +496,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
-  // Life tap-and-hold: tap=±1, hold 400ms=±10, with highlight and delta display
+  // Life tap-and-hold: tap=+/-1, hold 400ms=+/-10, with highlight and delta display
   const lifeTimerRef = useRef(null);
   const lifeRepeatRef = useRef(null);
   const deltaFadeRef = useRef(null);
@@ -517,8 +517,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
   const startLifeRepeat = (delta) => {
     lifeTimerRef.current = setTimeout(() => {
-      // hold triggered — do ±10 once, then keep repeating ±10
-      applyLifeChange(delta * 9); // already did ±1 on pointerdown, so add 9 more = 10 total
+      // hold triggered - do +/-10 once, then keep repeating +/-10
+      applyLifeChange(delta * 9); // already did +/-1 on pointerdown, so add 9 more = 10 total
       lifeRepeatRef.current = setInterval(() => applyLifeChange(delta * 10), 400);
       lifeTimerRef.current = null;
     }, 400);
@@ -571,7 +571,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         {player.status === 'active' && (
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
 
-            {/* FULL-QUADRANT TAP ZONES — z-index 0, behind everything */}
+            {/* FULL-QUADRANT TAP ZONES - z-index 0, behind everything */}
             {/* Left half = subtract */}
             <div style={{
                 position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 0, touchAction: 'none',
@@ -593,7 +593,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
             />
 
-            {/* ROW 1 - [Lose] [Name] [Win] — z-index 10 so it sits above the full-quadrant tap zones */}
+            {/* ROW 1 - [Lose] [Name] [Win] - z-index 10 so it sits above the full-quadrant tap zones */}
             <div style={{
                 flex: '0 0 auto', position: 'relative', zIndex: 10,
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
@@ -634,7 +634,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1, color: lifeColor, textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none', transition: 'color 0.2s', userSelect: 'none' }}>{life}</span>
               </div>
-              {/* Delta — negative shown on left half, positive on right half */}
+              {/* Delta - negative shown on left half, positive on right half */}
               {showDelta && lifeDelta < 0 && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '50%' }}>
                   <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, userSelect: 'none', color: 'rgba(255,70,70,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{lifeDelta}</span>
@@ -914,6 +914,7 @@ export default function App() {
   }, []);
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [spinHighlight, setSpinHighlight] = useState(null);
   const [winnerHighlight, setWinnerHighlight] = useState(null);
 
   const handleRandom = () => {
@@ -940,7 +941,7 @@ export default function App() {
         }
         setTimeout(spin, delays[step]);
       } else {
-        // Land on winner — show gold flash
+        // Land on winner - show gold flash
         setSpinHighlight(null);
         setWinnerHighlight(winner);
         setTimeout(() => {
@@ -1204,7 +1205,7 @@ export default function App() {
           )}
           {!gameStarted && (
             <>
-              {/* RANDOM button — only visible when no one has gone first yet */}
+              {/* RANDOM button - only visible when no one has gone first yet */}
               {firstSeatIndex === null && !allFilled && !hasPending && (
                 <button
                   onClick={handleRandom}
@@ -1215,7 +1216,7 @@ export default function App() {
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
               )}
-              {/* START / SYNC button — normal behavior */}
+              {/* START / SYNC button - normal behavior */}
               {(allFilled || hasPending) && (
                 <button
                   onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
