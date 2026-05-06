@@ -711,7 +711,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
-                onClick={() => { setCmdModal(null); setCmdHeld(false); }}}
+                onClick={() => { setCmdModal(null); setCmdHeld(false); }}
               >
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                 <div
