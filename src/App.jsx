@@ -580,8 +580,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               )}
               {/* -/+ edge hints */}
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
-                <span style={{ fontSize: 22, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)', userSelect: 'none', textShadow: hasArt ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>-</span>
-                <span style={{ fontSize: 22, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)', userSelect: 'none', textShadow: hasArt ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>+</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>-</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>+</span>
               </div>
             </div>
 
@@ -592,7 +592,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '1px solid rgba(255,255,255,0.15)', pointerEvents: 'auto' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.3)', pointerEvents: 'auto' }}
                   >
                     {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
@@ -644,9 +644,13 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
+                onClick={() => setCmdModal(null)}
               >
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(160px, 40vw, 220px)', height: 'clamp(160px, 40vw, 220px)' }}>
+                <div
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {(isFlipped ? [...opponents].reverse() : opponents).map((op) => {
                     const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
                     const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
@@ -676,10 +680,6 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                     );
                   })}
                 </div>
-                <button
-                  onClick={() => setCmdModal(null)}
-                  style={{ marginTop: 16, fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', padding: '6px 24px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-                >Done</button>
               </div>
             )}
 
