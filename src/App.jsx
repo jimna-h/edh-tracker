@@ -159,8 +159,21 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 };
 
 // --- QUADRANT WRAPPER ---
-const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
+const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, isWinner }) => {
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
+  const hasPartner = !!artUrlPartner && typeof artUrlPartner === 'string' && artUrlPartner.startsWith('http');
+  
+  const bgStyle = hasArt && !isOut ? (
+    hasPartner ? {
+      backgroundImage: `url(${artUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    } : {
+      backgroundImage: `url(${artUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  ) : {};
   
   return (
     <div 
@@ -171,12 +184,17 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
         ${isFlipped ? 'rotate-180' : ''}
         ${isOut ? (isWinner ? 'bg-[#0a0a0a]' : 'bg-[#050505]') : (!hasArt ? 'bg-gradient-to-br from-[#b8cedc] via-[#a3b8c9] to-[#8da3b5]' : '')}
       `}
-      style={hasArt && !isOut ? { 
-        backgroundImage: `url(${artUrl})`, 
-        backgroundSize: 'cover', 
-        backgroundPosition: 'center' 
-      } : {}}
+      style={bgStyle}
     >
+      {/* Partner commander — right half overlay */}
+      {hasArt && hasPartner && !isOut && (
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url(${artUrlPartner})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          clipPath: 'inset(0 0 0 50%)',
+        }} />
+      )}
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
       )}
@@ -233,7 +251,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
+      <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl} artUrlPartner={seat.artUrlPartner}>
         {step === 0 && firstSeatIndex === null && (
           <div className="w-full h-full flex items-center justify-center">
             <button 
@@ -302,6 +320,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               } else { 
                 onUpdate(id, 'deck', val.deck); 
                 onUpdate(id, 'artUrl', val.artUrl); 
+                onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
                 onUpdate(id, 'colors', val.colors || ''); 
                 setStep(3); 
               }
@@ -346,6 +365,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             onSelect={(val) => { 
               onUpdate(id, 'deck', val.deck); 
               onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
               onUpdate(id, 'colors', val.colors || ''); 
               setStep(3); 
             }} 
@@ -465,7 +485,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
+      <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} artUrlPartner={player.artUrlPartner} isWinner={isWinner}>
         {player.status === 'active' && (
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
 
@@ -668,7 +688,7 @@ export default function App() {
   const clockwiseOrder = [0, 1, 3, 2];
 
   const initialSeats = Array(4).fill(null).map((_, i) => ({ 
-    id: i, name: '', deck: '', artUrl: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
+    id: i, name: '', deck: '', artUrl: '', artUrlPartner: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
     stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0, life: 40, cmdDamage: {} } 
   }));
   const [seats, setSeats] = useState(initialSeats);
