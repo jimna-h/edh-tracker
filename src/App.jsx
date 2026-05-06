@@ -499,64 +499,60 @@ const StatNumpad = ({ label, color, onConfirm, onBack }) => {
 
   const press = (d) => {
     if (d === 'back') { setInput(prev => prev.slice(0, -1)); return; }
-    if (input.length >= 3) return; // max 3 digits
-    if (input === '0') return; // no leading zeros
+    if (input.length >= 3) return;
     setInput(prev => prev + d);
   };
 
-  const confirm = () => onConfirm(value === 0 ? null : value); // 0 = skip
+  const confirm = () => onConfirm(value === 0 ? null : value);
   const skip = () => onConfirm(null);
 
   const keys = ['7','8','9','4','5','6','1','2','3'];
 
+  const btnBase = {
+    height: 36, borderRadius: 8, fontWeight: 900, fontSize: 16,
+    backgroundColor: 'rgba(255,255,255,0.22)', color: '#fff',
+    border: '1px solid rgba(255,255,255,0.3)',
+  };
+
   return (
-    <div className="flex flex-col items-center w-full" style={{ gap: 10, padding: '0 12px' }}>
+    <div className="flex flex-col items-center w-full" style={{ gap: 8, padding: '0 10px' }}>
       {/* Label */}
-      <p className="text-white font-black text-[10px] uppercase tracking-[0.4em]"
-        style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}>
+      <p className="text-white font-black text-[9px] uppercase tracking-[0.4em]"
+        style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '4px 16px', borderRadius: '999px' }}>
         {label}
       </p>
 
       {/* Display */}
       <div style={{
-        backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 16, padding: '10px 24px',
-        minWidth: 90, textAlign: 'center', border: `2px solid ${color}44`,
+        backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, padding: '6px 20px',
+        minWidth: 70, textAlign: 'center', border: `2px solid ${color}66`,
       }}>
-        <span style={{ fontSize: 'clamp(32px, 10vw, 52px)', fontWeight: 900, color: '#fff', lineHeight: 1, userSelect: 'none' }}>
+        <span style={{ fontSize: 'clamp(24px, 7vw, 38px)', fontWeight: 900, color: '#fff', lineHeight: 1, userSelect: 'none' }}>
           {display}
         </span>
       </div>
 
       {/* Number grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, width: '100%', maxWidth: 240 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, width: '100%', maxWidth: 200 }}>
         {keys.map(k => (
-          <button key={k} onClick={() => press(k)}
-            style={{
-              height: 48, borderRadius: 10, fontWeight: 900, fontSize: 20,
-              backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff',
-              border: '1px solid rgba(255,255,255,0.15)',
-            }}
-          >{k}</button>
+          <button key={k} onClick={() => press(k)} style={btnBase}>{k}</button>
         ))}
-        {/* Bottom row: back, 0, confirm */}
         <button onClick={() => press('back')}
-          style={{ height: 48, borderRadius: 10, fontWeight: 900, fontSize: 18, backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ ...btnBase, backgroundColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}
         >del</button>
-        <button onClick={() => press('0')}
-          style={{ height: 48, borderRadius: 10, fontWeight: 900, fontSize: 20, backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}
-        >0</button>
+        <button onClick={() => press('0')} style={btnBase}>0</button>
         <button onClick={confirm}
-          style={{ height: 48, borderRadius: 10, fontWeight: 900, fontSize: 14, backgroundColor: color, color: '#fff', border: 'none' }}
+          style={{ ...btnBase, backgroundColor: color, border: 'none', fontSize: 13 }}
         >OK</button>
       </div>
 
       {/* Skip / Back */}
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={onBack}
-          style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '3px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
         >Back</button>
         <button onClick={skip}
-          style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '3px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
         >Skip</button>
       </div>
     </div>
