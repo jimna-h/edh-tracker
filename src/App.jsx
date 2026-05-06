@@ -946,7 +946,7 @@ export default function App() {
           setIsSpinning(false);
           setSpinHighlight(null);
           handleSetFirst(winner);
-        }, 600);
+        }, 1500);
       }
     };
     setTimeout(spin, delays[0]);
@@ -1156,19 +1156,21 @@ export default function App() {
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-          {/* Spin highlights — positioned over each quadrant */}
-          {spinHighlight !== null && [0,1,2,3].map(i => (
-            <div key={i} className="absolute pointer-events-none" style={{
-              top: i < 2 ? '2%' : '52%',
-              left: (i === 0 || i === 2) ? '2%' : '52%',
-              width: '46%', height: '46%',
-              borderRadius: '1.5rem',
-              border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : 'none',
-              backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
-              boxShadow: spinHighlight === i ? '0 0 40px rgba(255,255,255,0.4), inset 0 0 40px rgba(255,255,255,0.1)' : 'none',
-              transition: 'all 0.06s ease',
-            }} />
-          ))}
+          {/* Spin highlights — one per quadrant using grid positions */}
+          {spinHighlight !== null && (
+            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 pointer-events-none" style={{ padding: '10px', gap: '0px' }}>
+              {[0,1,2,3].map(i => (
+                <div key={i} style={{
+                  borderRadius: '1.5rem',
+                  border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                  backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.15)' : 'transparent',
+                  boxShadow: spinHighlight === i ? '0 0 50px rgba(255,255,255,0.5), inset 0 0 30px rgba(255,255,255,0.1)' : 'none',
+                  transition: 'border-color 0.05s, background-color 0.05s, box-shadow 0.05s',
+                  margin: '10px',
+                }} />
+              ))}
+            </div>
+          )}
           {/* Reset confirm modal */}
           {showResetConfirm && (
             <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
@@ -1193,8 +1195,8 @@ export default function App() {
                 <button
                   onClick={handleRandom}
                   disabled={isSpinning}
-                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center"
-                  style={{ width: '120px', height: '120px', backgroundColor: isSpinning ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.25)' }}
+                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: '120px', height: '120px' }}
                 >
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
