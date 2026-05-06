@@ -446,7 +446,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             <div style={{
                 flex: '0 0 auto',
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
-                gap: 6, padding: '8px 10px',
+                gap: 6, padding: '8px 95px 8px 10px',
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
