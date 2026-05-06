@@ -49,7 +49,8 @@ def get_players():
             for row in rows[1:]:
                 deck_name = row[0] if len(row) > 0 else ""
                 art_url = row[1] if len(row) > 1 else ""
-                color_id = row[2] if len(row) > 2 else ""
+                art_url_partner = row[2] if len(row) > 2 else ""
+                color_id = row[3] if len(row) > 3 else ""
                 
                 if deck_name.upper() == "PFP":
                     pfp_url = art_url
@@ -57,6 +58,7 @@ def get_players():
                     deck_list.append({
                         "deck": deck_name,
                         "artUrl": art_url,
+                        "artUrlPartner": art_url_partner,
                         "colors": color_id,
                     })
             
