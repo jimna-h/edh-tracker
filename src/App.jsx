@@ -547,8 +547,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               }}>Lose</button>
               <div style={{
                 flex: 1, minWidth: 0,
-                backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
                 borderRadius: 999, padding: '5px 14px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
               }}>
@@ -558,7 +558,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
                 flexShrink: 0, fontSize: 11, fontWeight: 900,
                 padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
-                backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
+                backgroundColor: 'rgba(180,148,40,0.6)', color: '#fff',
               }}>Win</button>
             </div>
             {/* ROW 2 - Life number + delta indicator (tap zones are full-quadrant overlays above) */}
