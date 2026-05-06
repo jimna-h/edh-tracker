@@ -587,11 +587,14 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
             {/* ROW 3 - CMD damage 2x2 grid button */}
             <div style={{ flex: '0 0 auto', minHeight: 58, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div
-                onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '1px solid rgba(255,255,255,0.15)', transform: isFlipped ? 'rotate(180deg)' : 'none', pointerEvents: 'auto' }}
-              >
-                {opponents.map((op) => {
+              {(() => {
+                const orderedOpponents = isFlipped ? [...opponents].reverse() : opponents;
+                return (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '1px solid rgba(255,255,255,0.15)', pointerEvents: 'auto' }}
+                  >
+                    {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
                   const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
                   const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
@@ -630,7 +633,9 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                     </div>
                   );
                 })}
-              </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* CMD DAMAGE MODAL */}
@@ -642,7 +647,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               >
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(160px, 40vw, 220px)', height: 'clamp(160px, 40vw, 220px)' }}>
-                  {opponents.map((op) => {
+                  {(isFlipped ? [...opponents].reverse() : opponents).map((op) => {
                     const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
                     const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
                     const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
