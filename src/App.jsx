@@ -366,13 +366,26 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           />
         )}
         {step === 3 && (
-          <SelectionCarousel 
-            title="Starting Lands" 
-            isFlipped={isFlipped} 
-            options={[0, 1, 2, 3, 4, 5, 6, 7]} 
-            onBack={handleBack} 
-            onSelect={(val) => { onUpdate(id, 'startLands', val); setStep(7); }} 
-          />
+          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, padding: '0 12px' }}>
+            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">Starting Lands</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
+              {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
+                <div key={ri} style={{ display: 'flex', gap: 8 }}>
+                  {row.map(n => (
+                    <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
+                      style={{
+                        flex: 1, height: 52, borderRadius: 14,
+                        fontSize: 22, fontWeight: 900, color: '#fff',
+                        backgroundColor: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                      }}
+                    >{n}</button>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <button onClick={handleBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+          </div>
         )}
         
         {step === 7 && (
