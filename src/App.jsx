@@ -525,9 +525,14 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 2 }}>
                 <span style={{ fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1, color: lifeColor, textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none', transition: 'color 0.2s', userSelect: 'none' }}>{life}</span>
               </div>
-              {/* Delta indicator */}
+              {/* Delta indicator — negative at CSS-top (visual left), positive at CSS-bottom (visual right) */}
               {showDelta && (
-                <div style={{ position: 'absolute', top: '8%', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 3 }}>
+                <div style={{
+                  position: 'absolute',
+                  ...(lifeDelta >= 0 ? { bottom: '10%' } : { top: '10%' }),
+                  left: 0, right: 0,
+                  display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 3,
+                }}>
                   <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, lineHeight: 1, userSelect: 'none', color: lifeDelta >= 0 ? 'rgba(60,220,110,0.95)' : 'rgba(255,70,70,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
                     {lifeDelta > 0 ? '+' : ''}{lifeDelta}
                   </span>
