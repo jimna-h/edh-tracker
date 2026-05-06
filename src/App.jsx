@@ -592,7 +592,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.3)', pointerEvents: 'auto' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto' }}
                   >
                     {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
