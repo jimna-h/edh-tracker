@@ -448,8 +448,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 flex: '0 0 auto',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: 6,
-                paddingTop: (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
-                paddingBottom: (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingTop: (seatIndex === 1 || seatIndex === 3) ? 95 : 10,
+                paddingBottom: (seatIndex === 0 || seatIndex === 2) ? 95 : 10,
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
