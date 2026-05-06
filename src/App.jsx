@@ -369,7 +369,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           <SelectionCarousel 
             title="Starting Lands" 
             isFlipped={isFlipped} 
-            options={[1, 2, 3, 4, 5, 6, 7]} 
+            options={[0, 1, 2, 3, 4, 5, 6, 7]} 
             onBack={handleBack} 
             onSelect={(val) => { onUpdate(id, 'startLands', val); setStep(7); }} 
           />
@@ -397,18 +397,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 };
 
 // --- CMD DAMAGE CELL ---
-const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2 }) => {
-  const [held, setHeld] = useState(false); // show +/- tap zones
-  const [heldSide, setHeldSide] = useState(null); // for partner: 'a' | 'b' | null
-  const holdTimer = useRef(null);
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
   const [activeHalf, setActiveHalf] = useState(null);
+  const holdTimer = useRef(null);
   const tapRepeat = useRef(null);
   const tapTimer = useRef(null);
 
-  const startHold = (side = null) => {
+  const startHold = () => {
     holdTimer.current = setTimeout(() => {
-      setHeld(true);
-      setHeldSide(side);
+      onHold(true);
       holdTimer.current = null;
     }, 400);
   };
@@ -432,9 +429,8 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
     setActiveHalf(null);
   };
 
-  const tapZones = (fn, label) => (
+  const tapZones = (fn) => (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
-      {/* Left = down */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
         onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('left'); startTap(fn, -1); }}
         onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
@@ -442,7 +438,6 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
       >
         <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
       </div>
-      {/* Right = up */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
         onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('right'); startTap(fn, 1); }}
         onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
@@ -450,11 +445,10 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
       >
         <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
       </div>
-      {/* Tap anywhere outside (no-op area) to dismiss */}
     </div>
   );
 
-  const subCell = (art, val, isDanger, isSelfCell, onTap, side = null) => (
+  const subCell = (art, val, isDanger, isSelfCell, onTap) => (
     <div
       style={{
         flex: 1, position: 'relative', overflow: 'hidden',
@@ -464,16 +458,15 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
         backgroundSize: 'cover', backgroundPosition: 'center',
         backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
       }}
-      onPointerDown={(e) => { e.stopPropagation(); startHold(side); }}
+      onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
       onPointerUp={(e) => {
         e.stopPropagation();
-        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); } // tap only if not already held
+        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); }
       }}
       onPointerLeave={cancelHold} onPointerCancel={cancelHold}
     >
       <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
-      {/* Show +/- tap zones when held */}
-      {held && (heldSide === null || heldSide === side) && tapZones(onTap, '')}
+      {held && tapZones(onTap)}
       {isSelfCell && val === 0
         ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
         : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
@@ -484,8 +477,8 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   if (hasPartner) {
     return (
       <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
-        {subCell(artUrl, value, danger, isSelf, onChange, 'a')}
-        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, 'b')}
+        {subCell(artUrl, value, danger, isSelf, onChange)}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2)}
       </div>
     );
   }
@@ -545,13 +538,26 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
     setActiveHalf(null);
   };
 
-  const [cmdModal, setCmdModal] = useState(null); // { opId } or null
+  const [cmdModal, setCmdModal] = useState(null);
+  const [cmdHeld, setCmdHeld] = useState(false); // when true, all cells show +/- zones
 
   const statOptions = (step) => {
-    if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i)];
-    return ['Skip', ...Array.from({length: 11}, (_, i) => i)];
+    if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i), '30+'];
+    return ['Skip', ...Array.from({length: 11}, (_, i) => i), '10+'];
   };
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
+
+  const handleStatSelect = (val) => {
+    if (val === 'Skip') { onLose(id, null); return; }
+    if (typeof val === 'string' && val.endsWith('+')) {
+      const min = parseInt(val) + 1;
+      const entered = prompt(`Enter exact count (${min}+):`);
+      const num = parseInt(entered);
+      if (!isNaN(num) && num >= min) onLose(id, num);
+      return;
+    }
+    onLose(id, val);
+  };
 
   const life = player.stats.life ?? 40;
   const isLow = life <= 10;
@@ -705,12 +711,14 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
-                onClick={() => setCmdModal(null)}
+                onClick={() => { setCmdModal(null); setCmdHeld(false); }}}
               >
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                 <div
                   style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
-                  onClick={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
                 >
                   {(isFlipped ? [...opponents].reverse() : opponents).map((op) => {
                     const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
@@ -737,6 +745,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                           onCmdDamage(id, `${op.id}_1`, delta);
                           onLifeChange(id, -delta);
                         }}
+                        held={cmdHeld}
+                        onHold={setCmdHeld}
                       />
                     );
                   })}
@@ -762,7 +772,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 options={statOptions(player.step)}
                 buttonColor={statColors[player.step]}
                 onBack={() => onBackStep(id)} 
-                onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
+                onSelect={(val) => handleStatSelect(val)} 
               />
             </div>
           </div>
