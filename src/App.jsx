@@ -180,13 +180,13 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
       `}
       style={bgStyle}
     >
-      {/* Partner commander — right half overlay */}
+      {/* Partner commander — bottom half of CSS div = visual right half on screen */}
       {hasArt && hasPartner && !isOut && (
         <div className="absolute inset-0" style={{
           backgroundImage: `url(${artUrlPartner})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          clipPath: 'inset(0 0 0 50%)',
+          clipPath: 'inset(50% 0 0 0)',
         }} />
       )}
       {hasArt && !isOut && (
@@ -403,9 +403,9 @@ const CmdCell = ({ opId, label, value, value2, hasPartner, danger, danger2, isSe
   const baseBg = 'rgba(255,255,255,0.10)';
 
   if (hasPartner) {
-    // Split cell: top = commander 1, bottom = commander 2
+    // Split cell: left = commander 1, right = commander 2
     return (
-      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid rgba(255,255,255,0.15)' }}>
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', gap: 2, border: '1px solid rgba(255,255,255,0.15)' }}>
         <div
           onClick={(e) => { e.stopPropagation(); onChange(1); }}
           style={{ flex: 1, backgroundColor: danger ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -615,7 +615,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
                   if (hasPartner) {
                     return (
-                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'row', gap: 1 }}>
                         <div style={{ flex: 1, backgroundColor: danger0 ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <span style={{ fontSize: 9, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger0 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val0}</span>
                         </div>
