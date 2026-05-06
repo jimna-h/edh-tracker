@@ -543,7 +543,7 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
 
       {/* Big colored label */}
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
-        <span style={{ fontSize: 'clamp(16px, 5vw, 28px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.2em', userSelect: 'none', textShadow: `0 0 20px ${color}99` }}>
+        <span style={{ fontSize: 'clamp(28px, 9vw, 52px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.25em', userSelect: 'none', textShadow: `0 0 30px ${color}, 0 2px 8px rgba(0,0,0,0.8)` }}>
           {label.replace('Final ', '')}
         </span>
       </div>
