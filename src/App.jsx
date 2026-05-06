@@ -951,6 +951,8 @@ export default function App() {
     };
     setTimeout(spin, delays[0]);
   };
+
+  const handleResetAll = () => {
     setFirstSeatIndex(null);
     setMulliganType('');
     setSeats(initialSeats);
