@@ -388,28 +388,46 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
   const isWinner = isOut && player.stats.turnDied === 0;
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
-  // Life tap-and-hold
+  // Life tap-and-hold: tap=±1, hold 400ms=±10, with highlight and delta display
   const lifeTimerRef = useRef(null);
   const lifeRepeatRef = useRef(null);
+  const deltaFadeRef = useRef(null);
+  const [activeHalf, setActiveHalf] = useState(null); // 'left' | 'right' | null
+  const [lifeDelta, setLifeDelta] = useState(0);
+  const [showDelta, setShowDelta] = useState(false);
+
+  const applyLifeChange = (delta) => {
+    onLifeChange(id, delta);
+    setLifeDelta(prev => prev + delta);
+    setShowDelta(true);
+    clearTimeout(deltaFadeRef.current);
+    deltaFadeRef.current = setTimeout(() => {
+      setShowDelta(false);
+      setLifeDelta(0);
+    }, 2000);
+  };
+
   const startLifeRepeat = (delta) => {
     lifeTimerRef.current = setTimeout(() => {
-      lifeRepeatRef.current = setInterval(() => onLifeChange(id, delta), 80);
+      // hold triggered — do ±10 once, then keep repeating ±10
+      applyLifeChange(delta * 9); // already did ±1 on pointerdown, so add 9 more = 10 total
+      lifeRepeatRef.current = setInterval(() => applyLifeChange(delta * 10), 400);
       lifeTimerRef.current = null;
-    }, 350);
+    }, 400);
   };
   const stopLifeRepeat = (delta) => {
-    const wasTap = !!lifeTimerRef.current;
     clearTimeout(lifeTimerRef.current);
     clearInterval(lifeRepeatRef.current);
     lifeTimerRef.current = null;
     lifeRepeatRef.current = null;
-    if (wasTap) onLifeChange(id, delta);
+    setActiveHalf(null);
   };
   const cancelLifeRepeat = () => {
     clearTimeout(lifeTimerRef.current);
     clearInterval(lifeRepeatRef.current);
     lifeTimerRef.current = null;
     lifeRepeatRef.current = null;
+    setActiveHalf(null);
   };
 
   // Cmd damage tap-and-hold (hold 600ms = reset)
@@ -481,32 +499,44 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
               }}>Win</button>
             </div>
-            {/* ROW 2 - Life number, flex-1 so it fills remaining space */}
+            {/* ROW 2 - Life number with highlight flash and delta indicator */}
             <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0 }}>
-              {/* Left half tap zone */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 8, zIndex: 1 }}
-                onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
+              {/* Left half tap = subtract, red highlight */}
+              <div style={{
+                  position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', zIndex: 1,
+                  backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.28)' : 'transparent',
+                  transition: 'background-color 0.08s',
+                }}
+                onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); applyLifeChange(-1); startLifeRepeat(-1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-              >
-                <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, userSelect: 'none', pointerEvents: 'none', color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)' }}>−</span>
-              </div>
-              {/* Right half tap zone */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, zIndex: 1 }}
-                onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
+              />
+              {/* Right half tap = add, green highlight */}
+              <div style={{
+                  position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', zIndex: 1,
+                  backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.28)' : 'transparent',
+                  transition: 'background-color 0.08s',
+                }}
+                onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); applyLifeChange(1); startLifeRepeat(1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
-              >
-                <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, userSelect: 'none', pointerEvents: 'none', color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)' }}>+</span>
+              />
+              {/* Life number */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 2 }}>
+                <span style={{ fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1, color: lifeColor, textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none', transition: 'color 0.2s', userSelect: 'none' }}>{life}</span>
               </div>
-              {/* Life number - fills the row, centered, no pointer events so taps pass through */}
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                <span style={{
-                  fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1,
-                  color: lifeColor,
-                  textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none',
-                  transition: 'color 0.2s', userSelect: 'none',
-                }}>{life}</span>
+              {/* Delta indicator */}
+              {showDelta && (
+                <div style={{ position: 'absolute', top: '8%', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 3 }}>
+                  <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, lineHeight: 1, userSelect: 'none', color: lifeDelta >= 0 ? 'rgba(60,220,110,0.95)' : 'rgba(255,70,70,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
+                    {lifeDelta > 0 ? '+' : ''}{lifeDelta}
+                  </span>
+                </div>
+              )}
+              {/* -/+ edge hints */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', pointerEvents: 'none', zIndex: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>-</span>
+                <span style={{ fontSize: 16, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>+</span>
               </div>
             </div>
 
