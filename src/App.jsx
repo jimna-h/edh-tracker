@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -118,10 +118,36 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-3 py-2' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
-        {options.map((opt, i) => {
+        {twoRows ? (() => {
+          const mid = Math.ceil(options.length / 2);
+          const row1 = options.slice(0, mid);
+          const row2 = options.slice(mid);
+          return [row1, row2].map((row, ri) => (
+            <div key={ri} className="flex flex-nowrap gap-3 snap-x snap-mandatory">
+              {row.map((opt, i) => {
+                const globalIdx = ri === 0 ? i : mid + i;
+                const isObj = typeof opt === 'object' && opt !== null;
+                const hasArt = isObj && opt.artUrl;
+                const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
+                return (
+                  <button
+                    key={`${title}-${globalIdx}`}
+                    data-option-index={globalIdx}
+                    onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[52px] md:h-[68px] border border-white/25 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/15 backdrop-blur-md'}`}
+                    style={buttonColor ? { backgroundColor: buttonColor } : {}}
+                  >
+                    {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" /><div className="absolute inset-0 bg-black/30" /></>)}
+                    <span className="relative z-10 text-sm font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ));
+        })() : options.map((opt, i) => {
           const isObj = typeof opt === 'object' && opt !== null;
           const hasArt = isObj && opt.artUrl;
           const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
@@ -320,10 +346,12 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 1 && mulliganType && (
-          <GridPicker
-            title={`Seat ${seat.order}`}
+          <SelectionCarousel 
+            title={`Seat ${seat.order}`} 
+            isFlipped={isFlipped} 
             options={players}
-            onBack={handleBack}
+            twoRows
+            onBack={handleBack} 
             onSelect={(val) => { 
               if (typeof val === 'object' && val !== null) {
                 onUpdate(id, 'name', val.name); 
@@ -333,15 +361,17 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 onUpdate(id, 'pfpUrl', '');
               }
               setStep(2); 
-            }}
+            }} 
           />
         )}
         
         {step === 2 && (
-          <GridPicker
-            title="Deck"
+          <SelectionCarousel 
+            title="Deck" 
+            isFlipped={isFlipped} 
             options={decks}
-            onBack={handleBack}
+            twoRows
+            onBack={handleBack} 
             onSelect={(val) => { 
               if (val.deck === "+ OTHER") { 
                 onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4); 
@@ -354,7 +384,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 onUpdate(id, 'colors', val.colors || ''); 
                 setStep(3); 
               }
-            }}
+            }} 
           />
         )}
 
@@ -372,28 +402,32 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 5 && (
-          <GridPicker
-            title="Borrow From?"
+          <SelectionCarousel 
+            title="Borrow From?" 
+            isFlipped={isFlipped} 
             options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
-            onBack={handleBack}
+            twoRows
+            onBack={handleBack} 
             onSelect={(val) => { 
               onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
               setStep(6); 
-            }}
+            }} 
           />
         )}
         {step === 6 && (
-          <GridPicker
-            title={`${seat.deckOwner}'s Decks`}
+          <SelectionCarousel 
+            title={`${seat.deckOwner}'s Decks`} 
+            isFlipped={isFlipped} 
             options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
-            onBack={handleBack}
+            twoRows
+            onBack={handleBack} 
             onSelect={(val) => { 
               onUpdate(id, 'deck', val.deck); 
               onUpdate(id, 'artUrl', val.artUrl); 
               onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
               onUpdate(id, 'colors', val.colors || ''); 
               setStep(3); 
-            }}
+            }} 
           />
         )}
         {step === 3 && (
