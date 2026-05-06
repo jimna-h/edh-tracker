@@ -199,7 +199,45 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
   );
 };
 
-// --- SETUP QUADRANT ---
+// --- GRID PICKER ---
+// Two-row grid replacing carousel for players/decks
+const GridPicker = ({ title, options, onSelect, onBack }) => {
+  const mid = Math.ceil(options.length / 2);
+  const row1 = options.slice(0, mid);
+  const row2 = options.slice(mid);
+
+  const btnStyle = (hasArt) => ({
+    flex: 1, minWidth: 0, height: 52, borderRadius: 12, fontWeight: 900, fontSize: 11,
+    color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em',
+    backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
+    position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap',
+  });
+
+  const renderBtn = (opt, i) => {
+    const isObj = typeof opt === 'object' && opt !== null;
+    const label = isObj ? (opt.name || opt.deck || 'Unnamed') : String(opt);
+    const art = isObj ? opt.artUrl : null;
+    return (
+      <button key={i} onClick={() => onSelect(opt)} style={btnStyle(!!art)}>
+        {art && <img src={art} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />}
+        <span style={{ position: 'relative', zIndex: 1, textShadow: art ? '0 1px 4px rgba(0,0,0,0.9)' : 'none', padding: '0 6px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 8, padding: '0 10px' }}>
+      {title && <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">{title}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
+        <div style={{ display: 'flex', gap: 7 }}>{row1.map((opt, i) => renderBtn(opt, i))}</div>
+        {row2.length > 0 && <div style={{ display: 'flex', gap: 7 }}>{row2.map((opt, i) => renderBtn(opt, mid + i))}</div>}
+      </div>
+      <button onClick={onBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+    </div>
+  );
+};
+
+
 const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
@@ -282,11 +320,10 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 1 && mulliganType && (
-          <SelectionCarousel 
-            title={`Seat ${seat.order}`} 
-            isFlipped={isFlipped} 
-            options={players} 
-            onBack={handleBack} 
+          <GridPicker
+            title={`Seat ${seat.order}`}
+            options={players}
+            onBack={handleBack}
             onSelect={(val) => { 
               if (typeof val === 'object' && val !== null) {
                 onUpdate(id, 'name', val.name); 
@@ -296,16 +333,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 onUpdate(id, 'pfpUrl', '');
               }
               setStep(2); 
-            }} 
+            }}
           />
         )}
         
         {step === 2 && (
-          <SelectionCarousel 
-            title="Deck" 
-            isFlipped={isFlipped} 
-            options={decks} 
-            onBack={handleBack} 
+          <GridPicker
+            title="Deck"
+            options={decks}
+            onBack={handleBack}
             onSelect={(val) => { 
               if (val.deck === "+ OTHER") { 
                 onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4); 
@@ -318,7 +354,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 onUpdate(id, 'colors', val.colors || ''); 
                 setStep(3); 
               }
-            }} 
+            }}
           />
         )}
 
@@ -336,33 +372,28 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 5 && (
-          <SelectionCarousel 
-            title="Borrow From?" 
-            isFlipped={isFlipped} 
-            options={playerDataMap
-              .filter(p => p.player_name !== seat.name)
-              .map(p => ({ name: p.player_name, artUrl: p.pfp }))
-            }
-            onBack={handleBack} 
+          <GridPicker
+            title="Borrow From?"
+            options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
+            onBack={handleBack}
             onSelect={(val) => { 
               onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
               setStep(6); 
-            }} 
+            }}
           />
         )}
         {step === 6 && (
-          <SelectionCarousel 
-            title={`${seat.deckOwner}'s Decks`} 
-            isFlipped={isFlipped} 
+          <GridPicker
+            title={`${seat.deckOwner}'s Decks`}
             options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
-            onBack={handleBack} 
+            onBack={handleBack}
             onSelect={(val) => { 
               onUpdate(id, 'deck', val.deck); 
               onUpdate(id, 'artUrl', val.artUrl); 
               onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
               onUpdate(id, 'colors', val.colors || ''); 
               setStep(3); 
-            }} 
+            }}
           />
         )}
         {step === 3 && (
@@ -376,8 +407,8 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                       style={{
                         flex: 1, height: 52, borderRadius: 14,
                         fontSize: 22, fontWeight: 900, color: '#fff',
-                        backgroundColor: 'rgba(255,255,255,0.12)',
-                        border: '1px solid rgba(255,255,255,0.2)',
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        border: '1px solid rgba(255,255,255,0.4)',
                       }}
                     >{n}</button>
                   ))}
