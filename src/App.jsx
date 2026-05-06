@@ -398,11 +398,64 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
 // --- CMD DAMAGE CELL ---
 const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2 }) => {
-  const hasArt = !!artUrl && artUrl.startsWith('http');
-  const hasArt2 = !!artUrlPartner && artUrlPartner.startsWith('http');
+  const [held, setHeld] = useState(false); // show +/- tap zones
+  const [heldSide, setHeldSide] = useState(null); // for partner: 'a' | 'b' | null
+  const holdTimer = useRef(null);
+  const [activeHalf, setActiveHalf] = useState(null);
+  const tapRepeat = useRef(null);
+  const tapTimer = useRef(null);
 
-  const subCell = (art, val, isDanger, isSelfCell, onTap) => (
-    <div onClick={(e) => { e.stopPropagation(); onTap(1); }}
+  const startHold = (side = null) => {
+    holdTimer.current = setTimeout(() => {
+      setHeld(true);
+      setHeldSide(side);
+      holdTimer.current = null;
+    }, 400);
+  };
+  const cancelHold = () => {
+    clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
+
+  const startTap = (fn, delta) => {
+    fn(delta);
+    tapTimer.current = setTimeout(() => {
+      tapRepeat.current = setInterval(() => fn(delta * 10), 300);
+      tapTimer.current = null;
+    }, 400);
+  };
+  const stopTap = () => {
+    clearTimeout(tapTimer.current);
+    clearInterval(tapRepeat.current);
+    tapTimer.current = null;
+    tapRepeat.current = null;
+    setActiveHalf(null);
+  };
+
+  const tapZones = (fn, label) => (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
+      {/* Left = down */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('left'); startTap(fn, -1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
+        onPointerLeave={stopTap} onPointerCancel={stopTap}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
+      </div>
+      {/* Right = up */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('right'); startTap(fn, 1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
+        onPointerLeave={stopTap} onPointerCancel={stopTap}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
+      </div>
+      {/* Tap anywhere outside (no-op area) to dismiss */}
+    </div>
+  );
+
+  const subCell = (art, val, isDanger, isSelfCell, onTap, side = null) => (
+    <div
       style={{
         flex: 1, position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -411,8 +464,16 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
         backgroundSize: 'cover', backgroundPosition: 'center',
         backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
       }}
+      onPointerDown={(e) => { e.stopPropagation(); startHold(side); }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        if (holdTimer.current) { cancelHold(); onTap(1); } // tap
+      }}
+      onPointerLeave={cancelHold} onPointerCancel={cancelHold}
     >
       <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
+      {/* Show +/- tap zones when held */}
+      {held && (heldSide === null || heldSide === side) && tapZones(onTap, '')}
       {isSelfCell && val === 0
         ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
         : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
@@ -420,17 +481,23 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
     </div>
   );
 
+  // Close held state when tapping outside — parent modal handles this via onClick backdrop
+  // But also allow tapping the cell itself to dismiss held state
+  const wrapperProps = held ? {
+    onClick: (e) => { e.stopPropagation(); setHeld(false); setHeldSide(null); }
+  } : {};
+
   if (hasPartner) {
     return (
-      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
-        {subCell(artUrl, value, danger, isSelf, onChange)}
-        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2)}
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }} {...wrapperProps}>
+        {subCell(artUrl, value, danger, isSelf, onChange, 'a')}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, 'b')}
       </div>
     );
   }
 
   return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)', display: 'flex' }}>
+    <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }} {...wrapperProps}>
       {subCell(artUrl, value, danger, isSelf, onChange)}
     </div>
   );
