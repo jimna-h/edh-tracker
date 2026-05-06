@@ -914,7 +914,7 @@ export default function App() {
   }, []);
 
   const [isSpinning, setIsSpinning] = useState(false);
-  const [spinHighlight, setSpinHighlight] = useState(null); // seat index being highlighted
+  const [winnerHighlight, setWinnerHighlight] = useState(null);
 
   const handleRandom = () => {
     if (isSpinning) return;
@@ -940,11 +940,12 @@ export default function App() {
         }
         setTimeout(spin, delays[step]);
       } else {
-        // Land on winner
-        setSpinHighlight(winner);
+        // Land on winner — show gold flash
+        setSpinHighlight(null);
+        setWinnerHighlight(winner);
         setTimeout(() => {
           setIsSpinning(false);
-          setSpinHighlight(null);
+          setWinnerHighlight(null);
           handleSetFirst(winner);
         }, 1500);
       }
@@ -1156,17 +1157,30 @@ export default function App() {
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-          {/* Spin highlights — one per quadrant using grid positions */}
-          {spinHighlight !== null && (
-            <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 pointer-events-none" style={{ padding: '10px', gap: '0px' }}>
+          {/* Gold winner flash */}
+          {winnerHighlight !== null && (
+            <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none' }}>
               {[0,1,2,3].map(i => (
                 <div key={i} style={{
                   borderRadius: '1.5rem',
-                  border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
-                  backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.15)' : 'transparent',
-                  boxShadow: spinHighlight === i ? '0 0 50px rgba(255,255,255,0.5), inset 0 0 30px rgba(255,255,255,0.1)' : 'none',
-                  transition: 'border-color 0.05s, background-color 0.05s, box-shadow 0.05s',
                   margin: '10px',
+                  border: winnerHighlight === i ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
+                  backgroundColor: winnerHighlight === i ? 'rgba(212,175,55,0.25)' : 'transparent',
+                  boxShadow: winnerHighlight === i ? '0 0 80px rgba(212,175,55,0.8), inset 0 0 50px rgba(212,175,55,0.2)' : 'none',
+                }} />
+              ))}
+            </div>
+          )}
+          {spinHighlight !== null && (
+            <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none' }}>
+              {[0,1,2,3].map(i => (
+                <div key={i} style={{
+                  borderRadius: '1.5rem',
+                  margin: '10px',
+                  border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                  backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
+                  boxShadow: spinHighlight === i ? '0 0 60px rgba(255,255,255,0.6), inset 0 0 40px rgba(255,255,255,0.15)' : 'none',
+                  transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
                 }} />
               ))}
             </div>
