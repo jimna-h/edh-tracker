@@ -586,13 +586,10 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             </div>
 
             {/* ROW 3 - CMD damage 2x2 grid button */}
-            <div style={{ flex: '0 0 auto', minHeight: 58, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-            >
+            <div style={{ flex: '0 0 auto', minHeight: 58, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div
                 onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '1px solid rgba(255,255,255,0.15)', transform: isFlipped ? 'rotate(180deg)' : 'none' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 52, height: 52, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '1px solid rgba(255,255,255,0.15)', transform: isFlipped ? 'rotate(180deg)' : 'none', pointerEvents: 'auto' }}
               >
                 {opponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
