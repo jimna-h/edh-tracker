@@ -180,13 +180,13 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
       `}
       style={bgStyle}
     >
-      {/* Partner commander — bottom half of CSS div = visual right half on screen */}
+      {/* Partner commander — clips to show on correct visual side accounting for isFlipped */}
       {hasArt && hasPartner && !isOut && (
         <div className="absolute inset-0" style={{
           backgroundImage: `url(${artUrlPartner})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          clipPath: 'inset(50% 0 0 0)',
+          clipPath: isFlipped ? 'inset(0 0 50% 0)' : 'inset(50% 0 0 0)',
         }} />
       )}
       {hasArt && !isOut && (
@@ -592,7 +592,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             >
               <div
                 onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 3, width: 58, height: 58, cursor: 'pointer' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 3, width: 62, height: 62, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10, padding: 3, backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.2)' }}
               >
                 {opponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
@@ -608,7 +608,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       backgroundImage: art ? `url(${art})` : 'none',
                       backgroundSize: 'cover', backgroundPosition: 'center',
-                      backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(0,0,0,0.3)'),
+                      backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(80,80,80,0.5)'),
                     }}>
                       <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.4)' }} />
                       {isSelfCell && val === 0
@@ -620,7 +620,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
                   if (hasPartner) {
                     return (
-                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
                         {miniCell(op.artUrl, val0, danger0, isSelf)}
                         {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
                       </div>
@@ -628,7 +628,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                   }
 
                   return (
-                    <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden' }}>
+                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
                       {miniCell(op.artUrl, val0, danger0, isSelf)}
                     </div>
                   );
