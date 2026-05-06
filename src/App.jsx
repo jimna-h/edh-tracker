@@ -514,19 +514,10 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
     setActiveHalf(null);
   };
 
-  // CSS flex-col = left-to-right on screen after 90deg rotation
-  // So: label on screen-left | tap zones in center | buttons on screen-right
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none' }}>
 
-      {/* CSS top = screen left: Label pill */}
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 8px 6px' }}>
-        <p style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: '5px 18px', borderRadius: 999, color: '#fff', fontWeight: 900, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.35em', whiteSpace: 'nowrap', userSelect: 'none' }}>
-          {label}
-        </p>
-      </div>
-
-      {/* CSS middle = screen center: Tap zones + big number */}
+      {/* Tap zones + big number */}
       <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0 }}>
         {/* Left tap = subtract */}
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 10, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
@@ -550,7 +541,14 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
         </div>
       </div>
 
-      {/* CSS bottom = screen right: Back / Skip / OK — in a row so they appear stacked on screen */}
+      {/* Big colored label */}
+      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
+        <span style={{ fontSize: 'clamp(16px, 5vw, 28px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.2em', userSelect: 'none', textShadow: `0 0 20px ${color}99` }}>
+          {label.replace('Final ', '')}
+        </span>
+      </div>
+
+      {/* Back / Skip / Next */}
       <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}>
         <button onClick={onBack}
           style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
@@ -560,7 +558,7 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
         >Skip</button>
         <button onClick={() => onConfirm(value)}
           style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 10, color: '#fff', textTransform: 'uppercase', backgroundColor: color, border: 'none' }}
-        >OK</button>
+        >Next</button>
       </div>
 
     </div>
