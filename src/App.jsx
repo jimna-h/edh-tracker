@@ -383,19 +383,20 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 };
 
 // --- CMD DAMAGE CELL ---
-// Tap anywhere = +1, separate +/- buttons always visible
 const CmdCell = ({ label, value, danger, isSelf, onChange }) => {
   const bg = danger ? 'rgba(180,20,20,0.9)' : isSelf ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)';
   const textColor = danger ? '#fff' : 'rgba(255,255,255,0.9)';
 
   return (
-    <div style={{ borderRadius: 12, backgroundColor: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.15)', gap: 4, padding: 6 }}>
-      <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onChange(1); }} style={{ width: '100%', flex: 1, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 14, fontWeight: 900, border: 'none' }}>+</button>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', lineHeight: 1 }}>{label}</span>
-        <span style={{ fontSize: 'clamp(18px, 5vw, 30px)', fontWeight: 900, color: textColor, lineHeight: 1 }}>{value}</span>
-      </div>
-      <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); if (value > 0) onChange(-1); }} style={{ width: '100%', flex: 1, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 14, fontWeight: 900, border: 'none' }}>-</button>
+    <div
+      onClick={(e) => { e.stopPropagation(); onChange(1); }}
+      style={{ borderRadius: 12, backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.15)' }}
+    >
+      {isSelf && value === 0 ? (
+        <span style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+      ) : (
+        <span style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, color: textColor, lineHeight: 1, userSelect: 'none' }}>{value}</span>
+      )}
     </div>
   );
 };
