@@ -440,50 +440,44 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
         {player.status === 'active' && (
-          <div className="flex flex-col w-full h-full" style={{ touchAction: 'none' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none' }}>
 
-            {/* ROW 1 (26%) - [Lose] [Name/Deck] [Win]
-                Seats 0,2 (left col): CSS-right = inner edge -> paddingRight:95, paddingLeft:10
-                Seats 1,3 (right col): rotate-180 flips it -> CSS-left = inner edge -> paddingLeft:95, paddingRight:10 */}
-            {(() => {
-              const isRightCol = seatIndex === 1 || seatIndex === 3;
-              return (
-                <div style={{
-                  height: '26%', display: 'flex', flexDirection: 'row', alignItems: 'center',
-                  gap: 6,
-                  paddingLeft: isRightCol ? 95 : 10,
-                  paddingRight: isRightCol ? 10 : 95,
-                }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onPointerUp={(e) => e.stopPropagation()}
-                >
-                  <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
-                    flexShrink: 0, fontSize: 'clamp(8px, 3vw, 12px)', fontWeight: 900,
-                    padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
-                    backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
-                    color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                    border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-                  }}>Lose</button>
-                  <div style={{
-                    flex: 1, minWidth: 0,
-                    backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
-                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-                    borderRadius: 999, padding: '5px 14px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  }}>
-                    <span style={{ fontSize: 'clamp(10px, 3.5vw, 15px)', fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.name}</span>
-                    {player.deck && <span style={{ fontSize: 'clamp(6px, 2vw, 9px)', fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.deck}</span>}
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
-                    flexShrink: 0, fontSize: 'clamp(8px, 3vw, 12px)', fontWeight: 900,
-                    padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
-                    backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
-                  }}>Win</button>
-                </div>
-              );
-            })()}
-            {/* ROW 2 (48%) - Life number centered, left=subtract, right=add */}
-            <div style={{ height: '48%', position: 'relative', width: '100%' }}>
+            {/* ROW 1 - Name/Lose/Win bar */}
+            <div style={{
+                flex: '0 0 auto', minHeight: 52,
+                display: 'flex', flexDirection: 'row', alignItems: 'center',
+                gap: 6,
+                paddingLeft: (seatIndex === 1 || seatIndex === 3) ? 95 : 10,
+                paddingRight: (seatIndex === 1 || seatIndex === 3) ? 10 : 95,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+            >
+              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+              }}>Lose</button>
+              <div style={{
+                flex: 1, minWidth: 0,
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.62)' : 'rgba(255,255,255,0.85)',
+                backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                borderRadius: 999, padding: '5px 12px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.name}</span>
+                {player.deck && <span style={{ fontSize: 8, fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.deck}</span>}
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: 'rgba(212,175,55,0.9)', color: '#000',
+              }}>Win</button>
+            </div>
+            {/* ROW 2 - Life number, flex-1 so it fills remaining space */}
+            <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0 }}>
               {/* Left half tap zone */}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 8, zIndex: 1 }}
                 onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
@@ -511,18 +505,17 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               </div>
             </div>
 
-            {/* ROW 3 (26%) - visual RIGHT: Commander damage grid centered */}
-            <div className="flex flex-row items-center justify-center"
-              style={{ height: '26%' }}
+            {/* ROW 3 - Commander damage */}
+            <div style={{ flex: '0 0 auto', minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
             >
-              <div className="grid gap-[3px]" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 52, height: 52 }}>
+              <div style={{ display: 'grid', gap: 3, gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', width: 52, height: 52 }}>
                 {myOpponents.map((op) => {
                   const val = (player.stats.cmdDamage || {})[op.id] || 0;
                   const danger = val >= 21;
                   return (
-                    <div key={op.id} className="rounded-[5px] flex items-center justify-center"
+                    <div key={op.id} 
                       style={{ backgroundColor: danger ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), touchAction: 'none', cursor: 'pointer' }}
                       onPointerDown={(e) => { e.stopPropagation(); startCmd(op.id); }}
                       onPointerUp={(e) => { e.stopPropagation(); stopCmd(op.id); }}
