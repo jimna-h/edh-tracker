@@ -133,7 +133,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
-  className={`relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
+  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/25 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
   style={buttonColor ? { backgroundColor: buttonColor } : {}}
 >
               {hasArt && (
@@ -142,7 +142,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                   <div className="absolute inset-0 bg-black/30" />
                 </>
               )}
-              <span className="relative z-10 text-lg md:text-2xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
+              <span className="relative z-10 text-xl md:text-3xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
                 {label}
               </span>
             </button>
@@ -490,75 +490,6 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   );
 };
 
-// --- STAT NUMPAD ---
-const StatNumpad = ({ label, color, onConfirm, onBack }) => {
-  const [input, setInput] = useState('');
-
-  const display = input === '' ? '0' : input;
-  const value = parseInt(display);
-
-  const press = (d) => {
-    if (d === 'back') { setInput(prev => prev.slice(0, -1)); return; }
-    if (input.length >= 3) return;
-    setInput(prev => prev + d);
-  };
-
-  const confirm = () => onConfirm(value === 0 ? null : value);
-  const skip = () => onConfirm(null);
-
-  const keys = ['7','8','9','4','5','6','1','2','3'];
-
-  const btnBase = {
-    height: 36, borderRadius: 8, fontWeight: 900, fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.22)', color: '#fff',
-    border: '1px solid rgba(255,255,255,0.3)',
-  };
-
-  return (
-    <div className="flex flex-col items-center w-full" style={{ gap: 8, padding: '0 10px' }}>
-      {/* Label */}
-      <p className="text-white font-black text-[9px] uppercase tracking-[0.4em]"
-        style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '4px 16px', borderRadius: '999px' }}>
-        {label}
-      </p>
-
-      {/* Display */}
-      <div style={{
-        backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, padding: '6px 20px',
-        minWidth: 70, textAlign: 'center', border: `2px solid ${color}66`,
-      }}>
-        <span style={{ fontSize: 'clamp(24px, 7vw, 38px)', fontWeight: 900, color: '#fff', lineHeight: 1, userSelect: 'none' }}>
-          {display}
-        </span>
-      </div>
-
-      {/* Number grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, width: '100%', maxWidth: 200 }}>
-        {keys.map(k => (
-          <button key={k} onClick={() => press(k)} style={btnBase}>{k}</button>
-        ))}
-        <button onClick={() => press('back')}
-          style={{ ...btnBase, backgroundColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}
-        >del</button>
-        <button onClick={() => press('0')} style={btnBase}>0</button>
-        <button onClick={confirm}
-          style={{ ...btnBase, backgroundColor: color, border: 'none', fontSize: 13 }}
-        >OK</button>
-      </div>
-
-      {/* Skip / Back */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={onBack}
-          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '3px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
-        >Back</button>
-        <button onClick={skip}
-          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '3px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
-        >Skip</button>
-      </div>
-    </div>
-  );
-};
-
 // --- GAMEPLAY QUADRANT ---
 const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
@@ -835,12 +766,22 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         
         {player.status === 'questionnaire' && (
           <div className="w-full h-full flex items-center justify-center">
-            <StatNumpad
-              label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
-              color={statColors[player.step]}
-              onConfirm={(val) => handleStatSelect(val)}
-              onBack={() => onBackStep(id)}
-            />
+            <div className="flex flex-col items-center w-full">
+              <p className="text-white font-black text-[10px] uppercase tracking-[0.4em] mb-3"
+                style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}
+              >
+                {['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+              </p>
+              <SelectionCarousel 
+                title=""
+                showBack={true}
+                isFlipped={isFlipped}
+                options={statOptions(player.step)}
+                buttonColor={statColors[player.step]}
+                onBack={() => onBackStep(id)} 
+                onSelect={(val) => handleStatSelect(val)} 
+              />
+            </div>
           </div>
         )}
 
