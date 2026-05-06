@@ -403,19 +403,50 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 };
 
 // --- CMD DAMAGE CELL ---
-const CmdCell = ({ label, value, danger, isSelf, onChange }) => {
-  const bg = danger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)';
-  const textColor = danger ? '#fff' : 'rgba(255,255,255,0.9)';
+// Single commander: tap = +1 to that player's commander
+// Partner commander: cell splits into two sub-cells, one per commander
+const CmdCell = ({ opId, label, value, value2, hasPartner, danger, danger2, isSelf, onChange, onChange2 }) => {
+  const baseBg = 'rgba(255,255,255,0.10)';
 
+  if (hasPartner) {
+    // Split cell: top = commander 1, bottom = commander 2
+    return (
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid rgba(255,255,255,0.15)' }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); onChange(1); }}
+          style={{ flex: 1, backgroundColor: danger ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+        >
+          {isSelf && value === 0 ? (
+            <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+          ) : (
+            <span style={{ fontSize: 'clamp(14px, 4vw, 22px)', fontWeight: 900, color: danger ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value}</span>
+          )}
+        </div>
+        <div
+          onClick={(e) => { e.stopPropagation(); onChange2(1); }}
+          style={{ flex: 1, backgroundColor: danger2 ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+        >
+          {isSelf && value2 === 0 ? (
+            <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+          ) : (
+            <span style={{ fontSize: 'clamp(14px, 4vw, 22px)', fontWeight: 900, color: danger2 ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value2}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Single commander
+  const danger1 = value >= 21;
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onChange(1); }}
-      style={{ borderRadius: 12, backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.15)' }}
+      style={{ borderRadius: 12, backgroundColor: danger1 ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.15)' }}
     >
       {isSelf && value === 0 ? (
         <span style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
       ) : (
-        <span style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, color: textColor, lineHeight: 1, userSelect: 'none' }}>{value}</span>
+        <span style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, color: danger1 ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value}</span>
       )}
     </div>
   );
@@ -580,16 +611,36 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 3, width: 58, height: 58, cursor: 'pointer' }}
               >
                 {opponents.map((op) => {
-                  const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                  const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
+                  const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                  const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
                   const isSelf = op.id === id;
-                  const danger = val >= 21;
+                  const danger0 = val0 >= 21;
+                  const danger1 = val1 >= 21;
+                  const totalVal = hasPartner ? null : val0; // for display in single mode
+
+                  if (hasPartner) {
+                    return (
+                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <div style={{ flex: 1, backgroundColor: danger0 ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 9, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger0 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val0}</span>
+                        </div>
+                        <div style={{ flex: 1, backgroundColor: danger1 ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 9, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger1 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val1}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={op.id} style={{
                       borderRadius: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: danger ? 'rgba(180,20,20,0.85)' : isSelf ? (hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)') : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'),
+                      backgroundColor: danger0 ? 'rgba(180,20,20,0.85)' : isSelf ? (hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)') : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'),
                     }}>
-                      {isSelf && <span style={{ fontSize: 6, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', lineHeight: 1, userSelect: 'none' }}>me</span>}
-                      <span style={{ fontSize: 11, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val}</span>
+                      {isSelf && val0 === 0
+                        ? <span style={{ fontSize: 6, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', lineHeight: 1, userSelect: 'none' }}>me</span>
+                        : <span style={{ fontSize: 11, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger0 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val0}</span>
+                      }
                     </div>
                   );
                 })}
@@ -606,19 +657,29 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(160px, 40vw, 220px)', height: 'clamp(160px, 40vw, 220px)' }}>
                   {opponents.map((op) => {
-                    const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                    const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
+                    const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                    const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
                     const isSelf = op.id === id;
-                    const danger = val >= 21;
                     return (
                       <CmdCell
                         key={op.id}
+                        opId={op.id}
                         label={isSelf ? 'me' : (op.name || '?')}
-                        value={val}
-                        danger={danger}
+                        value={val0}
+                        value2={val1}
+                        hasPartner={hasPartner}
+                        danger={val0 >= 21}
+                        danger2={val1 >= 21}
                         isSelf={isSelf}
                         onChange={(delta) => {
-                          onCmdDamage(id, op.id, delta);
-                          onLifeChange(id, -delta); // cmd damage inversely affects life, once only
+                          const key = hasPartner ? `${op.id}_0` : op.id;
+                          onCmdDamage(id, key, delta);
+                          onLifeChange(id, -delta);
+                        }}
+                        onChange2={(delta) => {
+                          onCmdDamage(id, `${op.id}_1`, delta);
+                          onLifeChange(id, -delta);
                         }}
                       />
                     );
@@ -958,7 +1019,7 @@ export default function App() {
                   onResetAll={handleResetAll}
                   mulliganType={mulliganType} onSetMulligan={setMulliganType}
                 /> :
-                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name }))} />
+                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrlPartner: seat.artUrlPartner }))} />
               }
             </div>
           ))}
