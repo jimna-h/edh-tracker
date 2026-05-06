@@ -382,6 +382,58 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   );
 };
 
+// --- CMD DAMAGE CELL ---
+// Tap = +1, hold 500ms = show +/- buttons
+const CmdCell = ({ label, value, danger, isSelf, onChange }) => {
+  const [showControls, setShowControls] = useState(false);
+  const holdTimer = useRef(null);
+
+  const handleDown = () => {
+    holdTimer.current = setTimeout(() => {
+      setShowControls(true);
+      holdTimer.current = null;
+    }, 500);
+  };
+  const handleUp = () => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+      if (!showControls) onChange(1); // tap = +1
+    }
+  };
+  const handleLeave = () => {
+    clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
+
+  const bg = danger ? 'rgba(180,20,20,0.9)' : isSelf ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)';
+  const textColor = danger ? '#fff' : 'rgba(255,255,255,0.9)';
+
+  return (
+    <div style={{ borderRadius: 12, backgroundColor: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}
+      onPointerDown={handleDown}
+      onPointerUp={handleUp}
+      onPointerLeave={handleLeave}
+      onPointerCancel={handleLeave}
+    >
+      {showControls ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 4 }}>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onChange(1); }} style={{ width: 32, height: 22, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          <span style={{ fontSize: 'clamp(16px, 5vw, 28px)', fontWeight: 900, color: textColor, lineHeight: 1 }}>{value}</span>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); if (value > 0) onChange(-1); }} style={{ width: 32, height: 22, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setShowControls(false); }} style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', border: 'none', backgroundColor: 'transparent', padding: '2px 4px' }}>done</button>
+        </div>
+      ) : (
+        <>
+          <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', lineHeight: 1, marginBottom: 2 }}>{label}</span>
+          <span style={{ fontSize: 'clamp(20px, 6vw, 36px)', fontWeight: 900, color: textColor, lineHeight: 1 }}>{value}</span>
+          <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>tap +1</span>
+        </>
+      )}
+    </div>
+  );
+};
+
 // --- GAMEPLAY QUADRANT ---
 const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
@@ -531,63 +583,69 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               </div>
             </div>
 
-            {/* ROW 3 - Commander damage 2x2 grid (all 4 players including self) — z-index 10 */}
-            <div style={{ flex: '0 0 auto', minHeight: 52, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            {/* ROW 3 - Single CMD damage button that opens the menu */}
+            <div style={{ flex: '0 0 auto', minHeight: 44, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 3, width: 56, height: 56 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  backgroundColor: hasArt ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.10)',
+                  border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                  borderRadius: 999, padding: '5px 12px',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                {/* Show total cmd damage received as a quick summary */}
                 {opponents.map((op) => {
                   const val = (player.stats.cmdDamage || {})[op.id] || 0;
-                  const isSelf = op.id === id;
                   const danger = val >= 21;
                   return (
-                    <div key={op.id}
-                      onClick={(e) => { e.stopPropagation(); setCmdModal({ opId: op.id }); }}
-                      style={{
-                        borderRadius: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: isSelf ? (hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)') : danger ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'),
-                        cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                      }}
-                    >
-                      {isSelf && (
-                        <span style={{ fontSize: 7, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', lineHeight: 1, userSelect: 'none' }}>me</span>
-                      )}
-                      <span style={{ fontSize: 12, fontWeight: 900, userSelect: 'none', color: danger ? '#fff' : isSelf ? (hasArt ? '#fff' : '#333') : (hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'), lineHeight: 1 }}>{val}</span>
-                    </div>
+                    <span key={op.id} style={{ fontSize: 11, fontWeight: 900, color: danger ? '#ef4444' : hasArt ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.55)', userSelect: 'none', minWidth: 14, textAlign: 'center' }}>{val}</span>
                   );
                 })}
-              </div>
+              </button>
             </div>
 
-            {/* CMD DAMAGE MODAL — full-quadrant overlay */}
-            {cmdModal && (() => {
-              const op = opponents.find(o => o.id === cmdModal.opId);
-              const val = (player.stats.cmdDamage || {})[cmdModal.opId] || 0;
-              const isSelf = cmdModal.opId === id;
+            {/* CMD DAMAGE MODAL — full-quadrant overlay with 2x2 grid */}
+            {cmdModal === 'grid' && (() => {
               return (
                 <div
-                  style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }}
+                  style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                 >
-                  <span style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 6, userSelect: 'none' }}>
-                    {isSelf ? 'My Cmdr Damage' : `${op?.name || 'Opponent'}'s Cmdr`}
-                  </span>
-                  <span style={{ fontSize: 'clamp(64px, 22vw, 120px)', fontWeight: 900, lineHeight: 1, color: val >= 21 ? '#ef4444' : '#ffffff', userSelect: 'none', marginBottom: 16 }}>{val}</span>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <button
-                      onClick={() => { if (val > 0) onCmdDamage(id, cmdModal.opId, -1); }}
-                      style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 28, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}
-                    >-</button>
-                    <button
-                      onClick={() => onCmdDamage(id, cmdModal.opId, 1)}
-                      style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 28, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}
-                    >+</button>
+                  <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(160px, 40vw, 220px)', height: 'clamp(160px, 40vw, 220px)' }}>
+                    {opponents.map((op) => {
+                      const val = (player.stats.cmdDamage || {})[op.id] || 0;
+                      const isSelf = op.id === id;
+                      const danger = val >= 21;
+                      return (
+                        <CmdCell
+                          key={op.id}
+                          label={isSelf ? 'me' : (op.name || '?')}
+                          value={val}
+                          danger={danger}
+                          isSelf={isSelf}
+                          artUrl={opponents.find(o => o.id === op.id)?.artUrl}
+                          onChange={(delta) => {
+                            onCmdDamage(id, op.id, delta);
+                            // Life changes inversely: +cmd = -life, -cmd = +life
+                            onLifeChange(id, -delta);
+                            applyLifeChange(-delta); // update delta display
+                          }}
+                        />
+                      );
+                    })}
                   </div>
+
                   <button
                     onClick={() => setCmdModal(null)}
-                    style={{ marginTop: 20, fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', padding: '6px 20px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                    style={{ marginTop: 16, fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', padding: '6px 24px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
                   >Done</button>
                 </div>
               );
