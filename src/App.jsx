@@ -442,9 +442,9 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         {player.status === 'active' && (
           <div className="flex flex-col w-full h-full" style={{ touchAction: 'none' }}>
 
-            {/* ROW 1 (26%) — [Lose] [Name/Deck] [Win]
-                Seats 0,2 (left col): CSS-right = inner edge → paddingRight:95, paddingLeft:10
-                Seats 1,3 (right col): rotate-180 flips it → CSS-left = inner edge → paddingLeft:95, paddingRight:10 */}
+            {/* ROW 1 (26%) - [Lose] [Name/Deck] [Win]
+                Seats 0,2 (left col): CSS-right = inner edge -> paddingRight:95, paddingLeft:10
+                Seats 1,3 (right col): rotate-180 flips it -> CSS-left = inner edge -> paddingLeft:95, paddingRight:10 */}
             {(() => {
               const isRightCol = seatIndex === 1 || seatIndex === 3;
               return (
@@ -482,14 +482,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 </div>
               );
             })()}
-              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
-                flexShrink: 0, fontSize: 'clamp(8px, 3vw, 12px)', fontWeight: 900,
-                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
-                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
-                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-
-            {/* ROW 2 (48%) — Life number centered, left=subtract, right=add */}
+            {/* ROW 2 (48%) - Life number centered, left=subtract, right=add */}
             <div style={{ height: '48%', position: 'relative', width: '100%' }}>
               {/* Left half tap zone */}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 8, zIndex: 1 }}
@@ -507,7 +500,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               >
                 <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, userSelect: 'none', pointerEvents: 'none', color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)' }}>+</span>
               </div>
-              {/* Life number — fills the row, centered, no pointer events so taps pass through */}
+              {/* Life number - fills the row, centered, no pointer events so taps pass through */}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                 <span style={{
                   fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1,
@@ -518,7 +511,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               </div>
             </div>
 
-            {/* ROW 3 (26%) — visual RIGHT: Commander damage grid centered */}
+            {/* ROW 3 (26%) - visual RIGHT: Commander damage grid centered */}
             <div className="flex flex-row items-center justify-center"
               style={{ height: '26%' }}
               onPointerDown={(e) => e.stopPropagation()}
