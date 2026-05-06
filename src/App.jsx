@@ -467,7 +467,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
       onPointerDown={(e) => { e.stopPropagation(); startHold(side); }}
       onPointerUp={(e) => {
         e.stopPropagation();
-        if (holdTimer.current) { cancelHold(); onTap(1); } // tap
+        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); } // tap only if not already held
       }}
       onPointerLeave={cancelHold} onPointerCancel={cancelHold}
     >
@@ -481,15 +481,9 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
     </div>
   );
 
-  // Close held state when tapping outside — parent modal handles this via onClick backdrop
-  // But also allow tapping the cell itself to dismiss held state
-  const wrapperProps = held ? {
-    onClick: (e) => { e.stopPropagation(); setHeld(false); setHeldSide(null); }
-  } : {};
-
   if (hasPartner) {
     return (
-      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }} {...wrapperProps}>
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
         {subCell(artUrl, value, danger, isSelf, onChange, 'a')}
         {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, 'b')}
       </div>
@@ -497,7 +491,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   }
 
   return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }} {...wrapperProps}>
+    <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
       {subCell(artUrl, value, danger, isSelf, onChange)}
     </div>
   );
