@@ -491,7 +491,6 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
 };
 
 // --- STAT PICKER ---
-// Same left/right tap pattern as life tracking
 const StatPicker = ({ label, color, onConfirm, onBack }) => {
   const [value, setValue] = useState(0);
   const [activeHalf, setActiveHalf] = useState(null);
@@ -515,58 +514,55 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
     setActiveHalf(null);
   };
 
+  // CSS flex-col = left-to-right on screen after 90deg rotation
+  // So: label on screen-left | tap zones in center | buttons on screen-right
   return (
-    <div className="flex flex-col items-center w-full h-full" style={{ touchAction: 'none' }}>
-      {/* Label */}
-      <div className="flex-none flex items-center justify-center" style={{ paddingTop: 10, paddingBottom: 6 }}>
-        <p className="text-white font-black text-[9px] uppercase tracking-[0.4em]"
-          style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '4px 16px', borderRadius: '999px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none' }}>
+
+      {/* CSS top = screen left: Label pill */}
+      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 8px 6px' }}>
+        <p style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: '5px 18px', borderRadius: 999, color: '#fff', fontWeight: 900, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.35em', whiteSpace: 'nowrap', userSelect: 'none' }}>
           {label}
         </p>
       </div>
 
-      {/* Tap zones + value display */}
-      <div className="relative flex-1 w-full" style={{ touchAction: 'none' }}>
-        {/* Left = decrease */}
-        <div className="absolute inset-y-0 left-0 flex items-center justify-start"
-          style={{ width: '50%', touchAction: 'none', paddingLeft: 12,
-            backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.2)' : 'transparent',
-            transition: 'background-color 0.08s' }}
+      {/* CSS middle = screen center: Tap zones + big number */}
+      <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0 }}>
+        {/* Left tap = subtract */}
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 10, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
           onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
           onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
           onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
         >
-          <span style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.7)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
         </div>
-        {/* Right = increase */}
-        <div className="absolute inset-y-0 right-0 flex items-center justify-end"
-          style={{ width: '50%', touchAction: 'none', paddingRight: 12,
-            backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.2)' : 'transparent',
-            transition: 'background-color 0.08s' }}
+        {/* Right tap = add */}
+        <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
           onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
           onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
           onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
         >
-          <span style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.7)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
         </div>
-        {/* Value centered */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Number */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
         </div>
       </div>
 
-      {/* Confirm / Skip / Back */}
-      <div className="flex-none flex items-center justify-center gap-3" style={{ paddingBottom: 10 }}>
+      {/* CSS bottom = screen right: Back / Skip / OK — in a row so they appear stacked on screen */}
+      <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}>
         <button onClick={onBack}
-          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
         >Back</button>
         <button onClick={() => onConfirm(null)}
-          style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 14px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
         >Skip</button>
         <button onClick={() => onConfirm(value)}
-          style={{ fontSize: 10, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '5px 18px', borderRadius: 999, backgroundColor: color, border: 'none' }}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 10, color: '#fff', textTransform: 'uppercase', backgroundColor: color, border: 'none' }}
         >OK</button>
       </div>
+
     </div>
   );
 };
