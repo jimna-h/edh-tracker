@@ -472,26 +472,26 @@ const Quadrant = ({ id, player, isFlipped, onLose, onBackStep, onLifeChange, onC
               }}>Win</button>
             </div>
 
-            {/* ROW 2 (48%) — visual CENTER: Life number. Left half=−, Right half=+ */}
-            <div className="flex flex-row relative" style={{ height: '48%' }}>
-              <div className="flex items-center justify-start"
-                style={{ width: '50%', touchAction: 'none', paddingLeft: 8 }}
+            {/* ROW 2 (48%) — Life number centered, left=−/subtract, right=+/add */}
+            <div style={{ height: '48%', position: 'relative', width: '100%' }}>
+              {/* Left half tap zone */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 8, zIndex: 1 }}
                 onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(-1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
               >
                 <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, userSelect: 'none', pointerEvents: 'none', color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)' }}>−</span>
               </div>
-              <div className="flex items-center justify-end"
-                style={{ width: '50%', touchAction: 'none', paddingRight: 8 }}
+              {/* Right half tap zone */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, zIndex: 1 }}
                 onPointerDown={(e) => { e.preventDefault(); startLifeRepeat(1); }}
                 onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
                 onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
               >
                 <span style={{ fontSize: 'clamp(12px, 5vw, 18px)', fontWeight: 900, userSelect: 'none', pointerEvents: 'none', color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)' }}>+</span>
               </div>
-              {/* Life number centered over both halves — pointer-events-none so taps reach the zones */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {/* Life number — fills the row, centered, no pointer events so taps pass through */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                 <span style={{
                   fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1,
                   color: lifeColor,
