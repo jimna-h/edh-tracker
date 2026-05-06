@@ -824,13 +824,18 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         )}
         
         {player.status === 'questionnaire' && (
-          <div className="w-full h-full flex items-center justify-center">
-            <StatPicker
-              label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
-              color={statColors[player.step]}
-              onConfirm={(val) => onLose(id, val)}
-              onBack={() => onBackStep(id)}
-            />
+          <div className="w-full h-full" style={{ position: 'relative' }}>
+            {/* Dim the background art */}
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 0 }} />
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <StatPicker
+                key={player.step}
+                label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+                color={statColors[player.step]}
+                onConfirm={(val) => onLose(id, val)}
+                onBack={() => onBackStep(id)}
+              />
+            </div>
           </div>
         )}
 
