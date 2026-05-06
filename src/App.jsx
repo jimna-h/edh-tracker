@@ -441,8 +441,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                       style={{
                         flex: 1, height: 52, borderRadius: 14,
                         fontSize: 22, fontWeight: 900, color: '#fff',
-                        backgroundColor: 'rgba(255,255,255,0.25)',
-                        border: '1px solid rgba(255,255,255,0.4)',
+                        backgroundColor: 'rgba(255,255,255,0.55)',
+                        border: '1px solid rgba(255,255,255,0.7)',
+                        color: '#000',
                       }}
                     >{n}</button>
                   ))}
