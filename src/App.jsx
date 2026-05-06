@@ -1157,35 +1157,38 @@ export default function App() {
           ))}
         </div>
 
+        {/* Spin highlight grid - sibling to center overlay, fills full container */}
+        {spinHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
+                boxShadow: spinHighlight === i ? '0 0 60px rgba(255,255,255,0.6)' : 'none',
+                transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Gold winner flash grid */}
+        {winnerHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: winnerHighlight === i ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
+                backgroundColor: winnerHighlight === i ? 'rgba(212,175,55,0.25)' : 'transparent',
+                boxShadow: winnerHighlight === i ? '0 0 80px rgba(212,175,55,0.8)' : 'none',
+              }} />
+            ))}
+          </div>
+        )}
+
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-          {/* Gold winner flash */}
-          {winnerHighlight !== null && (
-            <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none' }}>
-              {[0,1,2,3].map(i => (
-                <div key={i} style={{
-                  borderRadius: '1.5rem',
-                  margin: '10px',
-                  border: winnerHighlight === i ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
-                  backgroundColor: winnerHighlight === i ? 'rgba(212,175,55,0.25)' : 'transparent',
-                  boxShadow: winnerHighlight === i ? '0 0 80px rgba(212,175,55,0.8), inset 0 0 50px rgba(212,175,55,0.2)' : 'none',
-                }} />
-              ))}
-            </div>
-          )}
-          {spinHighlight !== null && (
-            <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none' }}>
-              {[0,1,2,3].map(i => (
-                <div key={i} style={{
-                  borderRadius: '1.5rem',
-                  margin: '10px',
-                  border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
-                  backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
-                  boxShadow: spinHighlight === i ? '0 0 60px rgba(255,255,255,0.6), inset 0 0 40px rgba(255,255,255,0.15)' : 'none',
-                  transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
-                }} />
-              ))}
-            </div>
-          )}
           {/* Reset confirm modal */}
           {showResetConfirm && (
             <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
