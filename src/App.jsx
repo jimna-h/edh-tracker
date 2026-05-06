@@ -443,12 +443,11 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
           <div className="flex flex-col w-full h-full" style={{ touchAction: 'none' }}>
 
             {/* ROW 1 (26%) — [Lose] [Name/Deck] [Win]
-                Equal padding both sides: the turn circle (90px radius) overlaps ONE inner corner.
-                After all the rotations it's impossible to predict which CSS side without testing,
-                so we pad both sides equally with the circle radius. Wastes space but never clips. */}
+                CSS-right is always the inner edge (toward turn circle) for all seats.
+                Pad right to clear the 90px circle radius, small pad on left to reach outer edge. */}
             <div style={{
               height: '26%', display: 'flex', flexDirection: 'row', alignItems: 'center',
-              gap: 6, paddingLeft: 95, paddingRight: 95,
+              gap: 6, paddingLeft: 10, paddingRight: 95,
             }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
