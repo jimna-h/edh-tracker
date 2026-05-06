@@ -579,9 +579,9 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 </div>
               )}
               {/* -/+ edge hints */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>-</span>
-                <span style={{ fontSize: 16, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.15)', userSelect: 'none' }}>+</span>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)', userSelect: 'none', textShadow: hasArt ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>-</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)', userSelect: 'none', textShadow: hasArt ? '0 1px 4px rgba(0,0,0,0.8)' : 'none' }}>+</span>
               </div>
             </div>
 
