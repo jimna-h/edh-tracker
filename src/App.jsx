@@ -738,12 +738,19 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                         artUrlPartner={op.artUrlPartner}
                         onChange={(delta) => {
                           const key = hasPartner ? `${op.id}_0` : op.id;
-                          onCmdDamage(id, key, delta);
-                          onLifeChange(id, -delta);
+                          const current = (player.stats.cmdDamage || {})[key] ?? 0;
+                          const actual = delta > 0 ? delta : Math.max(-current, delta);
+                          if (actual === 0) return;
+                          onCmdDamage(id, key, actual);
+                          onLifeChange(id, -actual);
                         }}
                         onChange2={(delta) => {
-                          onCmdDamage(id, `${op.id}_1`, delta);
-                          onLifeChange(id, -delta);
+                          const key2 = `${op.id}_1`;
+                          const current2 = (player.stats.cmdDamage || {})[key2] ?? 0;
+                          const actual2 = delta > 0 ? delta : Math.max(-current2, delta);
+                          if (actual2 === 0) return;
+                          onCmdDamage(id, key2, actual2);
+                          onLifeChange(id, -actual2);
                         }}
                         held={cmdHeld}
                         onHold={setCmdHeld}
