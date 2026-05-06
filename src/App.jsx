@@ -659,7 +659,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
                   >
                     {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && op.artUrlPartner.startsWith('http'));
@@ -919,16 +919,29 @@ export default function App() {
     });
   };
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const resetHoldRef = useRef(null);
+
   const handlePointerDown = (e) => {
     e.preventDefault();
+    // Short hold (400ms) = decrement turn
     timerRef.current = setTimeout(() => { 
       setTurn(prev => Math.max(1, prev - 1)); 
       timerRef.current = null; 
     }, 400);
+    // Very long hold (2000ms) = reset confirm
+    resetHoldRef.current = setTimeout(() => {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      setShowResetConfirm(true);
+      resetHoldRef.current = null;
+    }, 2000);
   };
 
   const handlePointerUp = (e) => {
     e.preventDefault();
+    clearTimeout(resetHoldRef.current);
+    resetHoldRef.current = null;
     if (timerRef.current) { 
       clearTimeout(timerRef.current); 
       if (gameStarted) setTurn(prev => prev + 1); 
@@ -1093,6 +1106,23 @@ export default function App() {
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {/* Reset confirm modal */}
+          {showResetConfirm && (
+            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
+              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+              <span className="text-white/50 font-bold text-xs uppercase tracking-wider">Returns to "Who Goes First?"</span>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                >Cancel</button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                >Reset</button>
+              </div>
+            </div>
+          )}
           {!gameStarted && (
             <button
               onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
