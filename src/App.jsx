@@ -913,7 +913,44 @@ export default function App() {
     };
   }, []);
 
-  const handleResetAll = () => {
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinHighlight, setSpinHighlight] = useState(null); // seat index being highlighted
+
+  const handleRandom = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+    const winner = Math.floor(Math.random() * 4);
+    // Spin: start fast, slow down, land on winner
+    let step = 0;
+    const totalSteps = 16;
+    const delays = Array.from({length: totalSteps}, (_, i) => {
+      // Start at 60ms, slow to 300ms
+      return Math.floor(60 + (240 * (i / totalSteps) ** 2));
+    });
+    let current = Math.floor(Math.random() * 4);
+    const spin = () => {
+      setSpinHighlight(current);
+      step++;
+      if (step < totalSteps) {
+        // Last few steps: guide toward winner
+        if (step >= totalSteps - 4) {
+          current = (winner + (totalSteps - step)) % 4;
+        } else {
+          current = (current + 1) % 4;
+        }
+        setTimeout(spin, delays[step]);
+      } else {
+        // Land on winner
+        setSpinHighlight(winner);
+        setTimeout(() => {
+          setIsSpinning(false);
+          setSpinHighlight(null);
+          handleSetFirst(winner);
+        }, 600);
+      }
+    };
+    setTimeout(spin, delays[0]);
+  };
     setFirstSeatIndex(null);
     setMulliganType('');
     setSeats(initialSeats);
@@ -1101,7 +1138,11 @@ export default function App() {
           style={{ width: '100%', height: '100%' }}
         >
           {seats.map((s, i) => (
-            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
+            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ position: 'relative' }}>
+              {/* Spin highlight overlay */}
+              {!gameStarted && spinHighlight === i && (
+                <div className="absolute inset-0 z-50 pointer-events-none" style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: '1.5rem' }} />
+              )}
               {!gameStarted ?
                 <SetupQuadrant
                   id={i} seat={s} isFlipped={i < 2}
@@ -1135,18 +1176,33 @@ export default function App() {
             </div>
           )}
           {!gameStarted && (
-            <button
-              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-              disabled={(!allFilled && !hasPending) || isSyncing}
-              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
-                ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
-                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
-                  'bg-white/5 text-white/20 border border-white/10'}
-              `}
-              style={{ width: '120px', height: '120px' }}
-            >
-              <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
-            </button>
+            <>
+              {/* RANDOM button — only visible when no one has gone first yet */}
+              {firstSeatIndex === null && !allFilled && !hasPending && (
+                <button
+                  onClick={handleRandom}
+                  disabled={isSpinning}
+                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center"
+                  style={{ width: '120px', height: '120px', backgroundColor: isSpinning ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.25)' }}
+                >
+                  <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
+                </button>
+              )}
+              {/* START / SYNC button — normal behavior */}
+              {(allFilled || hasPending) && (
+                <button
+                  onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+                  disabled={isSyncing}
+                  className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
+                    ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
+                      'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]'}
+                  `}
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : 'SYNC')}</span>
+                </button>
+              )}
+            </>
           )}
           {gameStarted && !allFinished && (
             <button
