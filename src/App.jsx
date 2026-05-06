@@ -235,14 +235,16 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     <div className="w-full h-full flex items-center justify-center">
       <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
         {step === 0 && firstSeatIndex === null && (
-          <button 
-            onClick={() => onSetFirst(id)}
-            className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
-          >
-            <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
-              <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
-            </div>
-          </button>
+          <div className="w-full h-full flex items-center justify-center">
+            <button 
+              onClick={() => onSetFirst(id)}
+              className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+            >
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
+                <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
+              </div>
+            </button>
+          </div>
         )}
 
         {step >= 1 && !mulliganType && (
@@ -258,9 +260,11 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               }} 
             />
           ) : (
-            <div className="text-center animate-pulse">
-              <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
-              <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center animate-pulse">
+                <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
+                <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+              </div>
             </div>
           )
         )}
