@@ -397,51 +397,41 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 };
 
 // --- CMD DAMAGE CELL ---
-// Single commander: tap = +1 to that player's commander
-// Partner commander: cell splits into two sub-cells, one per commander
-const CmdCell = ({ opId, label, value, value2, hasPartner, danger, danger2, isSelf, onChange, onChange2 }) => {
-  const baseBg = 'rgba(255,255,255,0.10)';
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2 }) => {
+  const hasArt = !!artUrl && artUrl.startsWith('http');
+  const hasArt2 = !!artUrlPartner && artUrlPartner.startsWith('http');
+
+  const subCell = (art, val, isDanger, isSelfCell, onTap) => (
+    <div onClick={(e) => { e.stopPropagation(); onTap(1); }}
+      style={{
+        flex: 1, position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        backgroundImage: art ? `url(${art})` : 'none',
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
+      {isSelfCell && val === 0
+        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
+        : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
+      }
+    </div>
+  );
 
   if (hasPartner) {
-    // Split cell: left = commander 1, right = commander 2
     return (
-      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', gap: 2, border: '1px solid rgba(255,255,255,0.15)' }}>
-        <div
-          onClick={(e) => { e.stopPropagation(); onChange(1); }}
-          style={{ flex: 1, backgroundColor: danger ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        >
-          {isSelf && value === 0 ? (
-            <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
-          ) : (
-            <span style={{ fontSize: 'clamp(14px, 4vw, 22px)', fontWeight: 900, color: danger ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value}</span>
-          )}
-        </div>
-        <div
-          onClick={(e) => { e.stopPropagation(); onChange2(1); }}
-          style={{ flex: 1, backgroundColor: danger2 ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        >
-          {isSelf && value2 === 0 ? (
-            <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
-          ) : (
-            <span style={{ fontSize: 'clamp(14px, 4vw, 22px)', fontWeight: 900, color: danger2 ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value2}</span>
-          )}
-        </div>
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
+        {subCell(artUrl, value, danger, isSelf, onChange)}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2)}
       </div>
     );
   }
 
-  // Single commander
-  const danger1 = value >= 21;
   return (
-    <div
-      onClick={(e) => { e.stopPropagation(); onChange(1); }}
-      style={{ borderRadius: 12, backgroundColor: danger1 ? 'rgba(180,20,20,0.9)' : baseBg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', border: '1px solid rgba(255,255,255,0.15)' }}
-    >
-      {isSelf && value === 0 ? (
-        <span style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
-      ) : (
-        <span style={{ fontSize: 'clamp(22px, 6vw, 34px)', fontWeight: 900, color: danger1 ? '#fff' : 'rgba(255,255,255,0.9)', lineHeight: 1, userSelect: 'none' }}>{value}</span>
-      )}
+    <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)', display: 'flex' }}>
+      {subCell(artUrl, value, danger, isSelf, onChange)}
     </div>
   );
 };
@@ -611,30 +601,35 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                   const isSelf = op.id === id;
                   const danger0 = val0 >= 21;
                   const danger1 = val1 >= 21;
-                  const totalVal = hasPartner ? null : val0; // for display in single mode
+
+                  const miniCell = (art, val, isDanger, isSelfCell) => (
+                    <div style={{
+                      flex: 1, position: 'relative', overflow: 'hidden',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundImage: art ? `url(${art})` : 'none',
+                      backgroundSize: 'cover', backgroundPosition: 'center',
+                      backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(0,0,0,0.3)'),
+                    }}>
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.4)' }} />
+                      {isSelfCell && val === 0
+                        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+                        : <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
+                      }
+                    </div>
+                  );
 
                   if (hasPartner) {
                     return (
-                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'row', gap: 1 }}>
-                        <div style={{ flex: 1, backgroundColor: danger0 ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 9, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger0 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val0}</span>
-                        </div>
-                        <div style={{ flex: 1, backgroundColor: danger1 ? 'rgba(180,20,20,0.85)' : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 9, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger1 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val1}</span>
-                        </div>
+                      <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                        {miniCell(op.artUrl, val0, danger0, isSelf)}
+                        {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
                       </div>
                     );
                   }
 
                   return (
-                    <div key={op.id} style={{
-                      borderRadius: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: danger0 ? 'rgba(180,20,20,0.85)' : isSelf ? (hasArt ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)') : (hasArt ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)'),
-                    }}>
-                      {isSelf && val0 === 0
-                        ? <span style={{ fontSize: 6, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', lineHeight: 1, userSelect: 'none' }}>me</span>
-                        : <span style={{ fontSize: 11, fontWeight: 900, userSelect: 'none', lineHeight: 1, color: danger0 ? '#fff' : hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)' }}>{val0}</span>
-                      }
+                    <div key={op.id} style={{ borderRadius: 5, overflow: 'hidden' }}>
+                      {miniCell(op.artUrl, val0, danger0, isSelf)}
                     </div>
                   );
                 })}
@@ -658,14 +653,14 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                     return (
                       <CmdCell
                         key={op.id}
-                        opId={op.id}
-                        label={isSelf ? 'me' : (op.name || '?')}
                         value={val0}
                         value2={val1}
                         hasPartner={hasPartner}
                         danger={val0 >= 21}
                         danger2={val1 >= 21}
                         isSelf={isSelf}
+                        artUrl={op.artUrl}
+                        artUrlPartner={op.artUrlPartner}
                         onChange={(delta) => {
                           const key = hasPartner ? `${op.id}_0` : op.id;
                           onCmdDamage(id, key, delta);
@@ -1022,7 +1017,7 @@ export default function App() {
                   onResetAll={handleResetAll}
                   mulliganType={mulliganType} onSetMulligan={setMulliganType}
                 /> :
-                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrlPartner: seat.artUrlPartner }))} />
+                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
               }
             </div>
           ))}
