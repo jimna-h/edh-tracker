@@ -18,9 +18,8 @@
           { "src": "/public/icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
           { "src": "/public/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
         ],
-        // If there is a key in the URL, the "App" will always start with it
         "start_url": key ? `./?key=${key}` : ".",
-        "display": "standalone",
+        "display": "fullscreen",
         "theme_color": "#000000",
         "background_color": "#000000"
       };
@@ -36,14 +35,14 @@
     })();
   </script>
 
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EDH Tracker">
   <link rel="apple-touch-icon" href="/public/icon.png">
   <link rel="icon" sizes="192x192" href="/public/icon.png">
-
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="EDH Tracker"> 
 </head>
 
-  
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
