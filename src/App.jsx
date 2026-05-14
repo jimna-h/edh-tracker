@@ -187,7 +187,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 // --- QUADRANT WRAPPER ---
 const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, isWinner }) => {
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
-  const hasPartner = !!artUrlPartner && typeof artUrlPartner === 'string' && artUrlPartner.startsWith('http');
+  const hasPartner = !!artUrlPartner && (artUrlPartner === 'partner' || artUrlPartner.startsWith('http'));
   
   const bgStyle = hasArt && !isOut ? {
     backgroundImage: `url(${artUrl})`,
@@ -293,7 +293,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     } else if (step === 2) {
       onUpdate(id, 'name', '');
       setStep(1);
-    } else if (step === 3 || step === 4 || step === 5 || step === 6) {
+    } else if (step === 3 || step === 4 || step === 5 || step === 6 || step === 8) {
       onUpdate(id, 'artUrl', '');
       onUpdate(id, 'colors', '');
       if (step === 6) {
@@ -357,7 +357,8 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 onUpdate(id, 'name', val.name); 
                 onUpdate(id, 'pfpUrl', val.artUrl); 
               } else {
-                onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+                // Guest - no name prompt
+                onUpdate(id, 'name', 'Guest');
                 onUpdate(id, 'pfpUrl', '');
               }
               setStep(2); 
@@ -373,8 +374,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
-              if (val.deck === "+ OTHER") { 
-                onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4); 
+              if (val.deck === "+ OTHER") {
+                if (seat.name === 'Guest') {
+                  // Guest: skip name, go straight to color picker
+                  onUpdate(id, 'deck', ''); // will be set to colors on confirm
+                  setStep(4);
+                } else {
+                  // Named player: prompt for deck name
+                  onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4);
+                }
               } else if (val.deck === "* BORROWED") { 
                 setStep(5); 
               } else { 
@@ -396,7 +404,29 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             </div>
             <div className="flex gap-4 w-full max-w-[420px]">
               <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">- Back</button>
-              <button onClick={() => { onUpdate(id, 'colors', tempColors.join('')); setStep(3); }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
+              <button onClick={() => {
+                const colorStr = tempColors.join('');
+                onUpdate(id, 'colors', colorStr);
+                // For guests, use colors as deck name
+                if (seat.name === 'Guest') onUpdate(id, 'deck', colorStr || 'Guest');
+                setStep(8); // partner toggle
+              }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
+            <div className="flex gap-4 w-full max-w-[320px]">
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
+                className="flex-1 py-5 bg-white/10 text-white rounded-full font-black uppercase tracking-widest text-[10px] border border-white/20 active:scale-95 transition-all">
+                No
+              </button>
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
+                className="flex-1 py-5 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl">
+                Yes
+              </button>
             </div>
           </div>
         )}
