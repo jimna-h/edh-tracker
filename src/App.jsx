@@ -682,7 +682,7 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
 // --- GAMEPLAY QUADRANT ---
 const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
   const isOut = player.status === 'done' || player.status === 'out';
-  const isWinner = isOut && player.stats.turnDied === 0;
+  const isWinner = isOut && player.stats.turnDied === 'win';
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
 
   // Life tap-and-hold: tap=+/-1, hold 400ms=+/-10, with highlight and delta display
@@ -1204,7 +1204,7 @@ export default function App() {
       ns.forEach((p, idx) => { 
         if (p.status === 'active') { 
           p.status = 'questionnaire'; 
-          p.stats.turnDied = (idx === id) ? 0 : turn; 
+          p.stats.turnDied = (idx === id) ? 'win' : turn; 
         } 
       }); 
     } else {
