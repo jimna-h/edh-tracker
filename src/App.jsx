@@ -567,7 +567,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
         backgroundImage: art && art !== 'partner' ? `url(${art})` : 'none',
         backgroundSize: 'cover', backgroundPosition: 'center',
         backgroundColor: art && art !== 'partner' ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
-        WebkitTapHighlightColor: 'transparent',
+        WebkitTapHighlightColor: held ? 'transparent' : undefined,
       }}
       onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
       onPointerUp={(e) => {
