@@ -381,7 +381,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                   setStep(4);
                 } else {
                   // Named player: prompt for deck name
-                  onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4);
+                  const deckName = prompt("Deck Name:");
+                  if (deckName === null) return; // cancelled - stay on deck selection
+                  onUpdate(id, 'deck', deckName || "Other"); setStep(4);
                 }
               } else if (val.deck === "* BORROWED") { 
                 setStep(5); 
