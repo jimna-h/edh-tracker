@@ -507,7 +507,8 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
 // --- CMD DAMAGE CELL ---
 const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
-  const [activeHalf, setActiveHalf] = useState(null);
+  const [activeHalfA, setActiveHalfA] = useState(null);
+  const [activeHalfB, setActiveHalfB] = useState(null);
   const holdTimer = useRef(null);
   const tapRepeat = useRef(null);
   const tapTimer = useRef(null);
@@ -530,42 +531,42 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
       tapTimer.current = null;
     }, 400);
   };
-  const stopTap = () => {
+  const stopTap = (setHalf) => {
     clearTimeout(tapTimer.current);
     clearInterval(tapRepeat.current);
     tapTimer.current = null;
     tapRepeat.current = null;
-    setActiveHalf(null);
+    setHalf(null);
   };
 
-  const tapZones = (fn) => (
+  const tapZones = (fn, activeHalf, setHalf) => (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
-        onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('left'); startTap(fn, -1); }}
-        onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
-        onPointerLeave={stopTap} onPointerCancel={stopTap}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('left'); startTap(fn, -1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
       >
         <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
-        onPointerDown={(e) => { e.stopPropagation(); setActiveHalf('right'); startTap(fn, 1); }}
-        onPointerUp={(e) => { e.stopPropagation(); stopTap(); }}
-        onPointerLeave={stopTap} onPointerCancel={stopTap}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('right'); startTap(fn, 1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
       >
         <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
       </div>
     </div>
   );
 
-  const subCell = (art, val, isDanger, isSelfCell, onTap) => (
+  const subCell = (art, val, isDanger, isSelfCell, onTap, activeHalf, setHalf) => (
     <div
       style={{
         flex: 1, position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
-        backgroundImage: art ? `url(${art})` : 'none',
+        backgroundImage: art && art !== 'partner' ? `url(${art})` : 'none',
         backgroundSize: 'cover', backgroundPosition: 'center',
-        backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
+        backgroundColor: art && art !== 'partner' ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
       }}
       onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
       onPointerUp={(e) => {
@@ -575,7 +576,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
       onPointerLeave={cancelHold} onPointerCancel={cancelHold}
     >
       <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
-      {held && tapZones(onTap)}
+      {held && tapZones(onTap, activeHalf, setHalf)}
       {isSelfCell && val === 0
         ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
         : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
@@ -586,15 +587,15 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   if (hasPartner) {
     return (
       <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
-        {subCell(artUrl, value, danger, isSelf, onChange)}
-        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2)}
+        {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, activeHalfB, setActiveHalfB)}
       </div>
     );
   }
 
   return (
     <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
-      {subCell(artUrl, value, danger, isSelf, onChange)}
+      {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
     </div>
   );
 };
@@ -624,41 +625,42 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
 
-      {/* Tap zones + big number */}
-      <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0 }}>
-        {/* Left tap = subtract */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', paddingLeft: 10, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
-          onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
-          onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
-          onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
-        >
-          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
-        </div>
-        {/* Right tap = add */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
-          onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
-          onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
-          onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
-        >
-          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
-        </div>
-        {/* Number */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-          <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+      {/* Full-quadrant tap zones at z-index 0 */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+      <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+
+      {/* Number + edge hints, pointerEvents none */}
+      <div style={{ flex: '1 1 0', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
         </div>
       </div>
 
-      {/* Big colored label */}
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
+      {/* Big colored label, pointerEvents none */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
         <span style={{ fontSize: 'clamp(28px, 9vw, 52px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.25em', userSelect: 'none', textShadow: `0 0 30px ${color}, 0 2px 8px rgba(0,0,0,0.8)` }}>
           {label.replace('Final ', '')}
         </span>
       </div>
 
-      {/* Back / Skip / Next */}
-      <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}>
+      {/* Buttons at z-index 10 */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}
+        onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+      >
         <button onClick={onBack}
           style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
         >Back</button>
