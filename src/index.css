@@ -14,6 +14,10 @@ body {
 button {
   -webkit-appearance: none;
   appearance: none;
+  color: inherit;
+  background: none;
+  border: none;
+  font-family: inherit;
 }
 /* Custom scrollbar hiding for your questionnaire carousels */
 /* Ensure horizontal scrolling is smooth and flickable */
