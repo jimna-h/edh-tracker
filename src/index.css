@@ -15,8 +15,8 @@ button {
   -webkit-appearance: none;
   appearance: none;
   color: inherit;
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
   font-family: inherit;
 }
 /* Custom scrollbar hiding for your questionnaire carousels */
