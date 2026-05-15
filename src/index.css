@@ -10,6 +10,9 @@ body {
   overflow: hidden;
   background-color: black;
   font-family: system-ui, -apple-system, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 button {
   -webkit-appearance: none;
