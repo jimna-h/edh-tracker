@@ -1244,7 +1244,7 @@ export default function App() {
     setIsSyncing(false);
   };
 
-  const submitGame = async () => {
+  const submitGame = () => {
     const gameData = {
       timestamp: new Date().toISOString(),
       turn,
@@ -1260,27 +1260,20 @@ export default function App() {
       }))
     };
 
-    try {
-      setIsSyncing(true);
-      const r = await fetch(submitUrl, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(gameData) 
-      });
-      if (!r.ok) throw new Error("Server error");
-    } catch (e) {
-      const updated = [...pendingGames, gameData];
-      setPendingGames(updated);
-      localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
-      alert("Offline: Game saved locally. It will sync when you're back online!");
-    } finally {
-      setIsSyncing(false);
-      setGameStarted(false); 
-      setTurn(1); 
-      setSeats(initialSeats); 
-      setFirstSeatIndex(null); 
-      setMulliganType('');
-    }
+    // Always save locally first
+    const updated = [...pendingGames, gameData];
+    setPendingGames(updated);
+    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+
+    // Move on immediately - no waiting
+    setGameStarted(false); 
+    setTurn(1); 
+    setSeats(initialSeats); 
+    setFirstSeatIndex(null); 
+    setMulliganType('');
+
+    // Try to sync in the background
+    setTimeout(() => syncPending(), 500);
   };
   
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
