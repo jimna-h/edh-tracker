@@ -421,11 +421,11 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
             <div className="flex gap-4 w-full">
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
-                className="flex-1 py-6 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-sm border border-white/20 active:scale-95 transition-all">
+                style={{ flex: 1, height: 80, borderRadius: 16, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
                 No
               </button>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
-                className="flex-1 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-2xl">
+                style={{ flex: 1, height: 80, borderRadius: 16, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: '#fff', color: '#000', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
                 Yes
               </button>
             </div>
