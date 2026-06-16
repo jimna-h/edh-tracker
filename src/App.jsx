@@ -122,13 +122,12 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {twoRows ? (() => {
-          const mid = Math.ceil(options.length / 2);
-          const row1 = options.slice(0, mid);
-          const row2 = options.slice(mid);
+          const row1 = options.filter((_, i) => i % 2 === 0);
+          const row2 = options.filter((_, i) => i % 2 === 1);
           return [row1, row2].map((row, ri) => (
             <div key={ri} className="flex flex-nowrap gap-3 snap-x snap-mandatory">
               {row.map((opt, i) => {
-                const globalIdx = ri === 0 ? i : mid + i;
+                const globalIdx = i * 2 + ri;
                 const isObj = typeof opt === 'object' && opt !== null;
                 const hasArt = isObj && opt.artUrl;
                 const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
@@ -420,13 +419,13 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         {step === 8 && (
           <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
-            <div className="flex gap-4 w-full max-w-[320px]">
+            <div className="flex gap-4 w-full">
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
-                className="flex-1 py-5 bg-white/10 text-white rounded-full font-black uppercase tracking-widest text-[10px] border border-white/20 active:scale-95 transition-all">
+                className="flex-1 py-6 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-sm border border-white/20 active:scale-95 transition-all">
                 No
               </button>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
-                className="flex-1 py-5 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl">
+                className="flex-1 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-2xl">
                 Yes
               </button>
             </div>
