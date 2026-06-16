@@ -5,8 +5,8 @@ const textShadowStyle = {
   textShadow: '0px 2px 10px rgba(0,0,0,0.9), 0px 0px 20px rgba(0,0,0,0.5)' 
 };
 
-// --- COLOR PICKER COMPONENT --- 
-const ColorPicker = ({ selected = [], onToggle }) => { 
+// --- COLOR PICKER COMPONENT ---
+const ColorPicker = ({ selected = [], onToggle }) => {
   const colors = [
     { id: 'W', bg: '#fffbeb', text: 'text-gray-800' },
     { id: 'U', bg: '#3b82f6', text: 'text-white' },
@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -118,10 +118,35 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="flex overflow-x-auto flex-nowrap gap-4 md:gap-6 py-4 no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab"
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-3 py-2' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
-        {options.map((opt, i) => {
+        {twoRows ? (() => {
+          const row1 = options.filter((_, i) => i % 2 === 0);
+          const row2 = options.filter((_, i) => i % 2 === 1);
+          return [row1, row2].map((row, ri) => (
+            <div key={ri} className="flex flex-nowrap gap-3 snap-x snap-mandatory">
+              {row.map((opt, i) => {
+                const globalIdx = i * 2 + ri;
+                const isObj = typeof opt === 'object' && opt !== null;
+                const hasArt = isObj && opt.artUrl;
+                const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
+                return (
+                  <button
+                    key={`${title}-${globalIdx}`}
+                    data-option-index={globalIdx}
+                    onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[52px] md:h-[68px] border border-white/25 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/15 backdrop-blur-md'}`}
+                    style={buttonColor ? { backgroundColor: buttonColor } : {}}
+                  >
+                    {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" /><div className="absolute inset-0 bg-black/30" /></>)}
+                    <span className="relative z-10 text-sm font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ));
+        })() : options.map((opt, i) => {
           const isObj = typeof opt === 'object' && opt !== null;
           const hasArt = isObj && opt.artUrl;
           const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
@@ -133,7 +158,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
-  className={`relative shrink-0 w-[140px] md:w-[180px] h-[80px] md:h-[100px] border border-white/20 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center px-4 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
+  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/25 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
   style={buttonColor ? { backgroundColor: buttonColor } : {}}
 >
               {hasArt && (
@@ -142,7 +167,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                   <div className="absolute inset-0 bg-black/30" />
                 </>
               )}
-              <span className="relative z-10 text-lg md:text-2xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
+              <span className="relative z-10 text-xl md:text-3xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
                 {label}
               </span>
             </button>
@@ -151,7 +176,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
       </div>
       {showBack && (
         <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-          ← Back
+          - Back
         </button>
       )}
     </div>
@@ -159,8 +184,15 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
 };
 
 // --- QUADRANT WRAPPER ---
-const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
+const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, isWinner }) => {
   const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
+  const hasPartner = !!artUrlPartner && (artUrlPartner === 'partner' || artUrlPartner.startsWith('http'));
+  
+  const bgStyle = hasArt && !isOut ? {
+    backgroundImage: `url(${artUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  } : {};
   
   return (
     <div 
@@ -171,23 +203,66 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, isWinner }) => {
         ${isFlipped ? 'rotate-180' : ''}
         ${isOut ? (isWinner ? 'bg-[#0a0a0a]' : 'bg-[#050505]') : (!hasArt ? 'bg-gradient-to-br from-[#b8cedc] via-[#a3b8c9] to-[#8da3b5]' : '')}
       `}
-      style={hasArt && !isOut ? { 
-        backgroundImage: `url(${artUrl})`, 
-        backgroundSize: 'cover', 
-        backgroundPosition: 'center' 
-      } : {}}
+      style={bgStyle}
     >
+      {/* Partner commander - clips to show on correct visual side accounting for isFlipped */}
+      {hasArt && hasPartner && !isOut && (
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url(${artUrlPartner})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          clipPath: isFlipped ? 'inset(0 0 50% 0)' : 'inset(50% 0 0 0)',
+        }} />
+      )}
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
       )}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2">
+      <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-2">
         {children}
       </div>
     </div>
   );
 };
 
-// --- SETUP QUADRANT ---
+// --- GRID PICKER ---
+// Two-row grid replacing carousel for players/decks
+const GridPicker = ({ title, options, onSelect, onBack }) => {
+  const mid = Math.ceil(options.length / 2);
+  const row1 = options.slice(0, mid);
+  const row2 = options.slice(mid);
+
+  const btnStyle = (hasArt) => ({
+    flex: 1, minWidth: 0, height: 52, borderRadius: 12, fontWeight: 900, fontSize: 11,
+    color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em',
+    backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
+    position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap',
+  });
+
+  const renderBtn = (opt, i) => {
+    const isObj = typeof opt === 'object' && opt !== null;
+    const label = isObj ? (opt.name || opt.deck || 'Unnamed') : String(opt);
+    const art = isObj ? opt.artUrl : null;
+    return (
+      <button key={i} onClick={() => onSelect(opt)} style={btnStyle(!!art)}>
+        {art && <img src={art} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />}
+        <span style={{ position: 'relative', zIndex: 1, textShadow: art ? '0 1px 4px rgba(0,0,0,0.9)' : 'none', padding: '0 6px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 8, padding: '0 10px' }}>
+      {title && <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">{title}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
+        <div style={{ display: 'flex', gap: 7 }}>{row1.map((opt, i) => renderBtn(opt, i))}</div>
+        {row2.length > 0 && <div style={{ display: 'flex', gap: 7 }}>{row2.map((opt, i) => renderBtn(opt, mid + i))}</div>}
+      </div>
+      <button onClick={onBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+    </div>
+  );
+};
+
+
 const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
@@ -217,7 +292,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     } else if (step === 2) {
       onUpdate(id, 'name', '');
       setStep(1);
-    } else if (step === 3 || step === 4 || step === 5 || step === 6) {
+    } else if (step === 3 || step === 4 || step === 5 || step === 6 || step === 8) {
       onUpdate(id, 'artUrl', '');
       onUpdate(id, 'colors', '');
       if (step === 6) {
@@ -233,16 +308,18 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl}>
+      <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl} artUrlPartner={seat.artUrlPartner}>
         {step === 0 && firstSeatIndex === null && (
-          <button 
-            onClick={() => onSetFirst(id)}
-            className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
-          >
-            <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
-              <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
-            </div>
-          </button>
+          <div className="w-full h-full flex items-center justify-center">
+            <button 
+              onClick={() => onSetFirst(id)}
+              className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+            >
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
+                <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
+              </div>
+            </button>
+          </div>
         )}
 
         {step >= 1 && !mulliganType && (
@@ -258,9 +335,11 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               }} 
             />
           ) : (
-            <div className="text-center animate-pulse">
-              <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
-              <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center animate-pulse">
+                <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
+                <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+              </div>
             </div>
           )
         )}
@@ -269,14 +348,16 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           <SelectionCarousel 
             title={`Seat ${seat.order}`} 
             isFlipped={isFlipped} 
-            options={players} 
+            options={players}
+            twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
               if (typeof val === 'object' && val !== null) {
                 onUpdate(id, 'name', val.name); 
                 onUpdate(id, 'pfpUrl', val.artUrl); 
               } else {
-                onUpdate(id, 'name', prompt("Enter Guest Name:") || "Guest");
+                // Guest - no name prompt
+                onUpdate(id, 'name', 'Guest');
                 onUpdate(id, 'pfpUrl', '');
               }
               setStep(2); 
@@ -288,16 +369,27 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           <SelectionCarousel 
             title="Deck" 
             isFlipped={isFlipped} 
-            options={decks} 
+            options={decks}
+            twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
-              if (val.deck === "+ OTHER") { 
-                onUpdate(id, 'deck', prompt("Deck Name:") || "Other"); setStep(4); 
+              if (val.deck === "+ OTHER") {
+                if (seat.name === 'Guest') {
+                  // Guest: skip name, go straight to color picker
+                  onUpdate(id, 'deck', ''); // will be set to colors on confirm
+                  setStep(4);
+                } else {
+                  // Named player: prompt for deck name
+                  const deckName = prompt("Deck Name:");
+                  if (deckName === null) return; // cancelled - stay on deck selection
+                  onUpdate(id, 'deck', deckName || "Other"); setStep(4);
+                }
               } else if (val.deck === "* BORROWED") { 
                 setStep(5); 
               } else { 
                 onUpdate(id, 'deck', val.deck); 
                 onUpdate(id, 'artUrl', val.artUrl); 
+                onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
                 onUpdate(id, 'colors', val.colors || ''); 
                 setStep(3); 
               }
@@ -312,8 +404,30 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
             </div>
             <div className="flex gap-4 w-full max-w-[420px]">
-              <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">← Back</button>
-              <button onClick={() => { onUpdate(id, 'colors', tempColors.join('')); setStep(3); }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
+              <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">- Back</button>
+              <button onClick={() => {
+                const colorStr = tempColors.join('');
+                onUpdate(id, 'colors', colorStr);
+                // For guests, use colors as deck name
+                if (seat.name === 'Guest') onUpdate(id, 'deck', colorStr || 'Guest');
+                setStep(8); // partner toggle
+              }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
+            <div className="flex gap-4 w-full">
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
+                className="flex-1 py-6 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-sm border border-white/20 active:scale-95 transition-all">
+                No
+              </button>
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
+                className="flex-1 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-2xl">
+                Yes
+              </button>
             </div>
           </div>
         )}
@@ -322,10 +436,8 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           <SelectionCarousel 
             title="Borrow From?" 
             isFlipped={isFlipped} 
-            options={playerDataMap
-              .filter(p => p.player_name !== seat.name)
-              .map(p => ({ name: p.player_name, artUrl: p.pfp }))
-            }
+            options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
+            twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
               onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
@@ -338,23 +450,39 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             title={`${seat.deckOwner}'s Decks`} 
             isFlipped={isFlipped} 
             options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
+            twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
               onUpdate(id, 'deck', val.deck); 
               onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
               onUpdate(id, 'colors', val.colors || ''); 
               setStep(3); 
             }} 
           />
         )}
         {step === 3 && (
-          <SelectionCarousel 
-            title="Starting Lands" 
-            isFlipped={isFlipped} 
-            options={[1, 2, 3, 4, 5, 6, 7]} 
-            onBack={handleBack} 
-            onSelect={(val) => { onUpdate(id, 'startLands', val); setStep(7); }} 
-          />
+          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, padding: '0 12px' }}>
+            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">Starting Lands</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
+              {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
+                <div key={ri} style={{ display: 'flex', gap: 8 }}>
+                  {row.map(n => (
+                    <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
+                      style={{
+                        flex: 1, height: 52, borderRadius: 14,
+                        fontSize: 22, fontWeight: 900, color: '#fff',
+                        backgroundColor: 'rgba(255,255,255,0.55)',
+                        border: '1px solid rgba(255,255,255,0.7)',
+                        color: '#000',
+                      }}
+                    >{n}</button>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <button onClick={handleBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+          </div>
         )}
         
         {step === 7 && (
@@ -378,51 +506,447 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
   );
 };
 
-// --- GAMEPLAY QUADRANT ---
-const Quadrant = ({ id, player, isFlipped, onLose, onBackStep }) => {
-  const isOut = player.status === 'done' || player.status === 'out';
-  const isWinner = isOut && player.stats.turnDied === 0;
-  const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
+// --- CMD DAMAGE CELL ---
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
+  const [activeHalfA, setActiveHalfA] = useState(null);
+  const [activeHalfB, setActiveHalfB] = useState(null);
+  const holdTimer = useRef(null);
+  const tapRepeat = useRef(null);
+  const tapTimer = useRef(null);
 
-  const statOptions = (step) => {
-    if (step === 0) return ['Skip', ...Array.from({length: 31}, (_, i) => i)];
-    return ['Skip', ...Array.from({length: 11}, (_, i) => i)];
+  const startHold = () => {
+    holdTimer.current = setTimeout(() => {
+      onHold(true);
+      holdTimer.current = null;
+    }, 400);
+  };
+  const cancelHold = () => {
+    clearTimeout(holdTimer.current);
+    holdTimer.current = null;
   };
 
-  // lands = dark green, rocks = brown, dorks = light green
+  const startTap = (fn, delta) => {
+    fn(delta);
+    tapTimer.current = setTimeout(() => {
+      tapRepeat.current = setInterval(() => fn(delta * 10), 300);
+      tapTimer.current = null;
+    }, 400);
+  };
+  const stopTap = (setHalf) => {
+    clearTimeout(tapTimer.current);
+    clearInterval(tapRepeat.current);
+    tapTimer.current = null;
+    tapRepeat.current = null;
+    setHalf(null);
+  };
+
+  const tapZones = (fn, activeHalf, setHalf) => (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('left'); startTap(fn, -1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('right'); startTap(fn, 1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
+      </div>
+    </div>
+  );
+
+  const subCell = (art, val, isDanger, isSelfCell, onTap, activeHalf, setHalf) => (
+    <div
+      style={{
+        flex: 1, position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        backgroundImage: art && art !== 'partner' ? `url(${art})` : 'none',
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundColor: art && art !== 'partner' ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
+        WebkitTapHighlightColor: held ? 'transparent' : undefined,
+      }}
+      onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); }
+      }}
+      onPointerLeave={cancelHold} onPointerCancel={cancelHold}
+    >
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
+      {held && tapZones(onTap, activeHalf, setHalf)}
+      {isSelfCell && val === 0
+        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
+        : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
+      }
+    </div>
+  );
+
+  if (hasPartner) {
+    return (
+      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
+        {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, activeHalfB, setActiveHalfB)}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
+      {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+    </div>
+  );
+};
+
+// --- STAT PICKER ---
+const StatPicker = ({ label, color, onConfirm, onBack }) => {
+  const [value, setValue] = useState(0);
+  const [activeHalf, setActiveHalf] = useState(null);
+  const timerRef = useRef(null);
+  const repeatRef = useRef(null);
+
+  const change = (delta) => setValue(prev => Math.max(0, prev + delta));
+
+  const startRepeat = (delta) => {
+    change(delta);
+    timerRef.current = setTimeout(() => {
+      repeatRef.current = setInterval(() => change(delta), 80);
+      timerRef.current = null;
+    }, 350);
+  };
+  const stopRepeat = () => {
+    clearTimeout(timerRef.current);
+    clearInterval(repeatRef.current);
+    timerRef.current = null;
+    repeatRef.current = null;
+    setActiveHalf(null);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
+
+      {/* Full-quadrant tap zones at z-index 0 */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+      <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+
+      {/* Number + edge hints, pointerEvents none */}
+      <div style={{ flex: '1 1 0', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
+        </div>
+      </div>
+
+      {/* Big colored label, pointerEvents none */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
+        <span style={{ fontSize: 'clamp(28px, 9vw, 52px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.25em', userSelect: 'none', textShadow: `0 0 30px ${color}, 0 2px 8px rgba(0,0,0,0.8)` }}>
+          {label.replace('Final ', '')}
+        </span>
+      </div>
+
+      {/* Buttons at z-index 10 */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}
+        onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+      >
+        <button onClick={onBack}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Back</button>
+        <button onClick={() => onConfirm(null)}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Skip</button>
+        <button onClick={() => onConfirm(value)}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 10, color: '#fff', textTransform: 'uppercase', backgroundColor: color, border: 'none' }}
+        >Next</button>
+      </div>
+
+    </div>
+  );
+};
+
+// --- GAMEPLAY QUADRANT ---
+const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
+  const isOut = player.status === 'done' || player.status === 'out';
+  const isWinner = isOut && player.stats.turnDied === 'win';
+  const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
+
+  // Life tap-and-hold: tap=+/-1, hold 400ms=+/-10, with highlight and delta display
+  const lifeTimerRef = useRef(null);
+  const lifeRepeatRef = useRef(null);
+  const deltaFadeRef = useRef(null);
+  const [activeHalf, setActiveHalf] = useState(null); // 'left' | 'right' | null
+  const [lifeDelta, setLifeDelta] = useState(0);
+  const [showDelta, setShowDelta] = useState(false);
+
+  const applyLifeChange = (delta) => {
+    onLifeChange(id, delta);
+    setLifeDelta(prev => prev + delta);
+    setShowDelta(true);
+    clearTimeout(deltaFadeRef.current);
+    deltaFadeRef.current = setTimeout(() => {
+      setShowDelta(false);
+      setLifeDelta(0);
+    }, 2000);
+  };
+
+  const startLifeRepeat = (delta) => {
+    lifeTimerRef.current = setTimeout(() => {
+      // hold triggered - do +/-10 once, then keep repeating +/-10
+      applyLifeChange(delta * 9); // already did +/-1 on pointerdown, so add 9 more = 10 total
+      lifeRepeatRef.current = setInterval(() => applyLifeChange(delta * 10), 400);
+      lifeTimerRef.current = null;
+    }, 400);
+  };
+  const stopLifeRepeat = (delta) => {
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
+    setActiveHalf(null);
+  };
+  const cancelLifeRepeat = () => {
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
+    setActiveHalf(null);
+  };
+
+  const [cmdModal, setCmdModal] = useState(null);
+  const [cmdHeld, setCmdHeld] = useState(false); // when true, all cells show +/- zones
+
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
+
+  const life = player.stats.life ?? 40;
+  const isLow = life <= 10;
+  const isDead = life <= 0;
+  const lifeColor = isDead ? '#ef4444' : isLow ? '#f97316' : (hasArt ? '#ffffff' : '#111111');
+  const allOpponents = opponents || [];
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} isWinner={isWinner}>
+      <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} artUrlPartner={player.artUrlPartner} isWinner={isWinner}>
         {player.status === 'active' && (
-          <div className="flex flex-col items-center w-full px-4 md:px-10">
-            <p style={hasArt ? textShadowStyle : {}} className="text-white/80 font-black text-[9px] md:text-[18px] uppercase tracking-[0.4em] mb-1 truncate max-w-full">{player.deck}</p>
-            <h2 style={hasArt ? textShadowStyle : {}} className="text-white text-2xl md:text-7xl font-black uppercase tracking-tighter text-center leading-[0.8] mb-6 md:mb-20">{player.name}</h2>
-            <div className={`flex w-full max-w-[220px] md:max-w-[400px] ${hasArt ? 'bg-black/50' : 'bg-black/[0.08]'} rounded-[1.2rem] md:rounded-[2.5rem] overflow-hidden backdrop-blur-xl border ${hasArt ? 'border-white/20' : 'border-transparent'}`}>
-              <button onClick={() => onLose(id)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Lose</button>
-              <div className="w-[1px] bg-white/20 my-2 md:my-5" />
-              <button onClick={() => onLose(id, null, true)} className="flex-1 py-5 md:py-9 font-black text-[13px] md:text-[16px] text-white uppercase">Win</button>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
+
+            {/* FULL-QUADRANT TAP ZONES - z-index 0, behind everything */}
+            {/* Left half = subtract */}
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 0, touchAction: 'none',
+                backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent',
+                transition: 'background-color 0.08s',
+              }}
+              onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); applyLifeChange(-1); startLifeRepeat(-1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            />
+            {/* Right half = add */}
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', zIndex: 0, touchAction: 'none',
+                backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent',
+                transition: 'background-color 0.08s',
+              }}
+              onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); applyLifeChange(1); startLifeRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            />
+
+            {/* ROW 1 - [Lose] [Name] [Win] - z-index 10 so it sits above the full-quadrant tap zones */}
+            <div style={{
+                flex: '0 0 auto', position: 'relative', zIndex: 10,
+                display: 'flex', flexDirection: 'row', alignItems: 'center',
+                gap: 6,
+                paddingTop: 8, paddingBottom: 8,
+                paddingLeft: (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingRight: (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+            >
+              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+              }}>Lose</button>
+              <div style={{
+                flex: 1, minWidth: 0,
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                borderRadius: 999, padding: '5px 14px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.name}</span>
+                {player.deck && <span style={{ fontSize: 8, fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.deck}</span>}
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: 'rgba(180,148,40,0.6)', color: '#fff',
+              }}>Win</button>
             </div>
+            {/* ROW 2 - Life number + delta indicator (tap zones are full-quadrant overlays above) */}
+            <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0, zIndex: 5, pointerEvents: 'none' }}>
+              {/* Life number */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1, color: lifeColor, textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none', transition: 'color 0.2s', userSelect: 'none' }}>{life}</span>
+              </div>
+              {/* Delta - negative shown on left half, positive on right half */}
+              {showDelta && lifeDelta < 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '50%' }}>
+                  <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, userSelect: 'none', color: 'rgba(255,70,70,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{lifeDelta}</span>
+                </div>
+              )}
+              {showDelta && lifeDelta > 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '50%' }}>
+                  <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, userSelect: 'none', color: 'rgba(60,220,110,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>+{lifeDelta}</span>
+                </div>
+              )}
+              {/* -/+ edge hints */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>-</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>+</span>
+              </div>
+            </div>
+
+            {/* ROW 3 - CMD damage 2x2 grid button */}
+            <div style={{ flex: '0 0 auto', minHeight: 58, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              {(() => {
+                const orderedOpponents = isFlipped ? [...opponents].reverse() : opponents;
+                return (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {orderedOpponents.map((op) => {
+                  const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
+                  const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                  const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
+                  const isSelf = op.id === id;
+                  const danger0 = val0 >= 21;
+                  const danger1 = val1 >= 21;
+
+                  const miniCell = (art, val, isDanger, isSelfCell) => (
+                    <div style={{
+                      flex: 1, position: 'relative', overflow: 'hidden',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundImage: art ? `url(${art})` : 'none',
+                      backgroundSize: 'cover', backgroundPosition: 'center',
+                      backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(80,80,80,0.5)'),
+                    }}>
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.25)' }} />
+                      {isSelfCell && val === 0
+                        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+                        : <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
+                      }
+                    </div>
+                  );
+
+                  if (hasPartner) {
+                    return (
+                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                        {miniCell(op.artUrl, val0, danger0, isSelf)}
+                        {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
+                      {miniCell(op.artUrl, val0, danger0, isSelf)}
+                    </div>
+                  );
+                })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* CMD DAMAGE MODAL */}
+            {cmdModal === 'grid' && (
+              <div
+                style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onClick={() => { setCmdModal(null); setCmdHeld(false); }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
+                <div
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                >
+                  {(isFlipped ? [...opponents].reverse() : opponents).map((op) => {
+                    const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
+                    const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                    const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
+                    const isSelf = op.id === id;
+                    return (
+                      <CmdCell
+                        key={op.id}
+                        value={val0}
+                        value2={val1}
+                        hasPartner={hasPartner}
+                        danger={val0 >= 21}
+                        danger2={val1 >= 21}
+                        isSelf={isSelf}
+                        artUrl={op.artUrl}
+                        artUrlPartner={op.artUrlPartner}
+                        onChange={(delta) => {
+                          const key = hasPartner ? `${op.id}_0` : op.id;
+                          const current = (player.stats.cmdDamage || {})[key] ?? 0;
+                          const actual = delta > 0 ? delta : Math.max(-current, delta);
+                          if (actual === 0) return;
+                          onCmdDamage(id, key, actual);
+                          onLifeChange(id, -actual);
+                        }}
+                        onChange2={(delta) => {
+                          const key2 = `${op.id}_1`;
+                          const current2 = (player.stats.cmdDamage || {})[key2] ?? 0;
+                          const actual2 = delta > 0 ? delta : Math.max(-current2, delta);
+                          if (actual2 === 0) return;
+                          onCmdDamage(id, key2, actual2);
+                          onLifeChange(id, -actual2);
+                        }}
+                        held={cmdHeld}
+                        onHold={setCmdHeld}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
         
         {player.status === 'questionnaire' && (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="flex flex-col items-center w-full">
-              <p className="text-white font-black text-[10px] uppercase tracking-[0.4em] mb-3"
-                style={{ backgroundColor: 'rgba(0,0,0,0.75)', padding: '5px 20px', borderRadius: '999px' }}
-              >
-                {['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
-              </p>
-              <SelectionCarousel 
-                title=""
-                showBack={true}
-                isFlipped={isFlipped}
-                options={statOptions(player.step)}
-                buttonColor={statColors[player.step]}
-                onBack={() => onBackStep(id)} 
-                onSelect={(val) => onLose(id, val === 'Skip' ? null : val)} 
+          <div className="w-full h-full" style={{ position: 'relative' }}>
+            {/* Dim the background art */}
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 0 }} />
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <StatPicker
+                key={player.step}
+                label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+                color={statColors[player.step]}
+                onConfirm={(val) => onLose(id, val)}
+                onBack={() => onBackStep(id)}
               />
             </div>
           </div>
@@ -461,13 +985,22 @@ export default function App() {
   const clockwiseOrder = [0, 1, 3, 2];
 
   const initialSeats = Array(4).fill(null).map((_, i) => ({ 
-    id: i, name: '', deck: '', artUrl: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
-    stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0 } 
+    id: i, name: '', deck: '', artUrl: '', artUrlPartner: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
+    stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0, life: 40, cmdDamage: {} } 
   }));
   const [seats, setSeats] = useState(initialSeats);
   const timerRef = useRef(null);
 
   useEffect(() => {
+    const CACHE_VERSION = 'v2_artUrlPartner';
+    const cachedVersion = localStorage.getItem('mtg_cache_version');
+    
+    // Clear stale cache if version doesn't match
+    if (cachedVersion !== CACHE_VERSION) {
+      localStorage.removeItem('mtg_player_cache');
+      localStorage.setItem('mtg_cache_version', CACHE_VERSION);
+    }
+    
     const cachedData = localStorage.getItem('mtg_player_cache');
     if (cachedData) {
       try {
@@ -547,6 +1080,47 @@ export default function App() {
     };
   }, []);
 
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinHighlight, setSpinHighlight] = useState(null);
+  const [winnerHighlight, setWinnerHighlight] = useState(null);
+
+  const handleRandom = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+    const winner = Math.floor(Math.random() * 4);
+    // Spin: start fast, slow down, land on winner
+    let step = 0;
+    const totalSteps = 16;
+    const delays = Array.from({length: totalSteps}, (_, i) => {
+      // Start at 60ms, slow to 300ms
+      return Math.floor(60 + (240 * (i / totalSteps) ** 2));
+    });
+    let current = Math.floor(Math.random() * 4);
+    const spin = () => {
+      setSpinHighlight(current);
+      step++;
+      if (step < totalSteps) {
+        // Last few steps: guide toward winner
+        if (step >= totalSteps - 4) {
+          current = (winner + (totalSteps - step)) % 4;
+        } else {
+          current = (current + 1) % 4;
+        }
+        setTimeout(spin, delays[step]);
+      } else {
+        // Land on winner - show gold flash
+        setSpinHighlight(null);
+        setWinnerHighlight(winner);
+        setTimeout(() => {
+          setIsSpinning(false);
+          setWinnerHighlight(null);
+          handleSetFirst(winner);
+        }, 1500);
+      }
+    };
+    setTimeout(spin, delays[0]);
+  };
+
   const handleResetAll = () => {
     setFirstSeatIndex(null);
     setMulliganType('');
@@ -564,16 +1138,29 @@ export default function App() {
     });
   };
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const resetHoldRef = useRef(null);
+
   const handlePointerDown = (e) => {
     e.preventDefault();
+    // Short hold (400ms) = decrement turn
     timerRef.current = setTimeout(() => { 
       setTurn(prev => Math.max(1, prev - 1)); 
       timerRef.current = null; 
     }, 400);
+    // Very long hold (2000ms) = reset confirm
+    resetHoldRef.current = setTimeout(() => {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      setShowResetConfirm(true);
+      resetHoldRef.current = null;
+    }, 2000);
   };
 
   const handlePointerUp = (e) => {
     e.preventDefault();
+    clearTimeout(resetHoldRef.current);
+    resetHoldRef.current = null;
     if (timerRef.current) { 
       clearTimeout(timerRef.current); 
       if (gameStarted) setTurn(prev => prev + 1); 
@@ -592,13 +1179,31 @@ export default function App() {
     });
   };
 
+  const handleLifeChange = (id, delta) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      ns[id] = { ...ns[id], stats: { ...ns[id].stats, life: (ns[id].stats.life ?? 40) + delta } };
+      return ns;
+    });
+  };
+
+  const handleCmdDamage = (targetId, sourceId, deltaOrReset) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      const current = ns[targetId].stats.cmdDamage || {};
+      const newVal = deltaOrReset === 'reset' ? 0 : Math.max(0, (current[sourceId] || 0) + deltaOrReset);
+      ns[targetId] = { ...ns[targetId], stats: { ...ns[targetId].stats, cmdDamage: { ...current, [sourceId]: newVal } } };
+      return ns;
+    });
+  };
+
   const handleLose = (id, val = null, isWin = false) => {
     const ns = [...seats];
     if (isWin) { 
       ns.forEach((p, idx) => { 
         if (p.status === 'active') { 
           p.status = 'questionnaire'; 
-          p.stats.turnDied = (idx === id) ? 0 : turn; 
+          p.stats.turnDied = (idx === id) ? 'win' : turn; 
         } 
       }); 
     } else {
@@ -638,7 +1243,7 @@ export default function App() {
     setIsSyncing(false);
   };
 
-  const submitGame = async () => {
+  const submitGame = () => {
     const gameData = {
       timestamp: new Date().toISOString(),
       turn,
@@ -654,27 +1259,20 @@ export default function App() {
       }))
     };
 
-    try {
-      setIsSyncing(true);
-      const r = await fetch(submitUrl, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(gameData) 
-      });
-      if (!r.ok) throw new Error("Server error");
-    } catch (e) {
-      const updated = [...pendingGames, gameData];
-      setPendingGames(updated);
-      localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
-      alert("Offline: Game saved locally. It will sync when you're back online!");
-    } finally {
-      setIsSyncing(false);
-      setGameStarted(false); 
-      setTurn(1); 
-      setSeats(initialSeats); 
-      setFirstSeatIndex(null); 
-      setMulliganType('');
-    }
+    // Always save locally first
+    const updated = [...pendingGames, gameData];
+    setPendingGames(updated);
+    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+
+    // Move on immediately - no waiting
+    setGameStarted(false); 
+    setTurn(1); 
+    setSeats(initialSeats); 
+    setFirstSeatIndex(null); 
+    setMulliganType('');
+
+    // Try to sync in the background
+    setTimeout(() => syncPending(), 500);
   };
   
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
@@ -713,26 +1311,89 @@ export default function App() {
                   onResetAll={handleResetAll}
                   mulliganType={mulliganType} onSetMulligan={setMulliganType}
                 /> :
-                <Quadrant id={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} />
+                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
               }
             </div>
           ))}
         </div>
 
+        {/* Spin highlight grid - sibling to center overlay, fills full container */}
+        {spinHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
+                boxShadow: spinHighlight === i ? '0 0 60px rgba(255,255,255,0.6)' : 'none',
+                transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Gold winner flash grid */}
+        {winnerHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: winnerHighlight === i ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
+                backgroundColor: winnerHighlight === i ? 'rgba(212,175,55,0.25)' : 'transparent',
+                boxShadow: winnerHighlight === i ? '0 0 80px rgba(212,175,55,0.8)' : 'none',
+              }} />
+            ))}
+          </div>
+        )}
+
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {/* Reset confirm modal */}
+          {showResetConfirm && (
+            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
+              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+              <span className="text-white/50 font-bold text-xs uppercase tracking-wider">Returns to "Who Goes First?"</span>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                >Cancel</button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                >Reset</button>
+              </div>
+            </div>
+          )}
           {!gameStarted && (
-            <button
-              onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-              disabled={(!allFilled && !hasPending) || isSyncing}
-              className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
-                ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
-                  hasPending ? 'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]' :
-                  'bg-white/5 text-white/20 border border-white/10'}
-              `}
-              style={{ width: '120px', height: '120px' }}
-            >
-              <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : hasPending ? `SYNC` : 'SETUP')}</span>
-            </button>
+            <>
+              {/* RANDOM button - only visible when no one has gone first yet */}
+              {firstSeatIndex === null && !allFilled && !hasPending && (
+                <button
+                  onClick={handleRandom}
+                  disabled={isSpinning}
+                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
+                </button>
+              )}
+              {/* START / SYNC button - normal behavior */}
+              {(allFilled || hasPending) && (
+                <button
+                  onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+                  disabled={isSyncing}
+                  className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
+                    ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
+                      'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]'}
+                  `}
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : 'SYNC')}</span>
+                </button>
+              )}
+            </>
           )}
           {gameStarted && !allFinished && (
             <button
