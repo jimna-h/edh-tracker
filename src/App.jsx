@@ -278,7 +278,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
-  const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
+  const decks = rawDecks;
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
   useEffect(() => {
@@ -375,28 +375,34 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             options={decks}
             twoRows
             onBack={handleBack} 
+            extraButton={
+              <>
+                <button onClick={() => {
+                  if (seat.name === 'Guest') {
+                    onUpdate(id, 'deck', '');
+                    setStep(4);
+                  } else {
+                    const deckName = prompt("Deck Name:");
+                    if (deckName === null) return;
+                    onUpdate(id, 'deck', deckName || "Other"); setStep(4);
+                  }
+                }}
+                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  + Other
+                </button>
+                <button onClick={() => setStep(5)}
+                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  * Borrowed
+                </button>
+              </>
+            }
             onSelect={(val) => { 
-              if (val.deck === "+ OTHER") {
-                if (seat.name === 'Guest') {
-                  // Guest: skip name, go straight to color picker
-                  onUpdate(id, 'deck', ''); // will be set to colors on confirm
-                  setStep(4);
-                } else {
-                  // Named player: prompt for deck name
-                  const deckName = prompt("Deck Name:");
-                  if (deckName === null) return; // cancelled - stay on deck selection
-                  onUpdate(id, 'deck', deckName || "Other"); setStep(4);
-                }
-              } else if (val.deck === "* BORROWED") { 
-                setStep(5); 
-              } else { 
-                onUpdate(id, 'deck', val.deck); 
-                onUpdate(id, 'artUrl', val.artUrl); 
-                onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
-                onUpdate(id, 'colors', val.colors || ''); 
-                setStep(3); 
-              }
-            }} 
+              onUpdate(id, 'deck', val.deck); 
+              onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
+              onUpdate(id, 'colors', val.colors || ''); 
+              setStep(3); 
+            }}
           />
         )}
 
@@ -422,7 +428,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         {step === 8 && (
           <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
-            <div className="flex gap-4 w-full" style={{ maxWidth: 280 }}>
+            <div className="flex gap-6 w-full" style={{ maxWidth: 280 }}>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
                 style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 No
@@ -432,7 +438,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 Yes
               </button>
             </div>
-            <button onClick={handleBack} className="mt-1 px-8 py-3 bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white/50">Back</button>
+            <button onClick={handleBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+              - Back
+            </button>
           </div>
         )}
 
@@ -485,7 +493,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 </div>
               ))}
             </div>
-            <button onClick={handleBack} className="mt-1 px-8 py-3 bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white/50">Back</button>
+            <button onClick={handleBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+              - Back
+            </button>
           </div>
         )}
         
