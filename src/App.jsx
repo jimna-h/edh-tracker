@@ -392,7 +392,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 </button>
                 <button onClick={() => setStep(5)}
                   className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-                  * Borrowed
+                  Borrowed
                 </button>
               </>
             }
