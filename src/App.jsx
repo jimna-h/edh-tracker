@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false, extraButton = null }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -174,11 +174,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           );
         })}
       </div>
-      {showBack && (
-        <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-          - Back
-        </button>
-      )}
+      <div className="flex gap-3 mt-4 md:mt-8">
+        {showBack && (
+          <button onClick={onBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+            - Back
+          </button>
+        )}
+        {extraButton}
+      </div>
     </div>
   );
 };
@@ -271,7 +274,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     name: p.player_name,
     artUrl: p.pfp
   }));
-  const players = [...playerOptions, "+ GUEST"];
+  const players = playerOptions;
 
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
@@ -351,15 +354,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             options={players}
             twoRows
             onBack={handleBack} 
+            extraButton={
+              <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
+                className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                + Guest
+              </button>
+            }
             onSelect={(val) => { 
-              if (typeof val === 'object' && val !== null) {
-                onUpdate(id, 'name', val.name); 
-                onUpdate(id, 'pfpUrl', val.artUrl); 
-              } else {
-                // Guest - no name prompt
-                onUpdate(id, 'name', 'Guest');
-                onUpdate(id, 'pfpUrl', '');
-              }
+              onUpdate(id, 'name', val.name); 
+              onUpdate(id, 'pfpUrl', val.artUrl); 
               setStep(2); 
             }} 
           />
@@ -419,16 +422,17 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         {step === 8 && (
           <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
-            <div className="flex gap-4 w-full">
+            <div className="flex gap-4 w-full" style={{ maxWidth: 280 }}>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
-                style={{ flex: 1, height: 80, borderRadius: 16, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 No
               </button>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
-                style={{ flex: 1, height: 80, borderRadius: 16, fontWeight: 900, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: '#fff', color: '#000', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 Yes
               </button>
             </div>
+            <button onClick={handleBack} className="mt-1 px-8 py-3 bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white/50">Back</button>
           </div>
         )}
 
@@ -481,7 +485,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 </div>
               ))}
             </div>
-            <button onClick={handleBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+            <button onClick={handleBack} className="mt-1 px-8 py-3 bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white/50">Back</button>
           </div>
         )}
         
