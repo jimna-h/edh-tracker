@@ -176,7 +176,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
       </div>
       <div className="flex gap-3 mt-4 md:mt-8">
         {showBack && (
-          <button onClick={onBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+          <button onClick={onBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
             - Back
           </button>
         )}
@@ -356,7 +356,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             onBack={handleBack} 
             extraButton={
               <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
-                className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
                 + Guest
               </button>
             }
@@ -377,6 +377,10 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             onBack={handleBack} 
             extraButton={
               <>
+                <button onClick={() => setStep(5)}
+                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  Borrowed
+                </button>
                 <button onClick={() => {
                   if (seat.name === 'Guest') {
                     onUpdate(id, 'deck', '');
@@ -387,12 +391,8 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                     onUpdate(id, 'deck', deckName || "Other"); setStep(4);
                   }
                 }}
-                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
                   + Other
-                </button>
-                <button onClick={() => setStep(5)}
-                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-                  Borrowed
                 </button>
               </>
             }
@@ -426,9 +426,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 8 && (
-          <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
-            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
-            <div className="flex gap-6 w-full" style={{ maxWidth: 280 }}>
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em] mb-6">Partner Commanders?</p>
+            <div style={{ display: 'flex', gap: 24, width: '100%', maxWidth: 280 }}>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
                 style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 No
@@ -438,7 +438,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 Yes
               </button>
             </div>
-            <button onClick={handleBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+            <button onClick={handleBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
               - Back
             </button>
           </div>
@@ -493,7 +493,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 </div>
               ))}
             </div>
-            <button onClick={handleBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+            <button onClick={handleBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
               - Back
             </button>
           </div>
