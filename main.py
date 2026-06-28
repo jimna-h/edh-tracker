@@ -92,8 +92,8 @@ def submit_stats():
         except:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Find the winner (turn_died == 0)
-        winner = next((p for p in data['players'] if p['turn_died'] == 0), data['players'][0])
+        # Find the winner (turn_died == 'win')
+        winner = next((p for p in data['players'] if p['turn_died'] == 'win'), data['players'][0])
         # Log to Game_Summary
         summary_row = [
     game_id,
@@ -155,7 +155,7 @@ def submit_demo():
         except:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        winner = next((p for p in request_data['players'] if p['turn_died'] == 0), request_data['players'][0])
+        winner = next((p for p in request_data['players'] if p['turn_died'] == 'win'), request_data['players'][0])
         
         summary_row = [
             game_id,
