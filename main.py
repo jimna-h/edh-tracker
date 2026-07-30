@@ -51,10 +51,11 @@ def get_players():
                 art_url = row[1] if len(row) > 1 else ""
                 art_url_partner = row[2] if len(row) > 2 else ""
                 color_id = row[3] if len(row) > 3 else ""
+                exclude = (row[4] if len(row) > 4 else "").strip().upper() == "TRUE"
                 
                 if deck_name.upper() == "PFP":
                     pfp_url = art_url
-                elif deck_name:
+                elif deck_name and not exclude:
                     deck_list.append({
                         "deck": deck_name,
                         "artUrl": art_url,
@@ -207,8 +208,10 @@ def add_player():
         if not player_name:
             return jsonify({"error": "player_name required"}), 400
         sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.add_worksheet(title=player_name, rows=50, cols=4)
-        ws.append_row(["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID"])
+        ws = sh.add_worksheet(title=player_name, rows=50, cols=6)
+        ws.update('A1:F1', [["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID", "Exclude", "Archidekt"]])
+        ws.format('A1:F1', {'textFormat': {'bold': True}})
+        ws.update('A2', [["PFP"]])
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding player: {e}")
