@@ -996,8 +996,12 @@ const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last 
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-4 px-2 py-6 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/5'} ${!last ? 'border-b border-white/[0.07]' : ''}`}
-    style={{ background: 'transparent', border: 'none', borderBottom: !last ? '1px solid rgba(255,255,255,0.07)' : 'none' }}
+    className={`w-full flex items-center gap-4 px-5 py-5 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/10'} ${!last ? 'mb-3' : ''}`}
+    style={{
+      background: destructive ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.06)',
+      border: destructive ? '1px solid rgba(248,113,113,0.2)' : '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 18,
+    }}
   >
     <span style={{ width: 26, height: 26, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.65)' }}>{icon}</span>
     <span className={`flex-1 text-left font-bold text-[16px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
@@ -1620,7 +1624,7 @@ export default function App() {
                       </svg>
                     }
                   />
-                  <div className={`w-full flex items-center gap-4 py-6 ${!gameStarted ? 'border-b border-white/[0.07]' : ''}`}>
+                  <div className="w-full flex items-center gap-4 px-5 py-5 mb-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18 }}>
                     <span style={{ width: 26, height: 26, flexShrink: 0, color: 'rgba(255,255,255,0.65)' }}>
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
