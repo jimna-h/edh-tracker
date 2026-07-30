@@ -1513,7 +1513,8 @@ export default function App() {
                 <div style={{ width: 34 }} />
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto flex flex-col items-center">
+                <div style={{ width: '100%', maxWidth: 420 }}>
                 {/* Section: Game */}
                 <div className="px-6 pt-6 pb-2 flex items-center gap-3">
                   <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
@@ -1600,6 +1601,7 @@ export default function App() {
                     last
                   />
                 </div>
+                </div>
               </div>
             </div>
           )}
@@ -1607,7 +1609,7 @@ export default function App() {
           {/* Player / Deck editor */}
           {showPlayerEditor && (
             <div
-              className="pointer-events-auto flex flex-col items-stretch overflow-y-auto"
+              className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
               style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1631,7 +1633,8 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="px-6 py-5 flex flex-col gap-2">
+              <div className="flex flex-col items-center overflow-y-auto" style={{ flex: 1 }}>
+              <div className="px-6 py-5 flex flex-col gap-2" style={{ width: '100%', maxWidth: 420 }}>
               <button
                 disabled={editorBusy}
                 onClick={() => {
@@ -1639,7 +1642,7 @@ export default function App() {
                   if (!name) return;
                   editorCall('/players/add_player', { player_name: name });
                 }}
-                className="font-black uppercase text-[10px] text-black px-4 py-3 rounded-full bg-white"
+                className="font-black uppercase text-[10px] text-black px-6 py-3 rounded-full bg-white self-start"
               >+ Add Player</button>
 
               <div className="flex flex-col gap-2 mt-1">
@@ -1745,6 +1748,7 @@ export default function App() {
                     )}
                   </div>
                 ))}
+              </div>
               </div>
               </div>
             </div>
