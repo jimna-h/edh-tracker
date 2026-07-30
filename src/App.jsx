@@ -1486,7 +1486,7 @@ export default function App() {
           {showSettings && !showResetConfirm && !showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: '88%', height: '82%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20000, width: '88vh', height: '82vw', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1575,7 +1575,7 @@ export default function App() {
           {showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col items-stretch overflow-y-auto"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: '88%', height: '82%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20000, width: '88vh', height: '82vw', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 pt-6 pb-5 sticky top-0 flex-shrink-0" style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
