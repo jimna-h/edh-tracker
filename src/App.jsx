@@ -105,7 +105,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   return (
     <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
       {title && (
-        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-4 md:mb-8 text-white/60 drop-shadow-md">
+        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
           {title}
         </p>
       )}
@@ -118,7 +118,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-3 py-2' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {twoRows ? (() => {
@@ -136,11 +136,11 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                     key={`${title}-${globalIdx}`}
                     data-option-index={globalIdx}
                     onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
-                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[52px] md:h-[68px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[46px] md:h-[62px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
                     style={buttonColor ? { backgroundColor: buttonColor } : {}}
                   >
                     {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" /><div className="absolute inset-0 bg-black/15" /></>)}
-                    <span className="relative z-10 text-sm font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">{label}</span>
+                    <span className="relative z-10 text-sm font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">{label}</span>
                   </button>
                 );
               })}
@@ -167,14 +167,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                   <div className="absolute inset-0 bg-black/15" />
                 </>
               )}
-              <span className="relative z-10 text-xl md:text-3xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
+              <span className="relative z-10 text-xl md:text-3xl font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">
                 {label}
               </span>
             </button>
           );
         })}
       </div>
-      <div className="flex gap-3 mt-4 md:mt-8">
+      <div className="flex gap-3 mt-2 md:mt-4">
         {showBack && (
           <button onClick={onBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
             - Back
@@ -218,7 +218,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
         }} />
       )}
       {hasArt && !isOut && (
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] bg-[radial-gradient(circle,_transparent_20%,_rgba(0,0,0,0.5)_100%)]" />
+        <div className="absolute inset-0 bg-black/45" />
       )}
       <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-2">
         {children}
@@ -318,9 +318,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               onClick={() => onSetFirst(id)}
               className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
             >
-              <div className="w-16 h-16 md:w-24 md:h-24 bg-black/70 rounded-full flex items-center justify-center shadow-lg px-2">
-                <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
-              </div>
+              <span className="text-black font-black text-sm md:text-xl uppercase text-center leading-tight px-2">Goes First</span>
             </button>
           </div>
         )}
@@ -788,7 +786,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 flex: '0 0 auto', position: 'relative', zIndex: 10,
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
-                paddingTop: 8, paddingBottom: 8,
+                paddingTop: 10, paddingBottom: 16,
                 paddingLeft: (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
                 paddingRight: (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
@@ -843,7 +841,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             </div>
 
             {/* ROW 3 - CMD damage 2x2 grid button */}
-            <div style={{ flex: '0 0 auto', minHeight: 58, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 8, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               {(() => {
                 const orderedOpponents = isFlipped ? [...opponents].reverse() : opponents;
                 return (
