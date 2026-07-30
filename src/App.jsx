@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false, extraButton = null }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -174,11 +174,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           );
         })}
       </div>
-      {showBack && (
-        <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-          - Back
-        </button>
-      )}
+      <div className="flex gap-3 mt-4 md:mt-8">
+        {showBack && (
+          <button onClick={onBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+            - Back
+          </button>
+        )}
+        {extraButton}
+      </div>
     </div>
   );
 };
@@ -257,7 +260,7 @@ const GridPicker = ({ title, options, onSelect, onBack }) => {
         <div style={{ display: 'flex', gap: 7 }}>{row1.map((opt, i) => renderBtn(opt, i))}</div>
         {row2.length > 0 && <div style={{ display: 'flex', gap: 7 }}>{row2.map((opt, i) => renderBtn(opt, mid + i))}</div>}
       </div>
-      <button onClick={onBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+      <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">- Back</button>
     </div>
   );
 };
@@ -271,11 +274,11 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
     name: p.player_name,
     artUrl: p.pfp
   }));
-  const players = [...playerOptions, "+ GUEST"];
+  const players = playerOptions;
 
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
   const rawDecks = playerEntry.decks || [];
-  const decks = [...rawDecks, { deck: "+ OTHER" }, { deck: "* BORROWED" }];
+  const decks = rawDecks;
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
   useEffect(() => {
@@ -351,15 +354,15 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             options={players}
             twoRows
             onBack={handleBack} 
+            extraButton={
+              <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
+                className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                + Guest
+              </button>
+            }
             onSelect={(val) => { 
-              if (typeof val === 'object' && val !== null) {
-                onUpdate(id, 'name', val.name); 
-                onUpdate(id, 'pfpUrl', val.artUrl); 
-              } else {
-                // Guest - no name prompt
-                onUpdate(id, 'name', 'Guest');
-                onUpdate(id, 'pfpUrl', '');
-              }
+              onUpdate(id, 'name', val.name); 
+              onUpdate(id, 'pfpUrl', val.artUrl); 
               setStep(2); 
             }} 
           />
@@ -372,28 +375,34 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
             options={decks}
             twoRows
             onBack={handleBack} 
+            extraButton={
+              <>
+                <button onClick={() => setStep(5)}
+                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  Borrowed
+                </button>
+                <button onClick={() => {
+                  if (seat.name === 'Guest') {
+                    onUpdate(id, 'deck', '');
+                    setStep(4);
+                  } else {
+                    const deckName = prompt("Deck Name:");
+                    if (deckName === null) return;
+                    onUpdate(id, 'deck', deckName || "Other"); setStep(4);
+                  }
+                }}
+                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                  + Other
+                </button>
+              </>
+            }
             onSelect={(val) => { 
-              if (val.deck === "+ OTHER") {
-                if (seat.name === 'Guest') {
-                  // Guest: skip name, go straight to color picker
-                  onUpdate(id, 'deck', ''); // will be set to colors on confirm
-                  setStep(4);
-                } else {
-                  // Named player: prompt for deck name
-                  const deckName = prompt("Deck Name:");
-                  if (deckName === null) return; // cancelled - stay on deck selection
-                  onUpdate(id, 'deck', deckName || "Other"); setStep(4);
-                }
-              } else if (val.deck === "* BORROWED") { 
-                setStep(5); 
-              } else { 
-                onUpdate(id, 'deck', val.deck); 
-                onUpdate(id, 'artUrl', val.artUrl); 
-                onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
-                onUpdate(id, 'colors', val.colors || ''); 
-                setStep(3); 
-              }
-            }} 
+              onUpdate(id, 'deck', val.deck); 
+              onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
+              onUpdate(id, 'colors', val.colors || ''); 
+              setStep(3); 
+            }}
           />
         )}
 
@@ -404,31 +413,38 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
             </div>
             <div className="flex gap-4 w-full max-w-[420px]">
-              <button onClick={handleBack} className="flex-1 py-4 bg-white/5 text-white/40 rounded-full font-black uppercase tracking-widest text-[9px] border border-white/10 active:scale-95 transition-all">- Back</button>
+              <button onClick={handleBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                - Back
+              </button>
               <button onClick={() => {
                 const colorStr = tempColors.join('');
                 onUpdate(id, 'colors', colorStr);
                 // For guests, use colors as deck name
                 if (seat.name === 'Guest') onUpdate(id, 'deck', colorStr || 'Guest');
                 setStep(8); // partner toggle
-              }} className="flex-[2] py-4 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs active:scale-95 transition-all shadow-2xl">Confirm</button>
+              }} className="flex-1 px-6 md:px-8 py-3 md:py-4 bg-white text-black rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest hover:bg-white/90 transition-colors shadow-2xl">
+                Confirm
+              </button>
             </div>
           </div>
         )}
 
         {step === 8 && (
-          <div className="flex flex-col items-center justify-center h-full w-full px-6 gap-6 animate-in zoom-in duration-300">
-            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em]">Partner Commanders?</p>
-            <div className="flex gap-4 w-full">
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em] mb-6">Partner Commanders?</p>
+            <div style={{ display: 'flex', gap: 24, width: '100%', maxWidth: 280 }}>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
-                className="flex-1 py-6 bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-sm border border-white/20 active:scale-95 transition-all">
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 No
               </button>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
-                className="flex-1 py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-2xl">
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
                 Yes
               </button>
             </div>
+            <button onClick={handleBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+              - Back
+            </button>
           </div>
         )}
 
@@ -481,7 +497,9 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
                 </div>
               ))}
             </div>
-            <button onClick={handleBack} className="mt-1 px-6 py-2 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">Back</button>
+            <button onClick={handleBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+              - Back
+            </button>
           </div>
         )}
         
@@ -1139,33 +1157,75 @@ export default function App() {
   };
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const resetHoldRef = useRef(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [tableLayout, setTableLayout] = useState(() => localStorage.getItem('mtg_table_layout') || 'grid');
+  const [showPlayerEditor, setShowPlayerEditor] = useState(false);
+  const [expandedPlayer, setExpandedPlayer] = useState(null);
+  const [editorBusy, setEditorBusy] = useState(false);
+
+  const toggleTableLayout = () => {
+    setTableLayout(prev => {
+      const next = prev === 'grid' ? 'cross' : 'grid';
+      localStorage.setItem('mtg_table_layout', next);
+      return next;
+    });
+  };
+
+  const refetchPlayers = () => {
+    fetch('https://edh-backend.onrender.com/players')
+      .then(r => r.json())
+      .then(d => { setPlayerDataMap(d); localStorage.setItem('mtg_player_cache', JSON.stringify(d)); })
+      .catch(() => {});
+  };
+
+  const editorCall = async (path, body) => {
+    setEditorBusy(true);
+    try {
+      const r = await fetch(`https://edh-backend.onrender.com${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error('Request failed');
+      refetchPlayers();
+    } catch (e) {
+      alert('Could not reach server - check your connection.');
+    } finally {
+      setEditorBusy(false);
+    }
+  };
+
+  // Layout config: maps visual grid position -> seat index + flip + grid-area name
+  const layoutConfig = tableLayout === 'cross'
+    ? [
+        { seatIndex: 0, area: 'top', flipped: true },
+        { seatIndex: 1, area: 'midl', flipped: false },
+        { seatIndex: 2, area: 'midr', flipped: false },
+        { seatIndex: 3, area: 'bot', flipped: false },
+      ]
+    : [
+        { seatIndex: 0, area: 'tl', flipped: true },
+        { seatIndex: 1, area: 'tr', flipped: true },
+        { seatIndex: 2, area: 'bl', flipped: false },
+        { seatIndex: 3, area: 'br', flipped: false },
+      ];
+  const gridTemplate = tableLayout === 'cross'
+    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.85fr 1.3fr 0.85fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
+    : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"tl tr" "bl br"' };
 
   const handlePointerDown = (e) => {
     e.preventDefault();
-    // Short hold (400ms) = decrement turn
+    // Hold (400ms) = decrement turn
     timerRef.current = setTimeout(() => { 
       setTurn(prev => Math.max(1, prev - 1)); 
       timerRef.current = null; 
     }, 400);
-    // Very long hold (2000ms) = reset confirm
-    resetHoldRef.current = setTimeout(() => {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-      setShowResetConfirm(true);
-      resetHoldRef.current = null;
-    }, 2000);
   };
 
   const handlePointerUp = (e) => {
     e.preventDefault();
-    clearTimeout(resetHoldRef.current);
-    resetHoldRef.current = null;
     if (timerRef.current) { 
       clearTimeout(timerRef.current); 
       if (gameStarted) setTurn(prev => prev + 1); 
       else if (allFilled) setGameStarted(true);
-      else if (hasPending) syncPending();
       timerRef.current = null; 
     }
   };
@@ -1298,35 +1358,40 @@ export default function App() {
         }}
       >
         <div
-          className="grid grid-cols-2 grid-rows-2 gap-0"
-          style={{ width: '100%', height: '100%' }}
+          className="grid gap-0"
+          style={{ width: '100%', height: '100%', ...gridTemplate }}
         >
-          {seats.map((s, i) => (
-            <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden">
-              {!gameStarted ?
-                <SetupQuadrant
-                  id={i} seat={s} isFlipped={i < 2}
-                  playerDataMap={playerDataMap} onUpdate={updateSeat}
-                  onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
-                  onResetAll={handleResetAll}
-                  mulliganType={mulliganType} onSetMulligan={setMulliganType}
-                /> :
-                <Quadrant id={i} seatIndex={i} player={s} isFlipped={i < 2} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
-              }
-            </div>
-          ))}
+          {layoutConfig.map((cfg) => {
+            const i = cfg.seatIndex;
+            const s = seats[i];
+            return (
+              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area }}>
+                {!gameStarted ?
+                  <SetupQuadrant
+                    id={i} seat={s} isFlipped={cfg.flipped}
+                    playerDataMap={playerDataMap} onUpdate={updateSeat}
+                    onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
+                    onResetAll={handleResetAll}
+                    mulliganType={mulliganType} onSetMulligan={setMulliganType}
+                  /> :
+                  <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
+                }
+              </div>
+            );
+          })}
         </div>
 
-        {/* Spin highlight grid - sibling to center overlay, fills full container */}
+        {/* Spin highlight grid - matches active layout via shared grid template */}
         {spinHighlight !== null && (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
-            {[0,1,2,3].map(i => (
-              <div key={i} style={{
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', pointerEvents: 'none', zIndex: 9999, ...gridTemplate }}>
+            {layoutConfig.map(cfg => (
+              <div key={cfg.seatIndex} style={{
+                gridArea: cfg.area,
                 margin: '10px',
                 borderRadius: '1.5rem',
-                border: spinHighlight === i ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
-                backgroundColor: spinHighlight === i ? 'rgba(255,255,255,0.18)' : 'transparent',
-                boxShadow: spinHighlight === i ? '0 0 60px rgba(255,255,255,0.6)' : 'none',
+                border: spinHighlight === cfg.seatIndex ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                backgroundColor: spinHighlight === cfg.seatIndex ? 'rgba(255,255,255,0.18)' : 'transparent',
+                boxShadow: spinHighlight === cfg.seatIndex ? '0 0 60px rgba(255,255,255,0.6)' : 'none',
                 transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
               }} />
             ))}
@@ -1335,14 +1400,15 @@ export default function App() {
 
         {/* Gold winner flash grid */}
         {winnerHighlight !== null && (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', pointerEvents: 'none', zIndex: 9999 }}>
-            {[0,1,2,3].map(i => (
-              <div key={i} style={{
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', pointerEvents: 'none', zIndex: 9999, ...gridTemplate }}>
+            {layoutConfig.map(cfg => (
+              <div key={cfg.seatIndex} style={{
+                gridArea: cfg.area,
                 margin: '10px',
                 borderRadius: '1.5rem',
-                border: winnerHighlight === i ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
-                backgroundColor: winnerHighlight === i ? 'rgba(212,175,55,0.25)' : 'transparent',
-                boxShadow: winnerHighlight === i ? '0 0 80px rgba(212,175,55,0.8)' : 'none',
+                border: winnerHighlight === cfg.seatIndex ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
+                backgroundColor: winnerHighlight === cfg.seatIndex ? 'rgba(212,175,55,0.25)' : 'transparent',
+                boxShadow: winnerHighlight === cfg.seatIndex ? '0 0 80px rgba(212,175,55,0.8)' : 'none',
               }} />
             ))}
           </div>
@@ -1351,7 +1417,7 @@ export default function App() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {/* Reset confirm modal */}
           {showResetConfirm && (
-            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)' }}>
+            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000 }}>
               <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
               <span className="text-white/50 font-bold text-xs uppercase tracking-wider">Returns to "Who Goes First?"</span>
               <div className="flex gap-3 mt-2">
@@ -1360,16 +1426,171 @@ export default function App() {
                   className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
                 >Cancel</button>
                 <button
-                  onClick={() => { setShowResetConfirm(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                  onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
                   className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
                 >Reset</button>
               </div>
             </div>
           )}
-          {!gameStarted && (
+
+          {/* Settings modal */}
+          {showSettings && !showResetConfirm && !showPlayerEditor && (
+            <div className="pointer-events-auto flex flex-col items-stretch gap-3 bg-black/90 rounded-3xl p-6 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, minWidth: 220 }}>
+              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Settings</span>
+              <button
+                onClick={() => { syncPending(); }}
+                disabled={!hasPending || isSyncing}
+                className={`font-black uppercase text-xs px-6 py-3 rounded-full transition-all ${hasPending ? 'bg-amber-500 text-black' : 'bg-white/5 text-white/30'}`}
+              >
+                {isSyncing ? 'Syncing...' : hasPending ? `Sync Now (${pendingGames.length})` : 'Nothing to Sync'}
+              </button>
+              <button
+                onClick={toggleTableLayout}
+                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
+              >Layout: {tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}</button>
+              {!gameStarted && (
+                <button
+                  onClick={() => { setShowPlayerEditor(true); }}
+                  className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
+                >Manage Players</button>
+              )}
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
+              >Reset Game</button>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-1"
+              >Close</button>
+            </div>
+          )}
+
+          {/* Player / Deck editor */}
+          {showPlayerEditor && (
+            <div className="pointer-events-auto flex flex-col items-stretch gap-2 bg-black/95 rounded-3xl p-5 border border-white/20 overflow-y-auto" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, width: 300, maxHeight: '70vh' }}>
+              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Manage Players</span>
+
+              <button
+                disabled={editorBusy}
+                onClick={() => {
+                  const name = prompt("New Player Name:");
+                  if (!name) return;
+                  editorCall('/players/add_player', { player_name: name });
+                }}
+                className="font-black uppercase text-[10px] text-black px-4 py-2 rounded-full bg-white"
+              >+ Add Player</button>
+
+              <div className="flex flex-col gap-2 mt-2">
+                {playerDataMap.map(p => (
+                  <div key={p.player_name} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedPlayer(prev => prev === p.player_name ? null : p.player_name)}
+                      className="w-full flex items-center justify-between px-4 py-3"
+                    >
+                      <span className="text-white font-black text-xs uppercase">{p.player_name}</span>
+                      <span className="text-white/40 text-xs">{expandedPlayer === p.player_name ? '-' : '+'}</span>
+                    </button>
+                    {expandedPlayer === p.player_name && (
+                      <div className="px-3 pb-3 flex flex-col gap-2">
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            const url = prompt("Profile Picture URL:", p.pfp || '');
+                            if (url === null) return;
+                            editorCall('/players/update_pfp', { player_name: p.player_name, art_url: url });
+                          }}
+                          className="text-left text-[10px] font-bold text-white/50 uppercase px-2"
+                        >Edit Profile Pic</button>
+
+                        {p.decks.map(d => (
+                          <div key={d.deck} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                            <span className="text-white text-[11px] font-bold truncate max-w-[140px]">{d.deck}</span>
+                            <div className="flex gap-2">
+                              <button
+                                disabled={editorBusy}
+                                onClick={() => {
+                                  const deck = prompt("Deck Name:", d.deck);
+                                  if (deck === null) return;
+                                  const art = prompt("Art URL:", d.artUrl || '');
+                                  if (art === null) return;
+                                  const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
+                                  if (partner === null) return;
+                                  const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
+                                  if (colors === null) return;
+                                  editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
+                                }}
+                                className="text-[9px] font-black uppercase text-white/60 px-2 py-1 rounded-full bg-white/10"
+                              >Edit</button>
+                              <button
+                                disabled={editorBusy}
+                                onClick={() => {
+                                  if (!confirm(`Delete deck "${d.deck}"?`)) return;
+                                  editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
+                                }}
+                                className="text-[9px] font-black uppercase text-red-400 px-2 py-1 rounded-full bg-red-500/10"
+                              >Del</button>
+                            </div>
+                          </div>
+                        ))}
+
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            const deck = prompt("New Deck Name:");
+                            if (!deck) return;
+                            const art = prompt("Art URL:") || '';
+                            const partner = prompt("Partner Art URL (blank if none):") || '';
+                            const colors = prompt("Colors (e.g. WUBRG letters):") || '';
+                            editorCall('/players/add_deck', { player_name: p.player_name, deck, art_url: art, art_url_partner: partner, colors });
+                          }}
+                          className="text-[10px] font-black uppercase text-white px-3 py-2 rounded-full bg-white/10 border border-white/15"
+                        >+ Add Deck</button>
+
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            if (!confirm(`Delete player "${p.player_name}" and all their decks?`)) return;
+                            editorCall('/players/delete_player', { player_name: p.player_name });
+                            setExpandedPlayer(null);
+                          }}
+                          className="text-[10px] font-black uppercase text-red-400 px-3 py-2 rounded-full bg-red-500/10 mt-1"
+                        >Delete Player</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
+                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-2"
+              >Back to Settings</button>
+            </div>
+          )}
+
+          {/* Settings gear icon - always visible, offset near center */}
+          {!showResetConfirm && !showSettings && (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="pointer-events-auto flex items-center justify-center rounded-full"
+              style={{
+                position: 'absolute', width: 34, height: 34,
+                top: 'calc(50% - 88px)', left: 'calc(50% + 48px)',
+                backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 15000,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
+
+          {!gameStarted && !showSettings && !showResetConfirm && (
             <>
-              {/* RANDOM button - only visible when no one has gone first yet */}
-              {firstSeatIndex === null && !allFilled && !hasPending && (
+              {/* RANDOM button - always available before goes-first is picked, regardless of pending syncs */}
+              {firstSeatIndex === null && !allFilled && (
                 <button
                   onClick={handleRandom}
                   disabled={isSpinning}
@@ -1379,23 +1600,19 @@ export default function App() {
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
               )}
-              {/* START / SYNC button - normal behavior */}
-              {(allFilled || hasPending) && (
+              {/* START button */}
+              {allFilled && (
                 <button
                   onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-                  disabled={isSyncing}
-                  className={`pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4
-                    ${allFilled ? 'bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]' :
-                      'bg-amber-500 text-black shadow-[0_0_40px_rgba(245,158,11,0.4)]'}
-                  `}
+                  className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
                   style={{ width: '120px', height: '120px' }}
                 >
-                  <span className="text-xs font-bold">{isSyncing ? '...' : (allFilled ? 'START' : 'SYNC')}</span>
+                  <span className="text-xs font-bold">START</span>
                 </button>
               )}
             </>
           )}
-          {gameStarted && !allFinished && (
+          {gameStarted && !allFinished && !showSettings && !showResetConfirm && (
             <button
               onPointerDown={handlePointerDown} 
               onPointerUp={handlePointerUp}
@@ -1417,7 +1634,7 @@ export default function App() {
               </span>
             </button>
           )}
-          {gameStarted && allFinished && (
+          {gameStarted && allFinished && !showSettings && !showResetConfirm && (
             <button
               onClick={submitGame}
               className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
