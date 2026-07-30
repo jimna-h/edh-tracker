@@ -1461,36 +1461,38 @@ export default function App() {
           </div>
         )}
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
-          {/* Reset confirm modal */}
+        <div
+          className="absolute inset-0 flex items-center justify-center z-[10000]"
+          style={{ pointerEvents: (showSettings || showPlayerEditor || showResetConfirm) ? 'auto' : 'none' }}
+          onPointerDown={(e) => {
+            if (showResetConfirm) { setShowResetConfirm(false); return; }
+            if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
+          }}
+        >
+          {/* Dim backgrounds - purely visual, the outer wrapper above handles the actual click-to-close */}
           {showResetConfirm && (
-            <>
-              <div className="pointer-events-auto" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} onClick={() => setShowResetConfirm(false)} />
-              <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onClick={(e) => e.stopPropagation()}>
-                <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
-                <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
-                <div className="flex gap-3 mt-2">
-                  <button
-                    onClick={() => setShowResetConfirm(false)}
-                    className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
-                  >Cancel</button>
-                  <button
-                    onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
-                    className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
-                  >Reset</button>
-                </div>
-              </div>
-            </>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} />
+          )}
+          {(showSettings || showPlayerEditor) && !showResetConfirm && (
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 19000 }} />
           )}
 
-          {/* Backdrop for settings / player editor */}
-          {(showSettings || showPlayerEditor) && !showResetConfirm && (
-            <div
-              className="pointer-events-auto"
-              style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 19000 }}
-              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }}
-              onClick={(e) => e.stopPropagation()}
-            />
+          {/* Reset confirm modal */}
+          {showResetConfirm && (
+            <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onPointerDown={(e) => e.stopPropagation()}>
+              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+              <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                >Cancel</button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                >Reset</button>
+              </div>
+            </div>
           )}
 
           {/* Settings modal - large, Lifetap-style panel, always upright regardless of table layout */}
@@ -1498,7 +1500,7 @@ export default function App() {
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
               style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
-              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -1615,7 +1617,7 @@ export default function App() {
               <div
                 className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
                 style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
-                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 {/* Header - swaps between "Players" list header and player-name detail header */}
                 <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
