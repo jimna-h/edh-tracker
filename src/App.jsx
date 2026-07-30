@@ -991,6 +991,22 @@ const submitUrl = IS_REAL
   ? 'https://edh-backend.onrender.com/submit'
   : 'https://edh-backend.onrender.com/submit-demo';
 
+// --- SETTINGS ROW ---
+const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-3 px-5 py-4 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/5'} ${!last ? 'border-b border-white/[0.06]' : ''}`}
+  >
+    <span style={{ width: 20, height: 20, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.6)' }}>{icon}</span>
+    <span className={`flex-1 text-left font-bold text-[13px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
+    {value && <span className="text-[11px] font-bold text-white/35 uppercase tracking-wide">{value}</span>}
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  </button>
+);
+
 export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [turn, setTurn] = useState(1);
@@ -1031,6 +1047,7 @@ export default function App() {
     fetch('https://edh-backend.onrender.com/players')
       .then(r => r.json())
       .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
         setPlayerDataMap(d);
         localStorage.setItem('mtg_player_cache', JSON.stringify(d));
       })
@@ -1170,11 +1187,19 @@ export default function App() {
       return next;
     });
   };
+  const selectTableLayout = (mode) => {
+    setTableLayout(mode);
+    localStorage.setItem('mtg_table_layout', mode);
+  };
 
   const refetchPlayers = () => {
     fetch('https://edh-backend.onrender.com/players')
       .then(r => r.json())
-      .then(d => { setPlayerDataMap(d); localStorage.setItem('mtg_player_cache', JSON.stringify(d)); })
+      .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
+        setPlayerDataMap(d);
+        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+      })
       .catch(() => {});
   };
 
@@ -1208,8 +1233,19 @@ export default function App() {
         { seatIndex: 3, area: 'br', flipped: false },
       ];
   const gridTemplate = tableLayout === 'cross'
-    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.85fr 1.3fr 0.85fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
+    ? { gridTemplateColumns: '0.85fr 1.3fr 0.85fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
     : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"tl tr" "bl br"' };
+
+  // Cross layout: outer 90deg app rotation turns a horizontal top/bottom strip into a vertical
+  // one, so we counter-rotate the content of those cells back. top/bot need a 90deg swap (so
+  // their pre-rotation box is sized using the outer container's vh/vw units, matching the actual
+  // fraction of the grid they occupy), midr just needs a straight 180 flip.
+  const topBotWidthPct = (0.85 / 3) * 100;
+  const crossRotationFix = {
+    top: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
+    bot: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
+    midl: { deg: 180, width: '100%', height: '100%' },
+  };
 
   const handlePointerDown = (e) => {
     e.preventDefault();
@@ -1364,18 +1400,28 @@ export default function App() {
           {layoutConfig.map((cfg) => {
             const i = cfg.seatIndex;
             const s = seats[i];
+            const fix = tableLayout === 'cross' ? crossRotationFix[cfg.area] : null;
+            const content = !gameStarted ?
+              <SetupQuadrant
+                id={i} seat={s} isFlipped={cfg.flipped}
+                playerDataMap={playerDataMap} onUpdate={updateSeat}
+                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
+                onResetAll={handleResetAll}
+                mulliganType={mulliganType} onSetMulligan={setMulliganType}
+              /> :
+              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
             return (
-              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area }}>
-                {!gameStarted ?
-                  <SetupQuadrant
-                    id={i} seat={s} isFlipped={cfg.flipped}
-                    playerDataMap={playerDataMap} onUpdate={updateSeat}
-                    onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
-                    onResetAll={handleResetAll}
-                    mulliganType={mulliganType} onSetMulligan={setMulliganType}
-                  /> :
-                  <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
-                }
+              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area, position: 'relative' }}>
+                {fix ? (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    width: fix.width, height: fix.height,
+                    transform: `translate(-50%, -50%) rotate(${fix.deg}deg)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {content}
+                  </div>
+                ) : content}
               </div>
             );
           })}
@@ -1417,59 +1463,178 @@ export default function App() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {/* Reset confirm modal */}
           {showResetConfirm && (
-            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000 }}>
-              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
-              <span className="text-white/50 font-bold text-xs uppercase tracking-wider">Returns to "Who Goes First?"</span>
-              <div className="flex gap-3 mt-2">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
-                >Cancel</button>
-                <button
-                  onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
-                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
-                >Reset</button>
+            <>
+              <div className="pointer-events-auto" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} onClick={() => setShowResetConfirm(false)} />
+              <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onClick={(e) => e.stopPropagation()}>
+                <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+                <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                  >Cancel</button>
+                  <button
+                    onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                    className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                  >Reset</button>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Settings modal */}
+          {/* Backdrop for settings / player editor */}
+          {(showSettings || showPlayerEditor) && !showResetConfirm && (
+            <div
+              className="pointer-events-auto"
+              style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 19000 }}
+              onClick={() => { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }}
+            />
+          )}
+
+          {/* Settings modal - large, Lifetap-style panel, always upright regardless of table layout */}
           {showSettings && !showResetConfirm && !showPlayerEditor && (
-            <div className="pointer-events-auto flex flex-col items-stretch gap-3 bg-black/90 rounded-3xl p-6 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, minWidth: 220 }}>
-              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Settings</span>
-              <button
-                onClick={() => { syncPending(); }}
-                disabled={!hasPending || isSyncing}
-                className={`font-black uppercase text-xs px-6 py-3 rounded-full transition-all ${hasPending ? 'bg-amber-500 text-black' : 'bg-white/5 text-white/30'}`}
-              >
-                {isSyncing ? 'Syncing...' : hasPending ? `Sync Now (${pendingGames.length})` : 'Nothing to Sync'}
-              </button>
-              <button
-                onClick={toggleTableLayout}
-                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-              >Layout: {tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}</button>
-              {!gameStarted && (
+            <div
+              className="pointer-events-auto flex flex-col overflow-hidden"
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <button
-                  onClick={() => { setShowPlayerEditor(true); }}
-                  className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-                >Manage Players</button>
-              )}
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-              >Reset Game</button>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-1"
-              >Close</button>
+                  onClick={() => setShowSettings(false)}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Settings</span>
+                <div style={{ width: 34 }} />
+              </div>
+
+              <div className="flex-1 overflow-y-auto flex flex-col items-center">
+                <div style={{ width: '100%', maxWidth: 420 }}>
+                {/* Section: Game */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div>
+                  <SettingsRow
+                    label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
+                    value={hasPending ? String(pendingGames.length) : null}
+                    disabled={!hasPending || isSyncing}
+                    onClick={() => syncPending()}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
+                      </svg>
+                    }
+                  />
+                  <div className={`w-full flex items-center gap-3 px-5 py-4 ${!gameStarted ? 'border-b border-white/[0.06]' : ''}`}>
+                    <span style={{ width: 20, height: 20, flexShrink: 0, color: 'rgba(255,255,255,0.6)' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                    </span>
+                    <span className="flex-1 text-left font-bold text-[13px] text-white">Table Layout</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => selectTableLayout('grid')}
+                        style={{
+                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'grid' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'grid' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => selectTableLayout('cross')}
+                        style={{
+                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'cross' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                          <rect x="9" y="3" width="6" height="18" rx="1" /><rect x="3" y="9" width="4" height="6" rx="1" /><rect x="17" y="9" width="4" height="6" rx="1" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  {!gameStarted && (
+                    <SettingsRow
+                      label="Manage Players"
+                      onClick={() => setShowPlayerEditor(true)}
+                      icon={
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                        </svg>
+                      }
+                      last
+                    />
+                  )}
+                </div>
+
+                {/* Section: Danger */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div className="pb-4">
+                  <SettingsRow
+                    label="Reset Game"
+                    destructive
+                    onClick={() => setShowResetConfirm(true)}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+                      </svg>
+                    }
+                    last
+                  />
+                </div>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Player / Deck editor */}
           {showPlayerEditor && (
-            <div className="pointer-events-auto flex flex-col items-stretch gap-2 bg-black/95 rounded-3xl p-5 border border-white/20 overflow-y-auto" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, width: 300, maxHeight: '70vh' }}>
-              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Manage Players</span>
+            <div
+              className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 pt-6 pb-5 sticky top-0 flex-shrink-0" style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <button
+                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Players</span>
+                <button
+                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
+              <div className="flex flex-col items-center overflow-y-auto" style={{ flex: 1 }}>
+              <div className="px-6 py-5 flex flex-col gap-2" style={{ width: '100%', maxWidth: 420 }}>
               <button
                 disabled={editorBusy}
                 onClick={() => {
@@ -1477,17 +1642,26 @@ export default function App() {
                   if (!name) return;
                   editorCall('/players/add_player', { player_name: name });
                 }}
-                className="font-black uppercase text-[10px] text-black px-4 py-2 rounded-full bg-white"
+                className="font-black uppercase text-[10px] text-black px-6 py-3 rounded-full bg-white self-start"
               >+ Add Player</button>
 
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-1">
                 {playerDataMap.map(p => (
                   <div key={p.player_name} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
                     <button
                       onClick={() => setExpandedPlayer(prev => prev === p.player_name ? null : p.player_name)}
-                      className="w-full flex items-center justify-between px-4 py-3"
+                      className="w-full flex items-center gap-3 px-4 py-3"
                     >
-                      <span className="text-white font-black text-xs uppercase">{p.player_name}</span>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                        backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                        backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {!p.pfp && <span className="text-white/30 text-xs font-black">{p.player_name?.[0]?.toUpperCase()}</span>}
+                      </div>
+                      <span className="text-white font-black text-xs uppercase flex-1 text-left">{p.player_name}</span>
+                      <span className="text-white/30 text-[10px] font-bold">{(p.decks || []).length} deck{(p.decks || []).length === 1 ? '' : 's'}</span>
                       <span className="text-white/40 text-xs">{expandedPlayer === p.player_name ? '-' : '+'}</span>
                     </button>
                     {expandedPlayer === p.player_name && (
@@ -1499,39 +1673,54 @@ export default function App() {
                             if (url === null) return;
                             editorCall('/players/update_pfp', { player_name: p.player_name, art_url: url });
                           }}
-                          className="text-left text-[10px] font-bold text-white/50 uppercase px-2"
-                        >Edit Profile Pic</button>
+                          className="flex items-center gap-3 px-2 py-2 rounded-xl bg-white/5"
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                            backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                            backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                          }} />
+                          <span className="text-left text-[10px] font-bold text-white/50 uppercase">Edit Profile Pic</span>
+                        </button>
 
-                        {p.decks.map(d => (
-                          <div key={d.deck} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
-                            <span className="text-white text-[11px] font-bold truncate max-w-[140px]">{d.deck}</span>
-                            <div className="flex gap-2">
-                              <button
-                                disabled={editorBusy}
-                                onClick={() => {
-                                  const deck = prompt("Deck Name:", d.deck);
-                                  if (deck === null) return;
-                                  const art = prompt("Art URL:", d.artUrl || '');
-                                  if (art === null) return;
-                                  const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
-                                  if (partner === null) return;
-                                  const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
-                                  if (colors === null) return;
-                                  editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
-                                }}
-                                className="text-[9px] font-black uppercase text-white/60 px-2 py-1 rounded-full bg-white/10"
-                              >Edit</button>
-                              <button
-                                disabled={editorBusy}
-                                onClick={() => {
-                                  if (!confirm(`Delete deck "${d.deck}"?`)) return;
-                                  editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
-                                }}
-                                className="text-[9px] font-black uppercase text-red-400 px-2 py-1 rounded-full bg-red-500/10"
-                              >Del</button>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                          {(p.decks || []).map(d => (
+                            <div key={d.deck} style={{
+                              position: 'relative', borderRadius: 14, overflow: 'hidden', aspectRatio: '1 / 0.85',
+                              backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                              backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                            }}>
+                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
+                              <span style={{ position: 'absolute', top: 6, left: 8, right: 8, color: '#fff', fontSize: 10, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <div style={{ position: 'absolute', bottom: 6, left: 6, right: 6, display: 'flex', gap: 4 }}>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={() => {
+                                    const deck = prompt("Deck Name:", d.deck);
+                                    if (deck === null) return;
+                                    const art = prompt("Art URL:", d.artUrl || '');
+                                    if (art === null) return;
+                                    const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
+                                    if (partner === null) return;
+                                    const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
+                                    if (colors === null) return;
+                                    editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
+                                  }}
+                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+                                >Edit</button>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={() => {
+                                    if (!confirm(`Delete deck "${d.deck}"?`)) return;
+                                    editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
+                                  }}
+                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
+                                >Del</button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
 
                         <button
                           disabled={editorBusy}
@@ -1560,11 +1749,8 @@ export default function App() {
                   </div>
                 ))}
               </div>
-
-              <button
-                onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
-                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-2"
-              >Back to Settings</button>
+              </div>
+              </div>
             </div>
           )}
 
@@ -1575,7 +1761,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 88px)', left: 'calc(50% + 48px)',
+                top: 'calc(50% - 17px)', left: 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
