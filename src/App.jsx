@@ -1047,6 +1047,7 @@ export default function App() {
     fetch('https://edh-backend.onrender.com/players')
       .then(r => r.json())
       .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
         setPlayerDataMap(d);
         localStorage.setItem('mtg_player_cache', JSON.stringify(d));
       })
@@ -1186,11 +1187,19 @@ export default function App() {
       return next;
     });
   };
+  const selectTableLayout = (mode) => {
+    setTableLayout(mode);
+    localStorage.setItem('mtg_table_layout', mode);
+  };
 
   const refetchPlayers = () => {
     fetch('https://edh-backend.onrender.com/players')
       .then(r => r.json())
-      .then(d => { setPlayerDataMap(d); localStorage.setItem('mtg_player_cache', JSON.stringify(d)); })
+      .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
+        setPlayerDataMap(d);
+        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+      })
       .catch(() => {});
   };
 
@@ -1456,7 +1465,7 @@ export default function App() {
           {showResetConfirm && (
             <>
               <div className="pointer-events-auto" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} onClick={() => setShowResetConfirm(false)} />
-              <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onClick={(e) => e.stopPropagation()}>
+              <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onClick={(e) => e.stopPropagation()}>
                 <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
                 <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
                 <div className="flex gap-3 mt-2">
@@ -1486,7 +1495,7 @@ export default function App() {
           {showSettings && !showResetConfirm && !showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20000, width: '88vh', height: '82vw', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1522,18 +1531,42 @@ export default function App() {
                       </svg>
                     }
                   />
-                  <SettingsRow
-                    label="Table Layout"
-                    value={tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}
-                    onClick={toggleTableLayout}
-                    icon={
+                  <div className={`w-full flex items-center gap-3 px-5 py-4 ${!gameStarted ? 'border-b border-white/[0.06]' : ''}`}>
+                    <span style={{ width: 20, height: 20, flexShrink: 0, color: 'rgba(255,255,255,0.6)' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                         <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                       </svg>
-                    }
-                    last={gameStarted}
-                  />
+                    </span>
+                    <span className="flex-1 text-left font-bold text-[13px] text-white">Table Layout</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => selectTableLayout('grid')}
+                        style={{
+                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'grid' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'grid' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => selectTableLayout('cross')}
+                        style={{
+                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'cross' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                          <rect x="9" y="3" width="6" height="18" rx="1" /><rect x="3" y="9" width="4" height="6" rx="1" /><rect x="17" y="9" width="4" height="6" rx="1" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                   {!gameStarted && (
                     <SettingsRow
                       label="Manage Players"
@@ -1575,7 +1608,7 @@ export default function App() {
           {showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col items-stretch overflow-y-auto"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20000, width: '88vh', height: '82vw', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 pt-6 pb-5 sticky top-0 flex-shrink-0" style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -1614,9 +1647,18 @@ export default function App() {
                   <div key={p.player_name} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
                     <button
                       onClick={() => setExpandedPlayer(prev => prev === p.player_name ? null : p.player_name)}
-                      className="w-full flex items-center justify-between px-4 py-3"
+                      className="w-full flex items-center gap-3 px-4 py-3"
                     >
-                      <span className="text-white font-black text-xs uppercase">{p.player_name}</span>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                        backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                        backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {!p.pfp && <span className="text-white/30 text-xs font-black">{p.player_name?.[0]?.toUpperCase()}</span>}
+                      </div>
+                      <span className="text-white font-black text-xs uppercase flex-1 text-left">{p.player_name}</span>
+                      <span className="text-white/30 text-[10px] font-bold">{(p.decks || []).length} deck{(p.decks || []).length === 1 ? '' : 's'}</span>
                       <span className="text-white/40 text-xs">{expandedPlayer === p.player_name ? '-' : '+'}</span>
                     </button>
                     {expandedPlayer === p.player_name && (
@@ -1628,39 +1670,54 @@ export default function App() {
                             if (url === null) return;
                             editorCall('/players/update_pfp', { player_name: p.player_name, art_url: url });
                           }}
-                          className="text-left text-[10px] font-bold text-white/50 uppercase px-2"
-                        >Edit Profile Pic</button>
+                          className="flex items-center gap-3 px-2 py-2 rounded-xl bg-white/5"
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                            backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                            backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                          }} />
+                          <span className="text-left text-[10px] font-bold text-white/50 uppercase">Edit Profile Pic</span>
+                        </button>
 
-                        {p.decks.map(d => (
-                          <div key={d.deck} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
-                            <span className="text-white text-[11px] font-bold truncate max-w-[140px]">{d.deck}</span>
-                            <div className="flex gap-2">
-                              <button
-                                disabled={editorBusy}
-                                onClick={() => {
-                                  const deck = prompt("Deck Name:", d.deck);
-                                  if (deck === null) return;
-                                  const art = prompt("Art URL:", d.artUrl || '');
-                                  if (art === null) return;
-                                  const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
-                                  if (partner === null) return;
-                                  const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
-                                  if (colors === null) return;
-                                  editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
-                                }}
-                                className="text-[9px] font-black uppercase text-white/60 px-2 py-1 rounded-full bg-white/10"
-                              >Edit</button>
-                              <button
-                                disabled={editorBusy}
-                                onClick={() => {
-                                  if (!confirm(`Delete deck "${d.deck}"?`)) return;
-                                  editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
-                                }}
-                                className="text-[9px] font-black uppercase text-red-400 px-2 py-1 rounded-full bg-red-500/10"
-                              >Del</button>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                          {(p.decks || []).map(d => (
+                            <div key={d.deck} style={{
+                              position: 'relative', borderRadius: 14, overflow: 'hidden', aspectRatio: '1 / 0.85',
+                              backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                              backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                            }}>
+                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
+                              <span style={{ position: 'absolute', top: 6, left: 8, right: 8, color: '#fff', fontSize: 10, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <div style={{ position: 'absolute', bottom: 6, left: 6, right: 6, display: 'flex', gap: 4 }}>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={() => {
+                                    const deck = prompt("Deck Name:", d.deck);
+                                    if (deck === null) return;
+                                    const art = prompt("Art URL:", d.artUrl || '');
+                                    if (art === null) return;
+                                    const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
+                                    if (partner === null) return;
+                                    const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
+                                    if (colors === null) return;
+                                    editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
+                                  }}
+                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+                                >Edit</button>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={() => {
+                                    if (!confirm(`Delete deck "${d.deck}"?`)) return;
+                                    editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
+                                  }}
+                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
+                                >Del</button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
 
                         <button
                           disabled={editorBusy}
@@ -1700,7 +1757,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 88px)', left: 'calc(50% + 48px)',
+                top: 'calc(50% - 17px)', left: 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
