@@ -1227,6 +1227,17 @@ export default function App() {
     ? { gridTemplateColumns: '0.85fr 1.3fr 0.85fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
     : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"tl tr" "bl br"' };
 
+  // Cross layout: outer 90deg app rotation turns a horizontal top/bottom strip into a vertical
+  // one, so we counter-rotate the content of those cells back. top/bot need a 90deg swap (so
+  // their pre-rotation box is sized using the outer container's vh/vw units, matching the actual
+  // fraction of the grid they occupy), midr just needs a straight 180 flip.
+  const topBotWidthPct = (0.85 / 3) * 100;
+  const crossRotationFix = {
+    top: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
+    bot: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
+    midr: { deg: 180, width: '100%', height: '100%' },
+  };
+
   const handlePointerDown = (e) => {
     e.preventDefault();
     // Hold (400ms) = decrement turn
@@ -1380,18 +1391,28 @@ export default function App() {
           {layoutConfig.map((cfg) => {
             const i = cfg.seatIndex;
             const s = seats[i];
+            const fix = tableLayout === 'cross' ? crossRotationFix[cfg.area] : null;
+            const content = !gameStarted ?
+              <SetupQuadrant
+                id={i} seat={s} isFlipped={cfg.flipped}
+                playerDataMap={playerDataMap} onUpdate={updateSeat}
+                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
+                onResetAll={handleResetAll}
+                mulliganType={mulliganType} onSetMulligan={setMulliganType}
+              /> :
+              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
             return (
-              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area }}>
-                {!gameStarted ?
-                  <SetupQuadrant
-                    id={i} seat={s} isFlipped={cfg.flipped}
-                    playerDataMap={playerDataMap} onUpdate={updateSeat}
-                    onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
-                    onResetAll={handleResetAll}
-                    mulliganType={mulliganType} onSetMulligan={setMulliganType}
-                  /> :
-                  <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />
-                }
+              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area, position: 'relative' }}>
+                {fix ? (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    width: fix.width, height: fix.height,
+                    transform: `translate(-50%, -50%) rotate(${fix.deg}deg)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {content}
+                  </div>
+                ) : content}
               </div>
             );
           })}
