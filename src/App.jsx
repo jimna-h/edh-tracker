@@ -1235,7 +1235,7 @@ export default function App() {
   const crossRotationFix = {
     top: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
     bot: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
-    midr: { deg: 180, width: '100%', height: '100%' },
+    midl: { deg: 180, width: '100%', height: '100%' },
   };
 
   const handlePointerDown = (e) => {
@@ -1482,86 +1482,91 @@ export default function App() {
             />
           )}
 
-          {/* Settings modal */}
+          {/* Settings modal - large, Lifetap-style panel, always upright regardless of table layout */}
           {showSettings && !showResetConfirm && !showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(18,18,20,0.97)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: 300, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: '88%', height: '82%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-4">
-                <span className="text-white font-black text-sm uppercase tracking-[0.15em]">Settings</span>
+              <div className="flex items-center justify-between px-6 pt-6 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <button
                   onClick={() => setShowSettings(false)}
                   className="flex items-center justify-center rounded-full"
-                  style={{ width: 28, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
-                    <path d="M18 6L6 18M6 6l12 12" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
+                    <path d="M15 18l-6-6 6-6" />
                   </svg>
                 </button>
+                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Settings</span>
+                <div style={{ width: 34 }} />
               </div>
 
-              {/* Section: Game */}
-              <div className="px-5 pb-1">
-                <span className="text-white/30 font-black text-[9px] uppercase tracking-[0.25em]">Game</span>
-              </div>
-              <div>
-                <SettingsRow
-                  label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
-                  value={hasPending ? String(pendingGames.length) : null}
-                  disabled={!hasPending || isSyncing}
-                  onClick={() => syncPending()}
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
-                    </svg>
-                  }
-                />
-                <SettingsRow
-                  label="Table Layout"
-                  value={tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}
-                  onClick={toggleTableLayout}
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-                      <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-                    </svg>
-                  }
-                  last={gameStarted}
-                />
-                {!gameStarted && (
+              <div className="flex-1 overflow-y-auto">
+                {/* Section: Game */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div>
                   <SettingsRow
-                    label="Manage Players"
-                    onClick={() => setShowPlayerEditor(true)}
+                    label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
+                    value={hasPending ? String(pendingGames.length) : null}
+                    disabled={!hasPending || isSyncing}
+                    onClick={() => syncPending()}
                     icon={
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
-                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                        <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
+                      </svg>
+                    }
+                  />
+                  <SettingsRow
+                    label="Table Layout"
+                    value={tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}
+                    onClick={toggleTableLayout}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                    }
+                    last={gameStarted}
+                  />
+                  {!gameStarted && (
+                    <SettingsRow
+                      label="Manage Players"
+                      onClick={() => setShowPlayerEditor(true)}
+                      icon={
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                        </svg>
+                      }
+                      last
+                    />
+                  )}
+                </div>
+
+                {/* Section: Danger */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div className="pb-4">
+                  <SettingsRow
+                    label="Reset Game"
+                    destructive
+                    onClick={() => setShowResetConfirm(true)}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
                       </svg>
                     }
                     last
                   />
-                )}
-              </div>
-
-              {/* Section: Danger */}
-              <div className="px-5 pt-4 pb-1">
-                <span className="text-white/30 font-black text-[9px] uppercase tracking-[0.25em]">Danger Zone</span>
-              </div>
-              <div className="pb-2">
-                <SettingsRow
-                  label="Reset Game"
-                  destructive
-                  onClick={() => setShowResetConfirm(true)}
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
-                    </svg>
-                  }
-                  last
-                />
+                </div>
               </div>
             </div>
           )}
@@ -1570,30 +1575,30 @@ export default function App() {
           {showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col items-stretch overflow-y-auto"
-              style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: 300, maxHeight: '72vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: '88%', height: '82%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 sticky top-0" style={{ backgroundColor: 'rgba(18,18,20,0.98)' }}>
+              <div className="flex items-center justify-between px-6 pt-6 pb-5 sticky top-0 flex-shrink-0" style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <button
                   onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
-                  className="flex items-center gap-1 text-white/50 font-black text-[10px] uppercase tracking-widest"
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
-                  Back
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
-                <span className="text-white font-black text-xs uppercase tracking-[0.15em]">Players</span>
+                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Players</span>
                 <button
                   onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
                   className="flex items-center justify-center rounded-full"
-                  style={{ width: 28, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
                 </button>
               </div>
 
-              <div className="px-5 pb-5 flex flex-col gap-2">
+              <div className="px-6 py-5 flex flex-col gap-2">
               <button
                 disabled={editorBusy}
                 onClick={() => {
