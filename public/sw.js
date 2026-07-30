@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtg-tracker-v2';
+const CACHE_NAME = 'mtg-tracker-v3';
 const IMAGE_CACHE = 'mtg-images-v1';
 
 self.addEventListener('install', (event) => {
@@ -48,7 +48,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for everything else (app shell + JS/CSS bundles)
+  // Network-first for the HTML app shell (navigations, "/", "/index.html").
+  // This is the fix: index.html references hashed JS/CSS bundle filenames,
+  // so it must always be fetched fresh when possible - otherwise a deploy
+  // can silently take two reloads to actually show up (stale-while-revalidate
+  // was serving yesterday's HTML on the very load that was supposed to pick
+  // up today's build).
+  const isAppShell = request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html';
+  if (isAppShell) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+          }
+          return response;
+        })
+        .catch(() => caches.open(CACHE_NAME).then((cache) => cache.match(request)))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for everything else (hashed JS/CSS bundles, etc.
+  // - safe to serve instantly from cache since their filenames change on
+  // every build, so a cached copy is never actually stale content).
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(request).then((cached) => {
@@ -56,7 +79,6 @@ self.addEventListener('fetch', (event) => {
           if (response.ok) cache.put(request, response.clone());
           return response;
         }).catch(() => cached);
-
         return cached || fetchPromise;
       })
     )
