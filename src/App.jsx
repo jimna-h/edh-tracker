@@ -991,6 +991,22 @@ const submitUrl = IS_REAL
   ? 'https://edh-backend.onrender.com/submit'
   : 'https://edh-backend.onrender.com/submit-demo';
 
+// --- SETTINGS ROW ---
+const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-3 px-5 py-4 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/5'} ${!last ? 'border-b border-white/[0.06]' : ''}`}
+  >
+    <span style={{ width: 20, height: 20, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.6)' }}>{icon}</span>
+    <span className={`flex-1 text-left font-bold text-[13px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
+    {value && <span className="text-[11px] font-bold text-white/35 uppercase tracking-wide">{value}</span>}
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  </button>
+);
+
 export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [turn, setTurn] = useState(1);
@@ -1208,7 +1224,7 @@ export default function App() {
         { seatIndex: 3, area: 'br', flipped: false },
       ];
   const gridTemplate = tableLayout === 'cross'
-    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.85fr 1.3fr 0.85fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
+    ? { gridTemplateColumns: '0.85fr 1.3fr 0.85fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
     : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"tl tr" "bl br"' };
 
   const handlePointerDown = (e) => {
@@ -1417,59 +1433,146 @@ export default function App() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {/* Reset confirm modal */}
           {showResetConfirm && (
-            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-black/90 rounded-3xl p-8 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000 }}>
-              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
-              <span className="text-white/50 font-bold text-xs uppercase tracking-wider">Returns to "Who Goes First?"</span>
-              <div className="flex gap-3 mt-2">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
-                >Cancel</button>
-                <button
-                  onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
-                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
-                >Reset</button>
+            <>
+              <div className="pointer-events-auto" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} onClick={() => setShowResetConfirm(false)} />
+              <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onClick={(e) => e.stopPropagation()}>
+                <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+                <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                  >Cancel</button>
+                  <button
+                    onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                    className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                  >Reset</button>
+                </div>
               </div>
-            </div>
+            </>
+          )}
+
+          {/* Backdrop for settings / player editor */}
+          {(showSettings || showPlayerEditor) && !showResetConfirm && (
+            <div
+              className="pointer-events-auto"
+              style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 19000 }}
+              onClick={() => { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }}
+            />
           )}
 
           {/* Settings modal */}
           {showSettings && !showResetConfirm && !showPlayerEditor && (
-            <div className="pointer-events-auto flex flex-col items-stretch gap-3 bg-black/90 rounded-3xl p-6 border border-white/20" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, minWidth: 220 }}>
-              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Settings</span>
-              <button
-                onClick={() => { syncPending(); }}
-                disabled={!hasPending || isSyncing}
-                className={`font-black uppercase text-xs px-6 py-3 rounded-full transition-all ${hasPending ? 'bg-amber-500 text-black' : 'bg-white/5 text-white/30'}`}
-              >
-                {isSyncing ? 'Syncing...' : hasPending ? `Sync Now (${pendingGames.length})` : 'Nothing to Sync'}
-              </button>
-              <button
-                onClick={toggleTableLayout}
-                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-              >Layout: {tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}</button>
-              {!gameStarted && (
+            <div
+              className="pointer-events-auto flex flex-col overflow-hidden"
+              style={{ backgroundColor: 'rgba(18,18,20,0.97)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: 300, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4">
+                <span className="text-white font-black text-sm uppercase tracking-[0.15em]">Settings</span>
                 <button
-                  onClick={() => { setShowPlayerEditor(true); }}
-                  className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-                >Manage Players</button>
-              )}
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="font-black uppercase text-xs text-white px-6 py-3 rounded-full bg-white/10 border border-white/15"
-              >Reset Game</button>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-1"
-              >Close</button>
+                  onClick={() => setShowSettings(false)}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 28, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Section: Game */}
+              <div className="px-5 pb-1">
+                <span className="text-white/30 font-black text-[9px] uppercase tracking-[0.25em]">Game</span>
+              </div>
+              <div>
+                <SettingsRow
+                  label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
+                  value={hasPending ? String(pendingGames.length) : null}
+                  disabled={!hasPending || isSyncing}
+                  onClick={() => syncPending()}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
+                    </svg>
+                  }
+                />
+                <SettingsRow
+                  label="Table Layout"
+                  value={tableLayout === 'cross' ? 'Cross Table' : '2x2 Grid'}
+                  onClick={toggleTableLayout}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                  }
+                  last={gameStarted}
+                />
+                {!gameStarted && (
+                  <SettingsRow
+                    label="Manage Players"
+                    onClick={() => setShowPlayerEditor(true)}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                      </svg>
+                    }
+                    last
+                  />
+                )}
+              </div>
+
+              {/* Section: Danger */}
+              <div className="px-5 pt-4 pb-1">
+                <span className="text-white/30 font-black text-[9px] uppercase tracking-[0.25em]">Danger Zone</span>
+              </div>
+              <div className="pb-2">
+                <SettingsRow
+                  label="Reset Game"
+                  destructive
+                  onClick={() => setShowResetConfirm(true)}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+                    </svg>
+                  }
+                  last
+                />
+              </div>
             </div>
           )}
 
           {/* Player / Deck editor */}
           {showPlayerEditor && (
-            <div className="pointer-events-auto flex flex-col items-stretch gap-2 bg-black/95 rounded-3xl p-5 border border-white/20 overflow-y-auto" style={{ backdropFilter: 'blur(16px)', position: 'absolute', zIndex: 20000, width: 300, maxHeight: '70vh' }}>
-              <span className="text-white/40 font-black text-[10px] uppercase tracking-[0.3em] text-center mb-1">Manage Players</span>
+            <div
+              className="pointer-events-auto flex flex-col items-stretch overflow-y-auto"
+              style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', zIndex: 20000, width: 300, maxHeight: '72vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 sticky top-0" style={{ backgroundColor: 'rgba(18,18,20,0.98)' }}>
+                <button
+                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
+                  className="flex items-center gap-1 text-white/50 font-black text-[10px] uppercase tracking-widest"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                  Back
+                </button>
+                <span className="text-white font-black text-xs uppercase tracking-[0.15em]">Players</span>
+                <button
+                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 28, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
+              <div className="px-5 pb-5 flex flex-col gap-2">
               <button
                 disabled={editorBusy}
                 onClick={() => {
@@ -1477,10 +1580,10 @@ export default function App() {
                   if (!name) return;
                   editorCall('/players/add_player', { player_name: name });
                 }}
-                className="font-black uppercase text-[10px] text-black px-4 py-2 rounded-full bg-white"
+                className="font-black uppercase text-[10px] text-black px-4 py-3 rounded-full bg-white"
               >+ Add Player</button>
 
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-1">
                 {playerDataMap.map(p => (
                   <div key={p.player_name} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
                     <button
@@ -1560,11 +1663,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-
-              <button
-                onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
-                className="font-black uppercase text-xs text-white/50 px-6 py-3 rounded-full bg-white/5 mt-2"
-              >Back to Settings</button>
+              </div>
             </div>
           )}
 
