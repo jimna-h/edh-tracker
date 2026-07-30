@@ -44,7 +44,7 @@ const ColorPicker = ({ selected = [], onToggle }) => {
 };
 
 // --- SELECTION CAROUSEL ---
-const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false, extraButton = null }) => {
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false, extraButton = null, axisSwapped = false }) => {
   const scrollRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -124,7 +124,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
-        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
       >
         {twoRows ? (() => {
           const row1 = options.filter((_, i) => i % 2 === 0);
@@ -279,7 +279,7 @@ const GridPicker = ({ title, options, onSelect, onBack }) => {
 };
 
 
-const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
+const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
@@ -338,7 +338,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
 
         {step >= 1 && !mulliganType && (
           seat.order === 4 ? (
-            <SelectionCarousel 
+            <SelectionCarousel axisSwapped={axisSwapped}
               title="Select Mulligan (Last Player)" 
               isFlipped={isFlipped} 
               options={mulliganOptions} 
@@ -359,7 +359,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 1 && mulliganType && (
-          <SelectionCarousel 
+          <SelectionCarousel axisSwapped={axisSwapped}
             title={`Seat ${seat.order}`} 
             isFlipped={isFlipped} 
             options={players}
@@ -380,7 +380,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
         
         {step === 2 && (
-          <SelectionCarousel 
+          <SelectionCarousel axisSwapped={axisSwapped}
             title="Deck" 
             isFlipped={isFlipped} 
             options={decks}
@@ -460,7 +460,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
         )}
 
         {step === 5 && (
-          <SelectionCarousel 
+          <SelectionCarousel axisSwapped={axisSwapped}
             title="Borrow From?" 
             isFlipped={isFlipped} 
             options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
@@ -473,7 +473,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           />
         )}
         {step === 6 && (
-          <SelectionCarousel 
+          <SelectionCarousel axisSwapped={axisSwapped}
             title={`${seat.deckOwner}'s Decks`} 
             isFlipped={isFlipped} 
             options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
@@ -1420,6 +1420,7 @@ export default function App() {
             const content = !gameStarted ?
               <SetupQuadrant
                 id={i} seat={s} isFlipped={cfg.flipped}
+                axisSwapped={!!(fix && fix.deg !== 180)}
                 playerDataMap={playerDataMap} onUpdate={updateSeat}
                 onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
                 onResetAll={handleResetAll}
