@@ -192,5 +192,109 @@ def submit_demo():
         print(f"Error submitting demo game: {e}")
         return jsonify({"error": str(e)}), 500
 
+def _find_deck_row(ws, deck_name):
+    values = ws.get_all_values()
+    for idx, row in enumerate(values):
+        if len(row) > 0 and row[0].strip().lower() == deck_name.strip().lower():
+            return idx + 1  # 1-indexed for gspread
+    return None
+
+@app.route('/players/add_player', methods=['POST'])
+def add_player():
+    try:
+        data = request.json
+        player_name = data.get('player_name', '').strip()
+        if not player_name:
+            return jsonify({"error": "player_name required"}), 400
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.add_worksheet(title=player_name, rows=50, cols=4)
+        ws.append_row(["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID"])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error adding player: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/players/delete_player', methods=['POST'])
+def delete_player():
+    try:
+        data = request.json
+        player_name = data.get('player_name', '').strip()
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.worksheet(player_name)
+        sh.del_worksheet(ws)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error deleting player: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/players/add_deck', methods=['POST'])
+def add_deck():
+    try:
+        data = request.json
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.worksheet(data.get('player_name', ''))
+        ws.append_row([
+            data.get('deck', ''),
+            data.get('art_url', ''),
+            data.get('art_url_partner', ''),
+            data.get('colors', ''),
+        ])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error adding deck: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/players/update_deck', methods=['POST'])
+def update_deck():
+    try:
+        data = request.json
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.worksheet(data.get('player_name', ''))
+        row = _find_deck_row(ws, data.get('original_deck', ''))
+        if row is None:
+            return jsonify({"error": "Deck not found"}), 404
+        ws.update(f"A{row}:D{row}", [[
+            data.get('deck', ''),
+            data.get('art_url', ''),
+            data.get('art_url_partner', ''),
+            data.get('colors', ''),
+        ]])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error updating deck: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/players/delete_deck', methods=['POST'])
+def delete_deck():
+    try:
+        data = request.json
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.worksheet(data.get('player_name', ''))
+        row = _find_deck_row(ws, data.get('deck', ''))
+        if row is None:
+            return jsonify({"error": "Deck not found"}), 404
+        ws.delete_rows(row)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error deleting deck: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/players/update_pfp', methods=['POST'])
+def update_pfp():
+    try:
+        data = request.json
+        sh = client.open_by_key(PLAYERS_ID)
+        ws = sh.worksheet(data.get('player_name', ''))
+        row = _find_deck_row(ws, "PFP")
+        art_url = data.get('art_url', '')
+        if row is None:
+            ws.append_row(["PFP", art_url, "", ""])
+        else:
+            ws.update(f"A{row}:D{row}", [["PFP", art_url, "", ""]])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error updating pfp: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(port=8000, debug=True, use_reloader=False)
