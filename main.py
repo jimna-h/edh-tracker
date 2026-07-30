@@ -227,18 +227,32 @@ def delete_player():
         print(f"Error deleting player: {e}")
         return jsonify({"error": str(e)}), 500
 
+def _find_next_blank_row(ws):
+    # Column A may have pre-loaded checkboxes sitting in column E on blank rows,
+    # so we write new decks into the next row where column A is empty rather
+    # than appending after the last row of ANY data (which could skip past
+    # those pre-loaded rows or land on the wrong one).
+    col_a = ws.col_values(1)
+    for idx, val in enumerate(col_a):
+        if idx == 0:
+            continue  # skip header row
+        if val.strip() == '':
+            return idx + 1  # 1-indexed row number
+    return len(col_a) + 1  # no blank row found, use the next row after the last
+
 @app.route('/players/add_deck', methods=['POST'])
 def add_deck():
     try:
         data = request.json
         sh = client.open_by_key(PLAYERS_ID)
         ws = sh.worksheet(data.get('player_name', ''))
-        ws.append_row([
+        row = _find_next_blank_row(ws)
+        ws.update(f"A{row}:D{row}", [[
             data.get('deck', ''),
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
-        ])
+        ]])
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding deck: {e}")
