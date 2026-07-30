@@ -103,7 +103,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   };
 
   return (
-    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto">
+    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingLeft: 18, paddingRight: 18 }}>
       {title && (
         <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
           {title}
@@ -226,7 +226,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
         </>
       )}
       {hasArt && !isOut && (
-        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0 bg-black/65" />
       )}
       <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-2">
         {children}
@@ -484,7 +484,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
           />
         )}
         {step === 3 && (
-          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, padding: '0 12px' }}>
+          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, padding: '0 18px' }}>
             <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">Starting Lands</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
               {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
@@ -794,7 +794,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 flex: '0 0 auto', position: 'relative', zIndex: 10,
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
-                paddingTop: 10, paddingBottom: 16,
+                paddingTop: 10, paddingBottom: 26,
                 paddingLeft: (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
                 paddingRight: (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
@@ -849,7 +849,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             </div>
 
             {/* ROW 3 - CMD damage 2x2 grid button */}
-            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 8, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 18, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               {(() => {
                 const orderedOpponents = isFlipped ? [...opponents].reverse() : opponents;
                 return (
@@ -904,7 +904,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             {/* CMD DAMAGE MODAL */}
             {cmdModal === 'grid' && (
               <div
-                style={{ position: 'absolute', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
+                style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
                 onClick={() => { setCmdModal(null); setCmdHeld(false); }}
@@ -963,7 +963,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         {player.status === 'questionnaire' && (
           <div className="w-full h-full" style={{ position: 'relative' }}>
             {/* Dim the background art */}
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 0 }} />
             <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <StatPicker
                 key={player.step}
