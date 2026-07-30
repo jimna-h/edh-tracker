@@ -1612,7 +1612,7 @@ export default function App() {
                   <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
                   <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
-                <div className="px-4">
+                <div>
                   <SettingsRow
                     label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
                     value={hasPending ? String(pendingGames.length) : null}
@@ -1631,17 +1631,17 @@ export default function App() {
                         <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                       </svg>
                     </span>
-                    <span className="flex-1 text-left font-bold text-[16px] text-white">Table Layout</span>
-                    <div className="flex gap-3">
+                    <span className="flex-1 text-left font-bold text-[16px] text-white" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Table Layout</span>
+                    <div className="flex gap-2" style={{ flexShrink: 0 }}>
                       <button
                         onClick={() => selectTableLayout('grid')}
                         style={{
-                          width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backgroundColor: tableLayout === 'grid' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
                           border: tableLayout === 'grid' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
                         }}
                       >
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
                           <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                           <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                         </svg>
@@ -1649,12 +1649,12 @@ export default function App() {
                       <button
                         onClick={() => selectTableLayout('cross')}
                         style={{
-                          width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backgroundColor: tableLayout === 'cross' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
                           border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
                         }}
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
                           <rect x="9" y="3" width="6" height="18" rx="1" /><rect x="3" y="9" width="4" height="6" rx="1" /><rect x="17" y="9" width="4" height="6" rx="1" />
                         </svg>
                       </button>
@@ -1680,7 +1680,7 @@ export default function App() {
                   <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
                   <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
-                <div className="px-4 pb-6">
+                <div className="pb-6">
                   <SettingsRow
                     label="Reset Game"
                     destructive
