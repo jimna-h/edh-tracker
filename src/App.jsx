@@ -136,7 +136,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                     key={`${title}-${globalIdx}`}
                     data-option-index={globalIdx}
                     onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
-                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[46px] md:h-[62px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[46px] md:h-[62px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
                     style={buttonColor ? { backgroundColor: buttonColor } : {}}
                   >
                     {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" /><div className="absolute inset-0 bg-black/15" /></>)}
@@ -158,7 +158,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
-  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/10 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.05] backdrop-blur-md'}`}
+  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/10 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.05] backdrop-blur-md'}`}
   style={buttonColor ? { backgroundColor: buttonColor } : {}}
 >
               {hasArt && (
@@ -167,7 +167,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                   <div className="absolute inset-0 bg-black/15" />
                 </>
               )}
-              <span className="relative z-10 text-xl md:text-3xl font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">
+              <span className="relative z-10 text-base md:text-xl font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">
                 {label}
               </span>
             </button>
@@ -208,14 +208,22 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
       `}
       style={bgStyle}
     >
-      {/* Partner commander - clips to show on correct visual side accounting for isFlipped */}
+      {/* Partner commander - left/right split, each half independently centered/covered */}
       {hasArt && hasPartner && !isOut && (
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url(${artUrlPartner})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          clipPath: isFlipped ? 'inset(0 0 50% 0)' : 'inset(50% 0 0 0)',
-        }} />
+        <>
+          <div className="absolute inset-y-0" style={{
+            left: isFlipped ? '50%' : 0, width: '50%',
+            backgroundImage: `url(${artUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }} />
+          <div className="absolute inset-y-0" style={{
+            left: isFlipped ? 0 : '50%', width: '50%',
+            backgroundImage: `url(${artUrlPartner})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }} />
+        </>
       )}
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/45" />
@@ -318,7 +326,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               onClick={() => onSetFirst(id)}
               className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
             >
-              <span className="text-black font-black text-sm md:text-xl uppercase text-center leading-tight px-2">Goes First</span>
+              <span className="text-white font-black text-sm md:text-xl uppercase text-center leading-tight px-2">Goes First</span>
             </button>
           </div>
         )}
