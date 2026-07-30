@@ -136,10 +136,10 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                     key={`${title}-${globalIdx}`}
                     data-option-index={globalIdx}
                     onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
-                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[52px] md:h-[68px] border border-white/25 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/15 backdrop-blur-md'}`}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[52px] md:h-[68px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
                     style={buttonColor ? { backgroundColor: buttonColor } : {}}
                   >
-                    {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" /><div className="absolute inset-0 bg-black/30" /></>)}
+                    {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" /><div className="absolute inset-0 bg-black/15" /></>)}
                     <span className="relative z-10 text-sm font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">{label}</span>
                   </button>
                 );
@@ -158,13 +158,13 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
-  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/25 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/10 backdrop-blur-md'}`}
+  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/10 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all shadow-xl overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.05] backdrop-blur-md'}`}
   style={buttonColor ? { backgroundColor: buttonColor } : {}}
 >
               {hasArt && (
                 <>
-                  <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                  <div className="absolute inset-0 bg-black/30" />
+                  <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" />
+                  <div className="absolute inset-0 bg-black/15" />
                 </>
               )}
               <span className="relative z-10 text-xl md:text-3xl font-black uppercase tracking-tight text-white text-center drop-shadow-lg line-clamp-2 leading-tight">
@@ -318,7 +318,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, playerDataMap, onUpdate, onSetFirs
               onClick={() => onSetFirst(id)}
               className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
             >
-              <div className="w-16 h-16 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center shadow-lg px-2">
+              <div className="w-16 h-16 md:w-24 md:h-24 bg-black/70 rounded-full flex items-center justify-center shadow-lg px-2">
                 <span className="text-white font-black text-[10px] md:text-sm uppercase text-center leading-tight">Goes First</span>
               </div>
             </button>
@@ -849,7 +849,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
                   >
                     {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
@@ -867,7 +867,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                       backgroundSize: 'cover', backgroundPosition: 'center',
                       backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(80,80,80,0.5)'),
                     }}>
-                      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.25)' }} />
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.65)' : 'rgba(0,0,0,0.55)' }} />
                       {isSelfCell && val === 0
                         ? <span style={{ position: 'relative', zIndex: 1, fontSize: 5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
                         : <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
