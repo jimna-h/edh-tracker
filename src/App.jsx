@@ -996,12 +996,12 @@ const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last 
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-3 px-5 py-4 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/5'} ${!last ? 'border-b border-white/[0.06]' : ''}`}
+    className={`w-full flex items-center gap-4 px-2 py-6 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/5'} ${!last ? 'border-b border-white/[0.07]' : ''}`}
   >
-    <span style={{ width: 20, height: 20, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.6)' }}>{icon}</span>
-    <span className={`flex-1 text-left font-bold text-[13px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
-    {value && <span className="text-[11px] font-bold text-white/35 uppercase tracking-wide">{value}</span>}
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5">
+    <span style={{ width: 26, height: 26, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.65)' }}>{icon}</span>
+    <span className={`flex-1 text-left font-bold text-[16px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
+    {value && <span className="text-[13px] font-bold text-white/40 uppercase tracking-wide">{value}</span>}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2.5">
       <path d="M9 6l6 6-6 6" />
     </svg>
   </button>
@@ -1495,7 +1495,7 @@ export default function App() {
           {showSettings && !showResetConfirm && !showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', maxHeight: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1513,43 +1513,43 @@ export default function App() {
                 <div style={{ width: 34 }} />
               </div>
 
-              <div className="flex-1 overflow-y-auto flex flex-col items-center">
+              <div className="overflow-y-auto flex flex-col items-center">
                 <div style={{ width: '100%', maxWidth: 420 }}>
                 {/* Section: Game */}
                 <div className="px-6 pt-6 pb-2 flex items-center gap-3">
                   <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
                   <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
-                <div>
+                <div className="px-4">
                   <SettingsRow
                     label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
                     value={hasPending ? String(pendingGames.length) : null}
                     disabled={!hasPending || isSyncing}
                     onClick={() => syncPending()}
                     icon={
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
                       </svg>
                     }
                   />
-                  <div className={`w-full flex items-center gap-3 px-5 py-4 ${!gameStarted ? 'border-b border-white/[0.06]' : ''}`}>
-                    <span style={{ width: 20, height: 20, flexShrink: 0, color: 'rgba(255,255,255,0.6)' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className={`w-full flex items-center gap-4 py-6 ${!gameStarted ? 'border-b border-white/[0.07]' : ''}`}>
+                    <span style={{ width: 26, height: 26, flexShrink: 0, color: 'rgba(255,255,255,0.65)' }}>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                         <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                       </svg>
                     </span>
-                    <span className="flex-1 text-left font-bold text-[13px] text-white">Table Layout</span>
-                    <div className="flex gap-2">
+                    <span className="flex-1 text-left font-bold text-[16px] text-white">Table Layout</span>
+                    <div className="flex gap-3">
                       <button
                         onClick={() => selectTableLayout('grid')}
                         style={{
-                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backgroundColor: tableLayout === 'grid' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
                           border: tableLayout === 'grid' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
                         }}
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
                           <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                           <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                         </svg>
@@ -1557,7 +1557,7 @@ export default function App() {
                       <button
                         onClick={() => selectTableLayout('cross')}
                         style={{
-                          width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backgroundColor: tableLayout === 'cross' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
                           border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
                         }}
@@ -1588,13 +1588,13 @@ export default function App() {
                   <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
                   <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
-                <div className="pb-4">
+                <div className="px-4 pb-6">
                   <SettingsRow
                     label="Reset Game"
                     destructive
                     onClick={() => setShowResetConfirm(true)}
                     icon={
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
                       </svg>
                     }
@@ -1606,94 +1606,115 @@ export default function App() {
             </div>
           )}
 
-          {/* Player / Deck editor */}
-          {showPlayerEditor && (
-            <div
-              className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '88vw', height: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-6 pt-6 pb-5 sticky top-0 flex-shrink-0" style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <button
-                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); }}
-                  className="flex items-center justify-center rounded-full"
-                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
-                </button>
-                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Players</span>
-                <button
-                  onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
-                  className="flex items-center justify-center rounded-full"
-                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+          {/* Player / Deck editor - drill-down: list view -> player detail view */}
+          {showPlayerEditor && (() => {
+            const detailPlayer = playerDataMap.find(p => p.player_name === expandedPlayer);
+            return (
+              <div
+                className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
+                style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', maxHeight: '82vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header - swaps between "Players" list header and player-name detail header */}
+                <div className="flex items-center justify-between px-6 pt-6 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    onClick={() => detailPlayer ? setExpandedPlayer(null) : setShowPlayerEditor(false)}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                  <span className="text-white font-black text-base uppercase tracking-[0.15em]">{detailPlayer ? detailPlayer.player_name : 'Players'}</span>
+                  <button
+                    onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-              <div className="flex flex-col items-center overflow-y-auto" style={{ flex: 1 }}>
-              <div className="px-6 py-5 flex flex-col gap-2" style={{ width: '100%', maxWidth: 420 }}>
-              <button
-                disabled={editorBusy}
-                onClick={() => {
-                  const name = prompt("New Player Name:");
-                  if (!name) return;
-                  editorCall('/players/add_player', { player_name: name });
-                }}
-                className="font-black uppercase text-[10px] text-black px-6 py-3 rounded-full bg-white self-start"
-              >+ Add Player</button>
+                <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
+                  <div className="px-6 py-6 flex flex-col" style={{ width: '100%', maxWidth: 420 }}>
 
-              <div className="flex flex-col gap-2 mt-1">
-                {playerDataMap.map(p => (
-                  <div key={p.player_name} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
-                    <button
-                      onClick={() => setExpandedPlayer(prev => prev === p.player_name ? null : p.player_name)}
-                      className="w-full flex items-center gap-3 px-4 py-3"
-                    >
-                      <div style={{
-                        width: 36, height: 36, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                        backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                        backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {!p.pfp && <span className="text-white/30 text-xs font-black">{p.player_name?.[0]?.toUpperCase()}</span>}
-                      </div>
-                      <span className="text-white font-black text-xs uppercase flex-1 text-left">{p.player_name}</span>
-                      <span className="text-white/30 text-[10px] font-bold">{(p.decks || []).length} deck{(p.decks || []).length === 1 ? '' : 's'}</span>
-                      <span className="text-white/40 text-xs">{expandedPlayer === p.player_name ? '-' : '+'}</span>
-                    </button>
-                    {expandedPlayer === p.player_name && (
-                      <div className="px-3 pb-3 flex flex-col gap-2">
+                    {!detailPlayer ? (
+                      <>
+                        {/* LIST VIEW */}
                         <button
                           disabled={editorBusy}
                           onClick={() => {
-                            const url = prompt("Profile Picture URL:", p.pfp || '');
-                            if (url === null) return;
-                            editorCall('/players/update_pfp', { player_name: p.player_name, art_url: url });
+                            const name = prompt("New Player Name:");
+                            if (!name) return;
+                            editorCall('/players/add_player', { player_name: name });
                           }}
-                          className="flex items-center gap-3 px-2 py-2 rounded-xl bg-white/5"
+                          className="font-black uppercase text-[13px] text-black px-6 py-3 rounded-full bg-white self-start mb-4"
+                        >+ Add Player</button>
+
+                        <div className="flex flex-col">
+                          {playerDataMap.map((p, idx) => (
+                            <button
+                              key={p.player_name}
+                              onClick={() => setExpandedPlayer(p.player_name)}
+                              className={`w-full flex items-center gap-4 py-5 ${idx < playerDataMap.length - 1 ? 'border-b border-white/[0.07]' : ''}`}
+                            >
+                              <div style={{
+                                width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                                backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                                backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {!p.pfp && <span className="text-white/30 text-sm font-black">{p.player_name?.[0]?.toUpperCase()}</span>}
+                              </div>
+                              <span className="text-white font-black text-[15px] uppercase flex-1 text-left">{p.player_name}</span>
+                              <span className="text-white/30 text-[12px] font-bold">{(p.decks || []).length} deck{(p.decks || []).length === 1 ? '' : 's'}</span>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2.5"><path d="M9 6l6 6-6 6" /></svg>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* DETAIL VIEW */}
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            const url = prompt("Profile Picture URL:", detailPlayer.pfp || '');
+                            if (url === null) return;
+                            editorCall('/players/update_pfp', { player_name: detailPlayer.player_name, art_url: url });
+                          }}
+                          className="flex flex-col items-center gap-2 self-center mb-6"
                         >
                           <div style={{
-                            width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                            backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
-                            backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-                          }} />
-                          <span className="text-left text-[10px] font-bold text-white/50 uppercase">Edit Profile Pic</span>
+                            width: 84, height: 84, borderRadius: '50%', overflow: 'hidden',
+                            backgroundColor: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.15)',
+                            backgroundImage: detailPlayer.pfp ? `url(${detailPlayer.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {!detailPlayer.pfp && <span className="text-white/30 text-2xl font-black">{detailPlayer.player_name?.[0]?.toUpperCase()}</span>}
+                          </div>
+                          <span className="text-[11px] font-bold text-white/40 uppercase tracking-wide">Edit Photo</span>
                         </button>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                          {(p.decks || []).map(d => (
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">
+                            Decks ({(detailPlayer.decks || []).length})
+                          </span>
+                          <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                          {(detailPlayer.decks || []).map(d => (
                             <div key={d.deck} style={{
-                              position: 'relative', borderRadius: 14, overflow: 'hidden', aspectRatio: '1 / 0.85',
+                              position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '1 / 0.85',
                               backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
                               backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
                               border: '1px solid rgba(255,255,255,0.12)',
                             }}>
                               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
-                              <span style={{ position: 'absolute', top: 6, left: 8, right: 8, color: '#fff', fontSize: 10, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
-                              <div style={{ position: 'absolute', bottom: 6, left: 6, right: 6, display: 'flex', gap: 4 }}>
+                              <span style={{ position: 'absolute', top: 8, left: 10, right: 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: 6 }}>
                                 <button
                                   disabled={editorBusy}
                                   onClick={() => {
@@ -1705,17 +1726,17 @@ export default function App() {
                                     if (partner === null) return;
                                     const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
                                     if (colors === null) return;
-                                    editorCall('/players/update_deck', { player_name: p.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
+                                    editorCall('/players/update_deck', { player_name: detailPlayer.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
                                   }}
-                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(4px)' }}
                                 >Edit</button>
                                 <button
                                   disabled={editorBusy}
                                   onClick={() => {
                                     if (!confirm(`Delete deck "${d.deck}"?`)) return;
-                                    editorCall('/players/delete_deck', { player_name: p.player_name, deck: d.deck });
+                                    editorCall('/players/delete_deck', { player_name: detailPlayer.player_name, deck: d.deck });
                                   }}
-                                  style={{ flex: 1, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '4px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
+                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
                                 >Del</button>
                               </div>
                             </div>
@@ -1730,29 +1751,28 @@ export default function App() {
                             const art = prompt("Art URL:") || '';
                             const partner = prompt("Partner Art URL (blank if none):") || '';
                             const colors = prompt("Colors (e.g. WUBRG letters):") || '';
-                            editorCall('/players/add_deck', { player_name: p.player_name, deck, art_url: art, art_url_partner: partner, colors });
+                            editorCall('/players/add_deck', { player_name: detailPlayer.player_name, deck, art_url: art, art_url_partner: partner, colors });
                           }}
-                          className="text-[10px] font-black uppercase text-white px-3 py-2 rounded-full bg-white/10 border border-white/15"
+                          className="text-[13px] font-black uppercase text-white px-6 py-3 rounded-full bg-white/10 border border-white/15 self-center mt-5"
                         >+ Add Deck</button>
 
                         <button
                           disabled={editorBusy}
                           onClick={() => {
-                            if (!confirm(`Delete player "${p.player_name}" and all their decks?`)) return;
-                            editorCall('/players/delete_player', { player_name: p.player_name });
+                            if (!confirm(`Delete player "${detailPlayer.player_name}" and all their decks?`)) return;
+                            editorCall('/players/delete_player', { player_name: detailPlayer.player_name });
                             setExpandedPlayer(null);
                           }}
-                          className="text-[10px] font-black uppercase text-red-400 px-3 py-2 rounded-full bg-red-500/10 mt-1"
+                          className="text-[13px] font-black uppercase text-red-400 px-6 py-3 rounded-full bg-red-500/10 self-center mt-3 mb-2"
                         >Delete Player</button>
-                      </div>
+                      </>
                     )}
+
                   </div>
-                ))}
+                </div>
               </div>
-              </div>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Settings gear icon - always visible, offset near center */}
           {!showResetConfirm && !showSettings && (
