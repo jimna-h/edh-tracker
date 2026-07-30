@@ -1461,25 +1461,109 @@ export default function App() {
           </div>
         )}
 
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {/* Settings gear icon - always visible, offset near center */}
+          {!showResetConfirm && !showSettings && (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="pointer-events-auto flex items-center justify-center rounded-full"
+              style={{
+                position: 'absolute', width: 34, height: 34,
+                top: 'calc(50% - 17px)', left: 'calc(50% + 95px)',
+                backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 15000,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
+
+          {!gameStarted && !showSettings && !showResetConfirm && (
+            <>
+              {/* RANDOM button - always available before goes-first is picked, regardless of pending syncs */}
+              {firstSeatIndex === null && !allFilled && (
+                <button
+                  onClick={handleRandom}
+                  disabled={isSpinning}
+                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
+                </button>
+              )}
+              {/* START button */}
+              {allFilled && (
+                <button
+                  onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+                  className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <span className="text-xs font-bold">START</span>
+                </button>
+              )}
+            </>
+          )}
+          {gameStarted && !allFinished && !showSettings && !showResetConfirm && (
+            <button
+              onPointerDown={handlePointerDown} 
+              onPointerUp={handlePointerUp}
+              className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
+              style={{ 
+                width: '180px', 
+                height: '180px', 
+                backgroundColor: '#000000',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none'
+              }}
+            >
+              <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: '12px' }}>Turn</span>
+              <span 
+                className="font-black tabular-nums text-white select-none" 
+                style={{ fontSize: '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
+              >
+                {turn}
+              </span>
+            </button>
+          )}
+          {gameStarted && allFinished && !showSettings && !showResetConfirm && (
+            <button
+              onClick={submitGame}
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
+              style={{ width: '150px', height: '150px' }}
+            >
+              SUBMIT
+            </button>
+          )}
+        </div>
+
+        {/* Giant invisible full-screen close catcher - sits above everything else in the app,
+            definitively topmost regardless of any nested stacking-context ambiguity. Only active
+            (and only visible as a dim/blur backdrop) while a modal is open. The modals themselves
+            are rendered right after it so they draw on top and remain fully interactive. */}
         <div
-          className="absolute inset-0 flex items-center justify-center z-[10000]"
-          style={{ pointerEvents: (showSettings || showPlayerEditor || showResetConfirm) ? 'auto' : 'none' }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 600000,
+            pointerEvents: (showSettings || showPlayerEditor || showResetConfirm) ? 'auto' : 'none',
+          }}
           onPointerDown={(e) => {
             if (showResetConfirm) { setShowResetConfirm(false); return; }
             if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
           }}
         >
-          {/* Dim backgrounds - purely visual, the outer wrapper above handles the actual click-to-close */}
           {showResetConfirm && (
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 20500 }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
           )}
           {(showSettings || showPlayerEditor) && !showResetConfirm && (
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 19000 }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} />
           )}
+        </div>
 
           {/* Reset confirm modal */}
           {showResetConfirm && (
-            <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 21000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onPointerDown={(e) => e.stopPropagation()}>
+            <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 621000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onPointerDown={(e) => e.stopPropagation()}>
               <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
               <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
               <div className="flex gap-3 mt-2">
@@ -1499,7 +1583,7 @@ export default function App() {
           {showSettings && !showResetConfirm && !showPlayerEditor && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onPointerDown={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1616,7 +1700,7 @@ export default function App() {
             return (
               <div
                 className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
-                style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 20000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+                style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {/* Header - swaps between "Players" list header and player-name detail header */}
@@ -1779,82 +1863,6 @@ export default function App() {
             );
           })()}
 
-          {/* Settings gear icon - always visible, offset near center */}
-          {!showResetConfirm && !showSettings && (
-            <button
-              onClick={() => setShowSettings(true)}
-              className="pointer-events-auto flex items-center justify-center rounded-full"
-              style={{
-                position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: 'calc(50% + 95px)',
-                backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-                zIndex: 15000,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-          )}
-
-          {!gameStarted && !showSettings && !showResetConfirm && (
-            <>
-              {/* RANDOM button - always available before goes-first is picked, regardless of pending syncs */}
-              {firstSeatIndex === null && !allFilled && (
-                <button
-                  onClick={handleRandom}
-                  disabled={isSpinning}
-                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: '120px', height: '120px' }}
-                >
-                  <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
-                </button>
-              )}
-              {/* START button */}
-              {allFilled && (
-                <button
-                  onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-                  className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: '120px', height: '120px' }}
-                >
-                  <span className="text-xs font-bold">START</span>
-                </button>
-              )}
-            </>
-          )}
-          {gameStarted && !allFinished && !showSettings && !showResetConfirm && (
-            <button
-              onPointerDown={handlePointerDown} 
-              onPointerUp={handlePointerUp}
-              className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
-              style={{ 
-                width: '180px', 
-                height: '180px', 
-                backgroundColor: '#000000',
-                WebkitTapHighlightColor: 'transparent',
-                userSelect: 'none'
-              }}
-            >
-              <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: '12px' }}>Turn</span>
-              <span 
-                className="font-black tabular-nums text-white select-none" 
-                style={{ fontSize: '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
-              >
-                {turn}
-              </span>
-            </button>
-          )}
-          {gameStarted && allFinished && !showSettings && !showResetConfirm && (
-            <button
-              onClick={submitGame}
-              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
-              style={{ width: '150px', height: '150px' }}
-            >
-              SUBMIT
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
