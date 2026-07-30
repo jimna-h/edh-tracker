@@ -60,10 +60,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
   }, [options]);
 
+  const mouseStartX = useRef(0);
+
   const handleMouseDown = (e) => {
     setIsDown(true);
     setStartX(e.pageX - e.currentTarget.offsetLeft);
     setScrollLeft(e.currentTarget.scrollLeft);
+    mouseStartX.current = e.pageX;
+    didScroll.current = false;
   };
 
   const handleMouseMove = (e) => {
@@ -72,6 +76,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     const x = e.pageX - e.currentTarget.offsetLeft;
     const walk = (x - startX) * (isFlipped ? -2 : 2);
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
+    if (Math.abs(e.pageX - mouseStartX.current) > 5) didScroll.current = true;
   };
 
   const handleTouchStart = (e) => {
@@ -226,7 +231,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
         </>
       )}
       {hasArt && !isOut && (
-        <div className="absolute inset-0 bg-black/65" />
+        <div className="absolute inset-0 bg-black/55" />
       )}
       <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-2">
         {children}
@@ -904,7 +909,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             {/* CMD DAMAGE MODAL */}
             {cmdModal === 'grid' && (
               <div
-                style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(12px)' }}
+                style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
                 onClick={() => { setCmdModal(null); setCmdHeld(false); }}
@@ -963,7 +968,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
         {player.status === 'questionnaire' && (
           <div className="w-full h-full" style={{ position: 'relative' }}>
             {/* Dim the background art */}
-            <div style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', top: -8, right: -8, bottom: -8, left: -8, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 }} />
             <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <StatPicker
                 key={player.step}
@@ -1553,23 +1558,22 @@ export default function App() {
             definitively topmost regardless of any nested stacking-context ambiguity. Only active
             (and only visible as a dim/blur backdrop) while a modal is open. The modals themselves
             are rendered right after it so they draw on top and remain fully interactive. */}
-        <div
-          style={{
-            position: 'absolute', inset: 0, zIndex: 600000,
-            pointerEvents: (showSettings || showPlayerEditor || showResetConfirm) ? 'auto' : 'none',
-          }}
-          onPointerDown={(e) => {
-            if (showResetConfirm) { setShowResetConfirm(false); return; }
-            if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
-          }}
-        >
-          {showResetConfirm && (
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
-          )}
-          {(showSettings || showPlayerEditor) && !showResetConfirm && (
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} />
-          )}
-        </div>
+        {(showSettings || showPlayerEditor || showResetConfirm) && (
+          <div
+            style={{ position: 'absolute', inset: 0, zIndex: 600000, pointerEvents: 'auto' }}
+            onPointerDown={(e) => {
+              if (showResetConfirm) { setShowResetConfirm(false); return; }
+              if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
+            }}
+          >
+            {showResetConfirm && (
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
+            )}
+            {(showSettings || showPlayerEditor) && !showResetConfirm && (
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} />
+            )}
+          </div>
+        )}
 
           {/* Reset confirm modal */}
           {showResetConfirm && (
