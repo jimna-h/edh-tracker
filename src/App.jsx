@@ -712,6 +712,16 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
   // Matches the same seatIndex -> area mapping used at the top level for cross layout,
   // so the commander damage grid mirrors the actual seating arrangement.
   const crossAreaBySeat = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
+  // The commander damage grid's area assignment needs to be relative to each viewer's
+  // own local rotation state - top/midl render correctly with the standard mapping,
+  // but midr needs a full swap (top<->bot, midl<->midr) and bot needs midl<->midr swapped.
+  const cmdAreaMapBySeat = {
+    0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+    1: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+    2: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
+    3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
+  };
+  const cmdAreaFor = (opSeatIndex) => cmdAreaMapBySeat[seatIndex]?.[opSeatIndex] ?? crossAreaBySeat[opSeatIndex];
   const myArea = tableLayout === 'cross' ? crossAreaBySeat[seatIndex] : null;
   const isTopBot = myArea === 'top' || myArea === 'bot';
   const isMidLR = myArea === 'midl' || myArea === 'midr';
@@ -807,7 +817,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 gap: 6,
                 paddingTop: 10, paddingBottom: 26,
                 paddingLeft: isTopBot ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
-                paddingRight: isTopBot ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 130 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
@@ -900,7 +910,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 
                   if (hasPartner) {
                     return (
-                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row', gridArea: isCross ? crossAreaBySeat[op.id] : undefined }}>
+                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row', gridArea: isCross ? cmdAreaFor(op.id) : undefined }}>
                         {miniCell(op.artUrl, val0, danger0, isSelf)}
                         {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
                       </div>
@@ -908,7 +918,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                   }
 
                   return (
-                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', gridArea: isCross ? crossAreaBySeat[op.id] : undefined }}>
+                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', gridArea: isCross ? cmdAreaFor(op.id) : undefined }}>
                       {miniCell(op.artUrl, val0, danger0, isSelf)}
                     </div>
                   );
@@ -943,7 +953,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                     const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
                     const isSelf = op.id === id;
                     return (
-                      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? crossAreaBySeat[op.id] : undefined }}>
+                      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined }}>
                       <CmdCell
                         value={val0}
                         value2={val1}
@@ -1494,7 +1504,7 @@ export default function App() {
           </div>
         )}
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]" style={{ transform: tableLayout === 'cross' ? 'translateX(55px)' : 'none' }}>
           {/* Settings gear icon - always visible, offset near center */}
           {!showResetConfirm && !showSettings && (
             <button
