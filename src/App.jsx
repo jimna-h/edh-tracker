@@ -708,7 +708,10 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
 };
 
 // --- GAMEPLAY QUADRANT ---
-const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
+const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
+  // Matches the same seatIndex -> area mapping used at the top level for cross layout,
+  // so the commander damage grid mirrors the actual seating arrangement.
+  const crossAreaBySeat = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
   const isOut = player.status === 'done' || player.status === 'out';
   const isWinner = isOut && player.stats.turnDied === 'win';
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
@@ -856,11 +859,15 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
             {/* ROW 3 - CMD damage 2x2 grid button */}
             <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 18, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               {(() => {
-                const orderedOpponents = isFlipped ? [...opponents].reverse() : opponents;
+                const isCross = tableLayout === 'cross';
+                const orderedOpponents = (!isCross && isFlipped) ? [...opponents].reverse() : opponents;
+                const gridStyle = isCross
+                  ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1.6fr 1fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 2, width: 46, height: 62, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
+                  : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' };
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
+                    style={gridStyle}
                   >
                     {orderedOpponents.map((op) => {
                   const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
@@ -888,7 +895,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
 
                   if (hasPartner) {
                     return (
-                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row', gridArea: isCross ? crossAreaBySeat[op.id] : undefined }}>
                         {miniCell(op.artUrl, val0, danger0, isSelf)}
                         {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
                       </div>
@@ -896,7 +903,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                   }
 
                   return (
-                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
+                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', gridArea: isCross ? crossAreaBySeat[op.id] : undefined }}>
                       {miniCell(op.artUrl, val0, danger0, isSelf)}
                     </div>
                   );
@@ -916,19 +923,21 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
               >
                 <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                 <div
-                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
+                  style={tableLayout === 'cross'
+                    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.8fr 1.4fr 0.8fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(240px, 58vw, 320px)' }
+                    : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
                 >
-                  {(isFlipped ? [...opponents].reverse() : opponents).map((op) => {
+                  {(tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
                     const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
                     const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
                     const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
                     const isSelf = op.id === id;
                     return (
+                      <div key={op.id} style={{ gridArea: tableLayout === 'cross' ? crossAreaBySeat[op.id] : undefined }}>
                       <CmdCell
-                        key={op.id}
                         value={val0}
                         value2={val1}
                         hasPartner={hasPartner}
@@ -956,6 +965,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, onLose, onBackStep, onLife
                         held={cmdHeld}
                         onHold={setCmdHeld}
                       />
+                      </div>
                     );
                   })}
                 </div>
@@ -1426,7 +1436,7 @@ export default function App() {
                 onResetAll={handleResetAll}
                 mulliganType={mulliganType} onSetMulligan={setMulliganType}
               /> :
-              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
+              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} tableLayout={tableLayout} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
             return (
               <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area, position: 'relative' }}>
                 {fix ? (
