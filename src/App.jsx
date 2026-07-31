@@ -1665,8 +1665,11 @@ export default function App() {
                           border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
                         }}
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
-                          <rect x="9" y="3" width="6" height="18" rx="1" /><rect x="3" y="9" width="4" height="6" rx="1" /><rect x="17" y="9" width="4" height="6" rx="1" />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} stroke="none">
+                          <rect x="2" y="1" width="20" height="6" rx="1.5" />
+                          <rect x="2" y="9" width="9" height="9" rx="1.5" />
+                          <rect x="13" y="9" width="9" height="9" rx="1.5" />
+                          <rect x="2" y="19" width="20" height="4" rx="1.5" />
                         </svg>
                       </button>
                     </div>
