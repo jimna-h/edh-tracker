@@ -617,7 +617,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
 
   if (hasPartner) {
     return (
-      <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
+      <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
         {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
         {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, activeHalfB, setActiveHalfB)}
       </div>
@@ -625,7 +625,7 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   }
 
   return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
+    <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
       {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
     </div>
   );
@@ -936,7 +936,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                     const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
                     const isSelf = op.id === id;
                     return (
-                      <div key={op.id} style={{ gridArea: tableLayout === 'cross' ? crossAreaBySeat[op.id] : undefined }}>
+                      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? crossAreaBySeat[op.id] : undefined }}>
                       <CmdCell
                         value={val0}
                         value2={val1}
