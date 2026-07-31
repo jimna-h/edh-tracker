@@ -108,7 +108,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   };
 
   return (
-    <div className="w-full max-w-[80%] md:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingLeft: 24, paddingRight: 24 }}>
+    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 26, paddingBottom: 26 }}>
       {title && (
         <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
           {title}
@@ -418,7 +418,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap
         )}
 
         {step === 4 && (
-          <div className="flex flex-col items-center justify-between h-full w-full px-8 py-8 md:py-12 animate-in zoom-in duration-300">
+          <div className="flex flex-col items-center justify-between h-full w-full px-6 py-8 md:py-12 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] md:text-sm uppercase tracking-[0.6em]">Select Colors</p>
             <div className="flex-1 flex items-center justify-center w-full">
               <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
@@ -441,7 +441,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap
         )}
 
         {step === 8 && (
-          <div className="flex flex-col items-center justify-center h-full w-full px-8 animate-in zoom-in duration-300">
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 animate-in zoom-in duration-300">
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em] mb-6">Partner Commanders?</p>
             <div style={{ display: 'flex', gap: 24, width: '100%', maxWidth: 280 }}>
               <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
@@ -489,7 +489,7 @@ const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap
           />
         )}
         {step === 3 && (
-          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, padding: '0 28px' }}>
+          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, paddingTop: 28, paddingBottom: 28 }}>
             <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">Starting Lands</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
               {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
