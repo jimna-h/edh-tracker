@@ -1520,7 +1520,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 108px)' : 'calc(50% + 95px)',
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 80px)' : 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
