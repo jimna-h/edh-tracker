@@ -279,7 +279,7 @@ const GridPicker = ({ title, options, onSelect, onBack }) => {
 };
 
 
-const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
+const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
@@ -534,6 +534,18 @@ const SetupQuadrant = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap
     </div>
   );
 };
+
+// Only re-render a seat's setup screen when its OWN data actually changes -
+// prevents unrelated seats from re-rendering (and their scroll position
+// resetting) whenever any other seat updates.
+const SetupQuadrant = React.memo(SetupQuadrantInner, (prev, next) => (
+  prev.seat === next.seat &&
+  prev.isFlipped === next.isFlipped &&
+  prev.axisSwapped === next.axisSwapped &&
+  prev.playerDataMap === next.playerDataMap &&
+  prev.firstSeatIndex === next.firstSeatIndex &&
+  prev.mulliganType === next.mulliganType
+));
 
 // --- CMD DAMAGE CELL ---
 const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
@@ -813,8 +825,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
                 paddingTop: 10, paddingBottom: 26,
-                paddingLeft: isTopBot ? 10 : myArea === 'midl' ? 150 : myArea === 'midr' ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
-                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 150 : myArea === 'midl' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+                paddingLeft: isTopBot ? 10 : myArea === 'midl' ? 100 : myArea === 'midr' ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 100 : myArea === 'midl' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
@@ -1307,12 +1319,11 @@ export default function App() {
   };
 
   const updateSeat = (id, field, value) => {
-    setSeats(prev => {
-      const ns = [...prev];
-      if (field === 'startLands') ns[id].stats.startLands = value; 
-      else ns[id][field] = value;
-      return ns;
-    });
+    setSeats(prev => prev.map((s, idx) => {
+      if (idx !== id) return s; // unrelated seats keep the exact same reference
+      if (field === 'startLands') return { ...s, stats: { ...s.stats, startLands: value } };
+      return { ...s, [field]: value };
+    }));
   };
 
   const handleLifeChange = (id, delta) => {
@@ -1509,7 +1520,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 90px)' : 'calc(50% + 95px)',
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 108px)' : 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
