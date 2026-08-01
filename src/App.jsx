@@ -290,7 +290,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
   const players = playerOptions;
 
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
-  const rawDecks = playerEntry.decks || [];
+  const rawDecks = (playerEntry.decks || []).filter(d => !d.exclude);
   const decks = rawDecks;
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
@@ -476,7 +476,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
           <SelectionCarousel axisSwapped={axisSwapped}
             title={`${seat.deckOwner}'s Decks`} 
             isFlipped={isFlipped} 
-            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks) || []}
+            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks || []).filter(d => !d.exclude)}
             twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
@@ -1816,6 +1816,37 @@ export default function App() {
                         />
                         <span className="text-[9px] font-semibold text-white/30 mb-4">Tip: use Scryfall's "Download Art Crop" link</span>
 
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Archidekt Link</span>
+                        <input
+                          type="text"
+                          value={editingDeck.archidekt || ''}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, archidekt: e.target.value }))}
+                          placeholder="https://archidekt.com/decks/..."
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Exclude from Setup</span>
+                            <span className="text-[9px] font-semibold text-white/25">Hides this deck from the game setup screen</span>
+                          </div>
+                          <button
+                            onClick={() => setEditingDeck(prev => ({ ...prev, exclude: !prev.exclude }))}
+                            style={{
+                              flexShrink: 0, width: 46, height: 26, borderRadius: 999, position: 'relative',
+                              backgroundColor: editingDeck.exclude ? '#ef4444' : 'rgba(255,255,255,0.12)',
+                              transition: 'background-color 0.15s',
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute', top: 3, left: editingDeck.exclude ? 23 : 3,
+                              width: 20, height: 20, borderRadius: '50%', backgroundColor: '#fff',
+                              transition: 'left 0.15s',
+                            }} />
+                          </button>
+                        </div>
+
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Partner Commander</span>
                           <div className="flex gap-2">
@@ -1869,6 +1900,8 @@ export default function App() {
                               art_url: editingDeck.artUrl.trim(),
                               art_url_partner: editingDeck.hasPartner ? (editingDeck.artUrlPartner.trim() || 'partner') : '',
                               colors: editingDeck.colors.join(''),
+                              exclude: !!editingDeck.exclude,
+                              archidekt: (editingDeck.archidekt || '').trim(),
                             };
                             if (editingDeck.isNew) {
                               editorCall('/players/add_deck', payload);
@@ -1949,29 +1982,48 @@ export default function App() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
                           {(detailPlayer.decks || []).map(d => (
-                            <div key={d.deck} style={{
-                              position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '1 / 0.85',
-                              backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-                              backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
-                              border: '1px solid rgba(255,255,255,0.12)',
-                            }}>
+                            <div
+                              key={d.deck}
+                              onClick={() => { if (d.archidekt) window.open(d.archidekt, '_blank', 'noopener,noreferrer'); }}
+                              style={{
+                                position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '1 / 0.85',
+                                backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                                backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                filter: d.exclude ? 'grayscale(1) brightness(0.45)' : 'none',
+                                cursor: d.archidekt ? 'pointer' : 'default',
+                              }}>
                               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
-                              <span style={{ position: 'absolute', top: 8, left: 10, right: 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              {d.exclude && (
+                                <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                  </svg>
+                                </div>
+                              )}
+                              <span style={{ position: 'absolute', top: 8, left: 10, right: d.exclude ? 34 : 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
                               <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: 6 }}>
                                 <button
                                   disabled={editorBusy}
-                                  onClick={() => setEditingDeck({
-                                    isNew: false, originalDeck: d.deck, deck: d.deck,
-                                    artUrl: d.artUrl || '',
-                                    hasPartner: !!(d.artUrlPartner && d.artUrlPartner !== ''),
-                                    artUrlPartner: (d.artUrlPartner && d.artUrlPartner !== 'partner') ? d.artUrlPartner : '',
-                                    colors: (d.colors || '').split('').filter(Boolean),
-                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingDeck({
+                                      isNew: false, originalDeck: d.deck, deck: d.deck,
+                                      artUrl: d.artUrl || '',
+                                      hasPartner: !!(d.artUrlPartner && d.artUrlPartner !== ''),
+                                      artUrlPartner: (d.artUrlPartner && d.artUrlPartner !== 'partner') ? d.artUrlPartner : '',
+                                      colors: (d.colors || '').split('').filter(Boolean),
+                                      exclude: !!d.exclude,
+                                      archidekt: d.archidekt || '',
+                                    });
+                                  }}
                                   style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(4px)' }}
                                 >Edit</button>
                                 <button
                                   disabled={editorBusy}
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     if (!confirm(`Delete deck "${d.deck}"?`)) return;
                                     editorCall('/players/delete_deck', { player_name: detailPlayer.player_name, deck: d.deck });
                                   }}
@@ -1984,7 +2036,7 @@ export default function App() {
 
                         <button
                           disabled={editorBusy}
-                          onClick={() => setEditingDeck({ isNew: true, deck: '', artUrl: '', hasPartner: false, artUrlPartner: '', colors: [] })}
+                          onClick={() => setEditingDeck({ isNew: true, deck: '', artUrl: '', hasPartner: false, artUrlPartner: '', colors: [], exclude: false, archidekt: '' })}
                           className="text-[13px] font-black uppercase text-white px-6 py-3 rounded-full bg-white/10 border border-white/15 self-center mt-5"
                         >+ Add Deck</button>
 
