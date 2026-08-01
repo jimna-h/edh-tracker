@@ -712,13 +712,10 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
   // Matches the same seatIndex -> area mapping used at the top level for cross layout,
   // so the commander damage grid mirrors the actual seating arrangement.
   const crossAreaBySeat = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
-  // The commander damage grid's area assignment needs to be relative to each viewer's
-  // own local rotation state - top/midl render correctly with the standard mapping,
-  // but midr needs a full swap (top<->bot, midl<->midr) and bot needs midl<->midr swapped.
   const cmdAreaMapBySeat = {
     0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
-    1: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
-    2: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
+    1: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
+    2: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
     3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
   };
   const cmdAreaFor = (opSeatIndex) => cmdAreaMapBySeat[seatIndex]?.[opSeatIndex] ?? crossAreaBySeat[opSeatIndex];
@@ -1504,7 +1501,7 @@ export default function App() {
           </div>
         )}
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]" style={{ transform: tableLayout === 'cross' ? 'translateX(55px)' : 'none' }}>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
           {/* Settings gear icon - always visible, offset near center */}
           {!showResetConfirm && !showSettings && (
             <button
@@ -1532,7 +1529,7 @@ export default function App() {
                   onClick={handleRandom}
                   disabled={isSpinning}
                   className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
@@ -1542,7 +1539,7 @@ export default function App() {
                 <button
                   onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
                   className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">START</span>
                 </button>
@@ -1559,7 +1556,8 @@ export default function App() {
                 height: tableLayout === 'cross' ? '108px' : '180px', 
                 backgroundColor: '#000000',
                 WebkitTapHighlightColor: 'transparent',
-                userSelect: 'none'
+                userSelect: 'none',
+                transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none',
               }}
             >
               <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: tableLayout === 'cross' ? '8px' : '12px' }}>Turn</span>
@@ -1575,7 +1573,7 @@ export default function App() {
             <button
               onClick={submitGame}
               className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
-              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px' }}
+              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
             >
               SUBMIT
             </button>
