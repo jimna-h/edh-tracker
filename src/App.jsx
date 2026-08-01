@@ -123,14 +123,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-mandatory w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 snap-x snap-proximity w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
       >
         {twoRows ? (() => {
           const row1 = options.filter((_, i) => i % 2 === 0);
           const row2 = options.filter((_, i) => i % 2 === 1);
           return [row1, row2].map((row, ri) => (
-            <div key={ri} className="flex flex-nowrap gap-3 snap-x snap-mandatory">
+            <div key={ri} className="flex flex-nowrap gap-3 snap-x snap-proximity">
               {row.map((opt, i) => {
                 const globalIdx = i * 2 + ri;
                 const isObj = typeof opt === 'object' && opt !== null;
