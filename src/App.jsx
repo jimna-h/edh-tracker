@@ -123,14 +123,14 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 ${axisSwapped ? '' : 'snap-x snap-proximity'} w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
       >
         {twoRows ? (() => {
           const row1 = options.filter((_, i) => i % 2 === 0);
           const row2 = options.filter((_, i) => i % 2 === 1);
           return [row1, row2].map((row, ri) => (
-            <div key={ri} className={`flex flex-nowrap gap-3 ${axisSwapped ? '' : 'snap-x snap-proximity'}`}>
+            <div key={ri} className="flex flex-nowrap gap-3">
               {row.map((opt, i) => {
                 const globalIdx = i * 2 + ri;
                 const isObj = typeof opt === 'object' && opt !== null;
@@ -1520,7 +1520,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 35px)' : 'calc(50% + 95px)',
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 30px)' : 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
