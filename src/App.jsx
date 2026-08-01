@@ -1230,6 +1230,7 @@ export default function App() {
   const [tableLayout, setTableLayout] = useState(() => localStorage.getItem('mtg_table_layout') || 'grid');
   const [showPlayerEditor, setShowPlayerEditor] = useState(false);
   const [expandedPlayer, setExpandedPlayer] = useState(null);
+  const [editingDeck, setEditingDeck] = useState(null); // { isNew, originalDeck, deck, artUrl, artUrlPartner, hasPartner, colors[] }
   const [editorBusy, setEditorBusy] = useState(false);
 
   const toggleTableLayout = () => {
@@ -1520,7 +1521,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% 29px)' : 'calc(50% + 95px)',
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 30px)' : 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
@@ -1540,7 +1541,7 @@ export default function App() {
                   onClick={handleRandom}
                   disabled={isSpinning}
                   className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(129px)' : 'none' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
@@ -1550,7 +1551,7 @@ export default function App() {
                 <button
                   onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
                   className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(129px)' : 'none' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">START</span>
                 </button>
@@ -1568,7 +1569,7 @@ export default function App() {
                 backgroundColor: '#000000',
                 WebkitTapHighlightColor: 'transparent',
                 userSelect: 'none',
-                transform: tableLayout === 'cross' ? 'translateX(129px)' : 'none',
+                transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none',
               }}
             >
               <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: tableLayout === 'cross' ? '8px' : '12px' }}>Turn</span>
@@ -1584,7 +1585,7 @@ export default function App() {
             <button
               onClick={submitGame}
               className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
-              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(129px)' : 'none' }}
+              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
             >
               SUBMIT
             </button>
@@ -1760,7 +1761,7 @@ export default function App() {
                 {/* Header - swaps between "Players" list header and player-name detail header */}
                 <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <button
-                    onClick={() => detailPlayer ? setExpandedPlayer(null) : setShowPlayerEditor(false)}
+                    onClick={() => editingDeck ? setEditingDeck(null) : detailPlayer ? setExpandedPlayer(null) : setShowPlayerEditor(false)}
                     className="flex items-center justify-center rounded-full"
                     style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
                   >
@@ -1781,7 +1782,106 @@ export default function App() {
                 <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
                   <div className="px-6 py-6 flex flex-col" style={{ width: '100%', maxWidth: 420 }}>
 
-                    {!detailPlayer ? (
+                    {editingDeck ? (
+                      <>
+                        {/* DECK EDIT FORM */}
+                        <div className="flex items-center gap-3 mb-5">
+                          <button
+                            onClick={() => setEditingDeck(null)}
+                            style={{ background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                          </button>
+                          <span className="text-white font-black text-sm uppercase tracking-wide">{editingDeck.isNew ? 'New Deck' : 'Edit Deck'}</span>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Deck Name</span>
+                        <input
+                          type="text"
+                          value={editingDeck.deck}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, deck: e.target.value }))}
+                          placeholder="e.g. Aragorn, Uniter"
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Art URL</span>
+                        <input
+                          type="text"
+                          value={editingDeck.artUrl}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrl: e.target.value }))}
+                          placeholder="https://..."
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-1"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+                        <span className="text-[9px] font-semibold text-white/30 mb-4">Tip: use Scryfall's "Download Art Crop" link</span>
+
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Partner Commander</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingDeck(prev => ({ ...prev, hasPartner: false, artUrlPartner: '' }))}
+                              style={{
+                                padding: '4px 14px', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+                                backgroundColor: !editingDeck.hasPartner ? '#fff' : 'rgba(255,255,255,0.08)',
+                                color: !editingDeck.hasPartner ? '#000' : 'rgba(255,255,255,0.5)',
+                              }}
+                            >No</button>
+                            <button
+                              onClick={() => setEditingDeck(prev => ({ ...prev, hasPartner: true }))}
+                              style={{
+                                padding: '4px 14px', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+                                backgroundColor: editingDeck.hasPartner ? '#fff' : 'rgba(255,255,255,0.08)',
+                                color: editingDeck.hasPartner ? '#000' : 'rgba(255,255,255,0.5)',
+                              }}
+                            >Yes</button>
+                          </div>
+                        </div>
+                        {editingDeck.hasPartner && (
+                          <input
+                            type="text"
+                            value={editingDeck.artUrlPartner}
+                            onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrlPartner: e.target.value }))}
+                            placeholder="Partner art URL..."
+                            className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4 mt-2"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                          />
+                        )}
+                        {!editingDeck.hasPartner && <div className="mb-4" />}
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-3 self-center">Colors</span>
+                        <div className="mb-6 self-center">
+                          <ColorPicker
+                            selected={editingDeck.colors}
+                            onToggle={(c) => setEditingDeck(prev => ({
+                              ...prev,
+                              colors: prev.colors.includes(c) ? prev.colors.filter(x => x !== c) : [...prev.colors, c],
+                            }))}
+                          />
+                        </div>
+
+                        <button
+                          disabled={editorBusy || !editingDeck.deck.trim()}
+                          onClick={() => {
+                            const payload = {
+                              player_name: detailPlayer.player_name,
+                              deck: editingDeck.deck.trim(),
+                              art_url: editingDeck.artUrl.trim(),
+                              art_url_partner: editingDeck.hasPartner ? (editingDeck.artUrlPartner.trim() || 'partner') : '',
+                              colors: editingDeck.colors.join(''),
+                            };
+                            if (editingDeck.isNew) {
+                              editorCall('/players/add_deck', payload);
+                            } else {
+                              editorCall('/players/update_deck', { ...payload, original_deck: editingDeck.originalDeck });
+                            }
+                            setEditingDeck(null);
+                          }}
+                          className="font-black uppercase text-sm text-black px-6 py-3.5 rounded-full bg-white self-center"
+                          style={{ opacity: (!editingDeck.deck.trim()) ? 0.4 : 1 }}
+                        >Save Deck</button>
+                      </>
+                    ) : !detailPlayer ? (
                       <>
                         {/* LIST VIEW */}
                         <button
@@ -1860,17 +1960,13 @@ export default function App() {
                               <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: 6 }}>
                                 <button
                                   disabled={editorBusy}
-                                  onClick={() => {
-                                    const deck = prompt("Deck Name:", d.deck);
-                                    if (deck === null) return;
-                                    const art = prompt("Art URL (tip: use Scryfall's Download Art Crop link):", d.artUrl || '');
-                                    if (art === null) return;
-                                    const partner = prompt("Partner Art URL (blank if none):", d.artUrlPartner || '');
-                                    if (partner === null) return;
-                                    const colors = prompt("Colors (e.g. WUBRG letters):", d.colors || '');
-                                    if (colors === null) return;
-                                    editorCall('/players/update_deck', { player_name: detailPlayer.player_name, original_deck: d.deck, deck, art_url: art, art_url_partner: partner, colors });
-                                  }}
+                                  onClick={() => setEditingDeck({
+                                    isNew: false, originalDeck: d.deck, deck: d.deck,
+                                    artUrl: d.artUrl || '',
+                                    hasPartner: !!(d.artUrlPartner && d.artUrlPartner !== ''),
+                                    artUrlPartner: (d.artUrlPartner && d.artUrlPartner !== 'partner') ? d.artUrlPartner : '',
+                                    colors: (d.colors || '').split('').filter(Boolean),
+                                  })}
                                   style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(4px)' }}
                                 >Edit</button>
                                 <button
@@ -1888,14 +1984,7 @@ export default function App() {
 
                         <button
                           disabled={editorBusy}
-                          onClick={() => {
-                            const deck = prompt("New Deck Name:");
-                            if (!deck) return;
-                            const art = prompt("Art URL (tip: use Scryfall's Download Art Crop link):") || '';
-                            const partner = prompt("Partner Art URL (blank if none):") || '';
-                            const colors = prompt("Colors (e.g. WUBRG letters):") || '';
-                            editorCall('/players/add_deck', { player_name: detailPlayer.player_name, deck, art_url: art, art_url_partner: partner, colors });
-                          }}
+                          onClick={() => setEditingDeck({ isNew: true, deck: '', artUrl: '', hasPartner: false, artUrlPartner: '', colors: [] })}
                           className="text-[13px] font-black uppercase text-white px-6 py-3 rounded-full bg-white/10 border border-white/15 self-center mt-5"
                         >+ Add Deck</button>
 
