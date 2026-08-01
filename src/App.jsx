@@ -813,8 +813,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
                 paddingTop: 10, paddingBottom: 26,
-                paddingLeft: isTopBot ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
-                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 130 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+                paddingLeft: isTopBot ? 10 : myArea === 'midr' ? 130 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
@@ -1529,7 +1529,7 @@ export default function App() {
                   onClick={handleRandom}
                   disabled={isSpinning}
                   className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(145px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
                 </button>
@@ -1539,7 +1539,7 @@ export default function App() {
                 <button
                   onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
                   className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
-                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(145px)' : 'none' }}
                 >
                   <span className="text-xs font-bold">START</span>
                 </button>
@@ -1557,7 +1557,7 @@ export default function App() {
                 backgroundColor: '#000000',
                 WebkitTapHighlightColor: 'transparent',
                 userSelect: 'none',
-                transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none',
+                transform: tableLayout === 'cross' ? 'translateX(145px)' : 'none',
               }}
             >
               <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: tableLayout === 'cross' ? '8px' : '12px' }}>Turn</span>
@@ -1573,7 +1573,7 @@ export default function App() {
             <button
               onClick={submitGame}
               className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
-              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(100px)' : 'none' }}
+              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(145px)' : 'none' }}
             >
               SUBMIT
             </button>
