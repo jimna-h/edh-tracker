@@ -813,8 +813,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
                 paddingTop: 10, paddingBottom: 26,
-                paddingLeft: isTopBot ? 10 : myArea === 'midr' ? 130 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
-                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+                paddingLeft: isTopBot ? 10 : myArea === 'midl' ? 150 : myArea === 'midr' ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 150 : myArea === 'midl' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
@@ -1509,7 +1509,7 @@ export default function App() {
               className="pointer-events-auto flex items-center justify-center rounded-full"
               style={{
                 position: 'absolute', width: 34, height: 34,
-                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 60px)' : 'calc(50% + 95px)',
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 90px)' : 'calc(50% + 95px)',
                 backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
@@ -1552,8 +1552,8 @@ export default function App() {
               onPointerUp={handlePointerUp}
               className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
               style={{ 
-                width: tableLayout === 'cross' ? '108px' : '180px', 
-                height: tableLayout === 'cross' ? '108px' : '180px', 
+                width: tableLayout === 'cross' ? '130px' : '180px', 
+                height: tableLayout === 'cross' ? '130px' : '180px', 
                 backgroundColor: '#000000',
                 WebkitTapHighlightColor: 'transparent',
                 userSelect: 'none',
@@ -1563,7 +1563,7 @@ export default function App() {
               <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: tableLayout === 'cross' ? '8px' : '12px' }}>Turn</span>
               <span 
                 className="font-black tabular-nums text-white select-none" 
-                style={{ fontSize: tableLayout === 'cross' ? '58px' : '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
+                style={{ fontSize: tableLayout === 'cross' ? '70px' : '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
               >
                 {turn}
               </span>
