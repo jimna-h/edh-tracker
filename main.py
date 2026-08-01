@@ -52,15 +52,18 @@ def get_players():
                 art_url_partner = row[2] if len(row) > 2 else ""
                 color_id = row[3] if len(row) > 3 else ""
                 exclude = (row[4] if len(row) > 4 else "").strip().upper() == "TRUE"
+                archidekt = row[5] if len(row) > 5 else ""
                 
                 if deck_name.upper() == "PFP":
                     pfp_url = art_url
-                elif deck_name and not exclude:
+                elif deck_name:
                     deck_list.append({
                         "deck": deck_name,
                         "artUrl": art_url,
                         "artUrlPartner": art_url_partner,
                         "colors": color_id,
+                        "exclude": exclude,
+                        "archidekt": archidekt,
                     })
             
             # Add each player as an object to the list
@@ -250,11 +253,13 @@ def add_deck():
         sh = client.open_by_key(PLAYERS_ID)
         ws = sh.worksheet(data.get('player_name', ''))
         row = _find_next_blank_row(ws)
-        ws.update(f"A{row}:D{row}", [[
+        ws.update(f"A{row}:F{row}", [[
             data.get('deck', ''),
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
+            'TRUE' if data.get('exclude') else 'FALSE',
+            data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
     except Exception as e:
@@ -270,11 +275,13 @@ def update_deck():
         row = _find_deck_row(ws, data.get('original_deck', ''))
         if row is None:
             return jsonify({"error": "Deck not found"}), 404
-        ws.update(f"A{row}:D{row}", [[
+        ws.update(f"A{row}:F{row}", [[
             data.get('deck', ''),
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
+            'TRUE' if data.get('exclude') else 'FALSE',
+            data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
     except Exception as e:
