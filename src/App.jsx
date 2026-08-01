@@ -1294,8 +1294,8 @@ export default function App() {
   // fraction of the grid they occupy), midr just needs a straight 180 flip.
   const topBotWidthPct = (0.85 / 3) * 100;
   const crossRotationFix = {
-    top: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
-    bot: { deg: -90, width: '100vw', height: `${topBotWidthPct}vh` },
+    top: { deg: -90, width: '100svw', height: `${topBotWidthPct}svh` },
+    bot: { deg: -90, width: '100svw', height: `${topBotWidthPct}svh` },
     midl: { deg: 180, width: '100%', height: '100%' },
   };
 
