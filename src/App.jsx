@@ -108,9 +108,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   };
 
   return (
-    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 12, paddingBottom: 12 }}>
+    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 6, paddingBottom: 6 }}>
       {title && (
-        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-1 md:mb-3 text-white/60 drop-shadow-md">
+        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-0.5 md:mb-2 text-white/60 drop-shadow-md">
           {title}
         </p>
       )}
@@ -123,7 +123,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 w-full cursor-grab ${twoRows ? 'flex flex-col gap-2' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        className={`overflow-x-auto no-scrollbar px-6 md:px-12 w-full cursor-grab ${twoRows ? 'flex flex-col gap-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
       >
         {twoRows ? (() => {
@@ -141,7 +141,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                     key={`${title}-${globalIdx}`}
                     data-option-index={globalIdx}
                     onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
-                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[40px] md:h-[56px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[54px] md:h-[70px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
                     style={buttonColor ? { backgroundColor: buttonColor } : {}}
                   >
                     {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" /><div className="absolute inset-0 bg-black/15" /></>)}
@@ -179,9 +179,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           );
         })}
       </div>
-      <div className="shrink-0 flex items-center gap-3 mt-1 md:mt-3">
+      <div className="shrink-0 flex items-center gap-3 mt-0.5 md:mt-2">
         {showBack && (
-          <button onClick={onBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+          <button onClick={onBack} className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
             - Back
           </button>
         )}
@@ -367,7 +367,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             onBack={handleBack} 
             extraButton={
               <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
-                className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                 + Guest
               </button>
             }
@@ -389,7 +389,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             extraButton={
               <>
                 <button onClick={() => setStep(5)}
-                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                   Borrowed
                 </button>
                 <button onClick={() => {
@@ -402,7 +402,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
                     onUpdate(id, 'deck', deckName || "Other"); setStep(4);
                   }
                 }}
-                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                   + Other
                 </button>
               </>
@@ -489,15 +489,15 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
           />
         )}
         {step === 3 && (
-          <div className="flex flex-col items-center w-full max-w-[90%] md:max-w-[450px] mx-auto animate-in fade-in zoom-in duration-500" style={{ gap: 8, paddingTop: 12, paddingBottom: 12 }}>
+          <div className="flex flex-col items-center w-full max-w-[90%] md:max-w-[450px] mx-auto animate-in fade-in zoom-in duration-500" style={{ gap: 4, paddingTop: 6, paddingBottom: 6 }}>
             <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em] text-center">Starting Lands</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 280 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', maxWidth: 280 }}>
               {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
                 <div key={ri} style={{ display: 'flex', gap: 6 }}>
                   {row.map(n => (
                     <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
                       style={{
-                        flex: 1, height: 40, borderRadius: 12,
+                        flex: 1, height: 52, borderRadius: 12,
                         fontSize: 20, fontWeight: 900, color: '#fff',
                         backgroundColor: 'rgba(255,255,255,0.55)',
                         border: '1px solid rgba(255,255,255,0.7)',
@@ -508,7 +508,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
                 </div>
               ))}
             </div>
-            <button onClick={handleBack} className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+            <button onClick={handleBack} className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
               - Back
             </button>
           </div>
