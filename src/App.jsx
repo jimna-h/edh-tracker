@@ -205,7 +205,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
   return (
     <div 
       className={`
-        relative h-[calc(100%-20px)] md:h-[calc(100%-50px)] w-[calc(100%-20px)] md:w-[calc(100%-50px)] 
+        relative h-[calc(100%-12px)] md:h-[calc(100%-30px)] w-[calc(100%-12px)] md:w-[calc(100%-30px)] 
         rounded-[1.5rem] md:rounded-[3.5rem] transition-all duration-700
         flex flex-col items-center justify-center overflow-hidden
         ${isFlipped ? 'rotate-180' : ''}
@@ -367,7 +367,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             onBack={handleBack} 
             extraButton={
               <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
-                className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                 + Guest
               </button>
             }
@@ -389,7 +389,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             extraButton={
               <>
                 <button onClick={() => setStep(5)}
-                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                   Borrowed
                 </button>
                 <button onClick={() => {
@@ -402,7 +402,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
                     onUpdate(id, 'deck', deckName || "Other"); setStep(4);
                   }
                 }}
-                  className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  className="px-6 md:px-8 py-2 md:py-3 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                   + Other
                 </button>
               </>
