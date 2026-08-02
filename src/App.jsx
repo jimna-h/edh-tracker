@@ -1064,6 +1064,10 @@ export default function App() {
   const [turn, setTurn] = useState(1);
   const [playerDataMap, setPlayerDataMap] = useState([]);
   const [pendingGames, setPendingGames] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_games') || '[]'));
+  const [pendingEdits, setPendingEdits] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_edits') || '[]'));
+  const [isSyncingEdits, setIsSyncingEdits] = useState(false);
+  const syncPendingRef = useRef(() => {});
+  const syncPendingEditsRef = useRef(() => {});
   const [firstSeatIndex, setFirstSeatIndex] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mulliganType, setMulliganType] = useState('');
@@ -1106,9 +1110,11 @@ export default function App() {
       .catch(() => console.log("Offline: Using cached player data"));
 
     if (pendingGames.length > 0) syncPending();
+    if (pendingEdits.length > 0) syncPendingEdits();
 
-    window.addEventListener('online', syncPending);
-    return () => window.removeEventListener('online', syncPending);
+    const handleOnline = () => { syncPendingRef.current(); syncPendingEditsRef.current(); };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   useEffect(() => {
@@ -1256,20 +1262,82 @@ export default function App() {
       .catch(() => {});
   };
 
+  // Mirrors what each editor endpoint does server-side, so the UI reflects the
+  // change immediately instead of waiting on a round-trip (or being stuck until
+  // the connection comes back).
+  const applyEditOptimistically = (path, body) => {
+    setPlayerDataMap(prev => {
+      let next = prev;
+      if (path === '/players/add_player') {
+        next = [...prev, { player_name: body.player_name, decks: [], pfp: '' }];
+      } else if (path === '/players/delete_player') {
+        next = prev.filter(p => p.player_name !== body.player_name);
+      } else if (path === '/players/add_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: [...(p.decks || []), { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }] }
+          : p);
+      } else if (path === '/players/update_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: (p.decks || []).map(d => d.deck === body.original_deck
+              ? { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }
+              : d) }
+          : p);
+      } else if (path === '/players/delete_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: (p.decks || []).filter(d => d.deck !== body.deck) }
+          : p);
+      } else if (path === '/players/update_pfp') {
+        next = prev.map(p => p.player_name === body.player_name ? { ...p, pfp: body.art_url } : p);
+      }
+      localStorage.setItem('mtg_player_cache', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const editorCall = async (path, body) => {
     setEditorBusy(true);
+    // Apply locally right away - the UI never waits on the network for this.
+    applyEditOptimistically(path, body);
     try {
       const r = await fetch(`https://edh-backend.onrender.com${path}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
       if (!r.ok) throw new Error('Request failed');
-      refetchPlayers();
+      refetchPlayers(); // reconcile with the server's canonical state
     } catch (e) {
-      alert('Could not reach server - check your connection.');
+      // Offline (or the backend is unreachable/cold-starting) - queue it and
+      // retry automatically once we're back online, same pattern as game submission.
+      setPendingEdits(prev => {
+        const next = [...prev, { id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, path, body }];
+        localStorage.setItem('pending_mtg_edits', JSON.stringify(next));
+        return next;
+      });
     } finally {
       setEditorBusy(false);
     }
   };
+
+  const syncPendingEdits = async () => {
+    if (isSyncingEdits || pendingEdits.length === 0) return;
+    setIsSyncingEdits(true);
+    const edits = [...pendingEdits];
+    let remaining = [...pendingEdits];
+    for (const edit of edits) {
+      try {
+        const r = await fetch(`https://edh-backend.onrender.com${edit.path}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edit.body)
+        });
+        if (r.ok) {
+          remaining = remaining.filter(e => e.id !== edit.id);
+          setPendingEdits([...remaining]);
+          localStorage.setItem('pending_mtg_edits', JSON.stringify(remaining));
+        } else { break; }
+      } catch (e) { break; }
+    }
+    setIsSyncingEdits(false);
+    refetchPlayers(); // pick up the server's canonical state after syncing
+  };
+  syncPendingEditsRef.current = syncPendingEdits;
 
   // Layout config: maps visual grid position -> seat index + flip + grid-area name
   const layoutConfig = tableLayout === 'cross'
@@ -1390,6 +1458,7 @@ export default function App() {
     }
     setIsSyncing(false);
   };
+  syncPendingRef.current = syncPending;
 
   const submitGame = () => {
     const gameData = {
@@ -1662,10 +1731,10 @@ export default function App() {
                 </div>
                 <div>
                   <SettingsRow
-                    label={isSyncing ? 'Syncing...' : hasPending ? 'Sync Pending Games' : 'All Games Synced'}
-                    value={hasPending ? String(pendingGames.length) : null}
-                    disabled={!hasPending || isSyncing}
-                    onClick={() => syncPending()}
+                    label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
+                    value={(hasPending || pendingEdits.length > 0) ? String(pendingGames.length + pendingEdits.length) : null}
+                    disabled={(!hasPending && pendingEdits.length === 0) || isSyncing || isSyncingEdits}
+                    onClick={() => { syncPending(); syncPendingEdits(); }}
                     icon={
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
