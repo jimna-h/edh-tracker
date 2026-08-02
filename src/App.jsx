@@ -57,9 +57,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const [fadeMask, setFadeMask] = useState('none');
   const fadeRaf = useRef(null);
 
-  const FADE_START = 'linear-gradient(to right, transparent, black 16%, black)';
-  const FADE_END = 'linear-gradient(to right, black, black 84%, transparent)';
-  const FADE_BOTH = 'linear-gradient(to right, transparent, black 16%, black 84%, transparent)';
+  const FADE_START = 'linear-gradient(to right, transparent, black 10%, black)';
+  const FADE_END = 'linear-gradient(to right, black, black 90%, transparent)';
+  const FADE_BOTH = 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)';
 
   const updateFadeMask = () => {
     const el = scrollRef.current;
