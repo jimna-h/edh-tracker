@@ -258,7 +258,7 @@ def add_deck():
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
-            'TRUE' if data.get('exclude') else 'FALSE',
+            bool(data.get('exclude')),
             data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
@@ -280,7 +280,7 @@ def update_deck():
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
-            'TRUE' if data.get('exclude') else 'FALSE',
+            bool(data.get('exclude')),
             data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
