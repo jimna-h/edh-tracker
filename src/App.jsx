@@ -1987,12 +1987,16 @@ export default function App() {
                               onClick={() => { if (d.archidekt) window.open(d.archidekt, '_blank', 'noopener,noreferrer'); }}
                               style={{
                                 position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '1 / 0.85',
-                                backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-                                backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
                                 border: '1px solid rgba(255,255,255,0.12)',
-                                filter: d.exclude ? 'grayscale(1) brightness(0.45)' : 'none',
                                 cursor: d.archidekt ? 'pointer' : 'default',
                               }}>
+                              {/* Art layer - only this gets dimmed/grayscaled, so buttons below stay full brightness */}
+                              <div style={{
+                                position: 'absolute', inset: 0,
+                                backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                                backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
+                                filter: d.exclude ? 'grayscale(1) brightness(0.45)' : 'none',
+                              }} />
                               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
                               {d.exclude && (
                                 <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
