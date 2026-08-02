@@ -123,8 +123,13 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 w-full cursor-grab ${twoRows ? 'flex flex-col gap-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
-        style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
+        className={`overflow-x-auto no-scrollbar px-3 md:px-6 w-full cursor-grab ${twoRows ? 'flex flex-col gap-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          touchAction: axisSwapped ? 'pan-x' : 'pan-y',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
+          maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
+        }}
       >
         {twoRows ? (() => {
           const row1 = options.filter((_, i) => i % 2 === 0);
