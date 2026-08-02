@@ -108,9 +108,9 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   };
 
   return (
-    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 40, paddingBottom: 40 }}>
+    <div className="w-full h-full max-w-[90%] md:max-w-[450px] flex flex-col items-center justify-between animate-in fade-in zoom-in duration-500 z-10 mx-auto overflow-hidden" style={{ paddingTop: 16, paddingBottom: 16 }}>
       {title && (
-        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
+        <p className="shrink-0 font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
           {title}
         </p>
       )}
@@ -123,7 +123,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`overflow-x-auto no-scrollbar px-6 md:px-12 w-full cursor-grab ${twoRows ? 'flex flex-col gap-2 py-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        className={`flex-1 min-h-0 overflow-x-auto overflow-y-hidden no-scrollbar px-6 md:px-12 w-full cursor-grab items-center ${twoRows ? 'flex flex-col justify-center gap-2 py-1' : 'flex flex-nowrap justify-center gap-4 md:gap-6 py-4'}`}
         style={{ WebkitOverflowScrolling: 'touch', touchAction: axisSwapped ? 'pan-x' : 'pan-y' }}
       >
         {twoRows ? (() => {
@@ -179,7 +179,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
           );
         })}
       </div>
-      <div className="flex gap-3 mt-2 md:mt-4">
+      <div className="shrink-0 flex gap-3 mt-2 md:mt-4">
         {showBack && (
           <button onClick={onBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
             - Back
@@ -489,26 +489,28 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
           />
         )}
         {step === 3 && (
-          <div className="flex flex-col items-center w-full max-w-[90%] md:max-w-[450px] mx-auto animate-in fade-in zoom-in duration-500" style={{ gap: 10, paddingTop: 40, paddingBottom: 40 }}>
-            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em] text-center">Starting Lands</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
-              {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
-                <div key={ri} style={{ display: 'flex', gap: 8 }}>
-                  {row.map(n => (
-                    <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
-                      style={{
-                        flex: 1, height: 52, borderRadius: 14,
-                        fontSize: 22, fontWeight: 900, color: '#fff',
-                        backgroundColor: 'rgba(255,255,255,0.55)',
-                        border: '1px solid rgba(255,255,255,0.7)',
-                        color: '#000',
-                      }}
-                    >{n}</button>
-                  ))}
-                </div>
-              ))}
+          <div className="flex flex-col items-center justify-between w-full h-full max-w-[90%] md:max-w-[450px] mx-auto overflow-hidden animate-in fade-in zoom-in duration-500" style={{ paddingTop: 16, paddingBottom: 16 }}>
+            <p className="shrink-0 text-white/60 font-black text-[10px] uppercase tracking-[0.4em] text-center">Starting Lands</p>
+            <div className="flex-1 min-h-0 flex items-center justify-center w-full">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
+                {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
+                  <div key={ri} style={{ display: 'flex', gap: 8 }}>
+                    {row.map(n => (
+                      <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
+                        style={{
+                          flex: 1, height: 52, borderRadius: 14,
+                          fontSize: 22, fontWeight: 900, color: '#fff',
+                          backgroundColor: 'rgba(255,255,255,0.55)',
+                          border: '1px solid rgba(255,255,255,0.7)',
+                          color: '#000',
+                        }}
+                      >{n}</button>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-            <button onClick={handleBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+            <button onClick={handleBack} className="shrink-0 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
               - Back
             </button>
           </div>
