@@ -205,7 +205,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
   return (
     <div 
       className={`
-        relative h-[calc(100%-12px)] md:h-[calc(100%-30px)] w-[calc(100%-12px)] md:w-[calc(100%-30px)] 
+        relative h-[calc(100%-8px)] md:h-[calc(100%-20px)] w-[calc(100%-8px)] md:w-[calc(100%-20px)] 
         rounded-[1.5rem] md:rounded-[3.5rem] transition-all duration-700
         flex flex-col items-center justify-center overflow-hidden
         ${isFlipped ? 'rotate-180' : ''}
@@ -233,7 +233,7 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
       {hasArt && !isOut && (
         <div className="absolute inset-0 bg-black/55" />
       )}
-      <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-3">
+      <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-1">
         {children}
       </div>
     </div>
@@ -940,7 +940,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
             {/* CMD DAMAGE MODAL */}
             {cmdModal === 'grid' && (
               <div
-                style={{ position: 'absolute', top: -12, right: -12, bottom: -12, left: -12, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
+                style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
                 onClick={() => { setCmdModal(null); setCmdHeld(false); }}
@@ -1004,7 +1004,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
         {player.status === 'questionnaire' && (
           <div className="w-full h-full" style={{ position: 'relative' }}>
             {/* Dim the background art */}
-            <div style={{ position: 'absolute', top: -12, right: -12, bottom: -12, left: -12, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 }} />
             <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <StatPicker
                 key={player.step}
