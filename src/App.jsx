@@ -54,10 +54,34 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   const touchStartY = useRef(0);
   const mountTime = useRef(Date.now());
   const handledTouch = useRef(false);
+  const [fadeMask, setFadeMask] = useState('none');
+  const fadeRaf = useRef(null);
+
+  const FADE_START = 'linear-gradient(to right, transparent, black 16%, black)';
+  const FADE_END = 'linear-gradient(to right, black, black 84%, transparent)';
+  const FADE_BOTH = 'linear-gradient(to right, transparent, black 16%, black 84%, transparent)';
+
+  const updateFadeMask = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 2;
+    const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 2;
+    let next = 'none';
+    if (!atStart && !atEnd) next = FADE_BOTH;
+    else if (!atStart && atEnd) next = FADE_START;
+    else if (atStart && !atEnd) next = FADE_END;
+    setFadeMask(next);
+  };
+
+  const scheduleFadeUpdate = () => {
+    if (fadeRaf.current) cancelAnimationFrame(fadeRaf.current);
+    fadeRaf.current = requestAnimationFrame(updateFadeMask);
+  };
 
   useEffect(() => {
     mountTime.current = Date.now();
     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+    scheduleFadeUpdate();
   }, [options]);
 
   const mouseStartX = useRef(0);
@@ -77,6 +101,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     const walk = (x - startX) * (isFlipped ? -2 : 2);
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
     if (Math.abs(e.pageX - mouseStartX.current) > 5) didScroll.current = true;
+    scheduleFadeUpdate();
   };
 
   const handleTouchStart = (e) => {
@@ -90,6 +115,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
     const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
     if (dx > 5 || dy > 5) didScroll.current = true;
+    scheduleFadeUpdate();
   };
 
   const handleTouchEnd = (e) => {
@@ -123,12 +149,13 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onScroll={scheduleFadeUpdate}
         className={`overflow-x-auto no-scrollbar px-5 md:px-8 w-full cursor-grab ${twoRows ? 'flex flex-col gap-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
         style={{
           WebkitOverflowScrolling: 'touch',
           touchAction: axisSwapped ? 'pan-x' : 'pan-y',
-          WebkitMaskImage: 'linear-gradient(to right, transparent, black 16%, black 84%, transparent)',
-          maskImage: 'linear-gradient(to right, transparent, black 16%, black 84%, transparent)',
+          WebkitMaskImage: fadeMask,
+          maskImage: fadeMask,
         }}
       >
         {twoRows ? (() => {
