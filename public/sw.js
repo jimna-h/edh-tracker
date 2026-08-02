@@ -64,7 +64,9 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.open(CACHE_NAME).then((cache) => cache.match(request)))
+        .catch(() => caches.open(CACHE_NAME).then((cache) =>
+          cache.match(request, { ignoreSearch: true }).then((match) => match || cache.match('/'))
+        ))
     );
     return;
   }
