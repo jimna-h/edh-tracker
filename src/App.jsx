@@ -108,7 +108,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
   };
 
   return (
-    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 26, paddingBottom: 26 }}>
+    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 40, paddingBottom: 40 }}>
       {title && (
         <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-2 md:mb-4 text-white/60 drop-shadow-md">
           {title}
@@ -489,8 +489,8 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
           />
         )}
         {step === 3 && (
-          <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 10, paddingTop: 28, paddingBottom: 28 }}>
-            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">Starting Lands</p>
+          <div className="flex flex-col items-center w-full max-w-[90%] md:max-w-[450px] mx-auto animate-in fade-in zoom-in duration-500" style={{ gap: 10, paddingTop: 40, paddingBottom: 40 }}>
+            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em] text-center">Starting Lands</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 280 }}>
               {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
                 <div key={ri} style={{ display: 'flex', gap: 8 }}>
@@ -824,7 +824,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 flex: '0 0 auto', position: 'relative', zIndex: 10,
                 display: 'flex', flexDirection: 'row', alignItems: 'center',
                 gap: 6,
-                paddingTop: 10, paddingBottom: 26,
+                paddingTop: 10, paddingBottom: 40,
                 paddingLeft: isTopBot ? 10 : myArea === 'midl' ? 82 : myArea === 'midr' ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
                 paddingRight: isTopBot ? 10 : myArea === 'midr' ? 82 : myArea === 'midl' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
               }}
@@ -879,7 +879,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
             </div>
 
             {/* ROW 3 - CMD damage 2x2 grid button */}
-            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 18, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 32, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               {(() => {
                 const isCross = tableLayout === 'cross';
                 const orderedOpponents = (!isCross && isFlipped) ? [...opponents].reverse() : opponents;
@@ -1018,13 +1018,17 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
         )}
 
         {isOut && (
-          <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
+          <div className="relative flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
             <div className="opacity-10 scale-75 md:scale-150">
               <h1 className="text-[5rem] md:text-[11rem] font-black italic uppercase tracking-tighter -rotate-12" style={{ color: isWinner ? '#D4AF37' : '#FFFFFF' }}>
                 {isWinner ? 'WINNER' : 'OUT'}
               </h1>
             </div>
-            {!isWinner && <p className="absolute mt-12 md:mt-24 text-white/40 font-black text-[12px] md:text-[20px] uppercase tracking-[0.4em]">Eliminated Turn {player.stats.turnDied}</p>}
+            {!isWinner && (
+              <p className="absolute inset-0 flex items-center justify-center text-white/40 font-black text-[12px] md:text-[20px] uppercase tracking-[0.4em]">
+                Eliminated Turn {player.stats.turnDied}
+              </p>
+            )}
           </div>
         )}
       </QuadrantWrapper>
