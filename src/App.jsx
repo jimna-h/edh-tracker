@@ -1,2315 +1,2173 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>MANUFACTOR</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MANUFACTOR">
-<meta name="theme-color" content="#0c0e11">
-<link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Oswald:wght@300;400;700&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;overflow:hidden;touch-action:manipulation;user-select:none;}
-body{
-  font-family:'Oswald',sans-serif;
-  background:#0a0c0f;color:#e8e4dc;
-  height:100dvh;display:flex;flex-direction:column;
-}
+import React, { useState, useEffect, useRef } from 'react';
 
-/* ── TOP BAR ── */
-.topbar{
-  display:flex;align-items:center;flex-wrap:wrap;
-  padding:0 8px;min-height:44px;
-  border-bottom:1px solid rgba(255,255,255,0.07);
-  flex-shrink:0;gap:4px;
-}
-.topbar-title{
-  font-family:'Cinzel',serif;font-size:0.85rem;
-  letter-spacing:0.25em;font-weight:900;white-space:nowrap;
-  flex-shrink:0;
-}
-.topbar-center{
-  flex:1;display:flex;align-items:center;justify-content:center;gap:4px;
-  min-width:0;
-}
-.topbar-right{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+// --- STYLING CONSTANTS ---
+const textShadowStyle = { 
+  textShadow: '0px 2px 10px rgba(0,0,0,0.9), 0px 0px 20px rgba(0,0,0,0.5)' 
+};
 
-/* Portrait: 3 rows — title / create / untap+mods */
-@media(max-aspect-ratio:1/1){
-  .topbar{padding:5px 8px;flex-wrap:wrap;}
-  .topbar-title{width:100%;text-align:center;order:1;}
-  .topbar-center{order:2;width:100%;justify-content:center;}
-  .topbar-right{order:3;width:100%;justify-content:center;padding-bottom:3px;}
-}
-
-/* Narrow: shrink everything */
-@media(max-width:500px){
-  .topbar-title{font-size:0.7rem;letter-spacing:0.15em;}
-  .tbar-btn{padding:0 8px;font-size:0.52rem;}
-  .tbar-select{width:80px;font-size:0.52rem;}
-  .tbar-input{width:36px;font-size:0.52rem;}
-}
-.tbar-btn{
-  height:34px;padding:0 12px;border-radius:8px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(255,255,255,0.05);
-  color:#e8e4dc;font-family:'Cinzel',serif;font-size:0.58rem;
-  letter-spacing:0.1em;cursor:pointer;white-space:nowrap;
-  display:flex;align-items:center;gap:6px;
-}
-.tbar-btn:active{background:rgba(255,255,255,0.12);}
-.tbar-btn.create{
-  background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.25);
-}
-.tbar-btn.untap{
-  background:rgba(96,180,232,0.1);border-color:rgba(96,180,232,0.4);color:#60b4e8;
-}
-.tbar-btn.untap:active{background:rgba(96,180,232,0.22);}
-.tbar-btn.undo{
-  background:rgba(232,200,75,0.1);border-color:rgba(232,200,75,0.4);color:#e8c84b;
-}
-.tbar-btn.undo:active{background:rgba(232,200,75,0.22);}
-.tbar-btn.undo:disabled{
-  opacity:0.3;cursor:not-allowed;
-  background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.3);
-}
-.tbar-btn.gear{
-  font-size:1rem;padding:0 10px;
-}
-.tbar-select,.tbar-input{
-  height:34px;border-radius:8px;
-  border:1px solid rgba(255,255,255,0.15);
-  background:#1a1e26;
-  color:#e8e4dc;font-family:'Cinzel',serif;font-size:0.58rem;
-  letter-spacing:0.07em;outline:none;-webkit-appearance:none;
-  padding:0 8px;cursor:pointer;
-}
-.tbar-select option{
-  background:#1a1e26;color:#e8e4dc;
-}
-.tbar-select{width:100px;}
-.tbar-input{width:42px;text-align:center;}
-.tbar-input::-webkit-inner-spin-button{-webkit-appearance:none;}
-.mod-pips{display:flex;gap:2px;align-items:center;max-width:60px;flex-wrap:nowrap;}
-.mod-pip{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.1);flex-shrink:0;}
-.mod-pip.on{background:#e8c84b;}
-.mod-pip-overflow{
-  font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:0.05em;
-  color:rgba(232,200,75,0.7);flex-shrink:0;margin-left:1px;
-}
-
-/* ── GENERIC ARTIFACT/CREATURE FLAG CHIPS ── */
-.generic-flags-row{
-  display:none; /* toggled on via JS when relevant */
-  align-items:center;gap:6px;
-  padding:3px 8px;flex-shrink:0;
-}
-.generic-flags-row.show{display:flex;}
-.generic-flags-label{
-  font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.06em;
-  color:rgba(255,255,255,0.3);text-transform:uppercase;
-}
-.generic-flag-chip{
-  height:22px;padding:0 10px;border-radius:11px;cursor:pointer;
-  border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);
-  color:rgba(255,255,255,0.45);font-family:'Cinzel',serif;font-size:0.56rem;letter-spacing:0.05em;
-}
-.generic-flag-chip.on{
-  background:rgba(96,180,232,0.18);border-color:rgba(96,180,232,0.5);color:#60b4e8;
-}
-.generic-flag-chip:active{opacity:0.7;}
-
-/* ── GRID ── */
-.grid{
-  flex:1;display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:5px;padding:5px;min-height:0;
-}
-@media(max-aspect-ratio:1/1){
-  .grid{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);}
-}
-
-/* ── TOKEN CARD ── */
-.tok-card{
-  background:#0f1218;
-  border:1.5px solid rgba(255,255,255,0.07);
-  border-radius:13px;
-  display:flex;flex-direction:column;
-  overflow:hidden;position:relative;
-}
-.tok-card.lit{border-color:var(--c);}
-
-/* Container anchors the stack of transient +X/-X popups for one token type */
-.tok-delta-container{
-  position:absolute;top:6px;right:8px;left:8px;
-  height:1px;
-  z-index:5;
-  pointer-events:none;
-  display:flex;justify-content:flex-end;
-}
-/* Each tap/sacrifice spawns one of these. They start low/transparent,
-   then rise + fade on the next frame, and stack upward if several land
-   in quick succession (via the inline `bottom` offset set in JS). */
-.tok-delta-popup{
-  position:absolute;right:0;top:0;
-  font-family:'Cinzel',serif;font-weight:900;
-  font-size:clamp(1rem,2.4vw,1.5rem);
-  white-space:nowrap;
-  opacity:0;transform:translateY(10px) scale(0.8);
-  transition:opacity 0.9s ease-out,transform 0.9s ease-out;
-  text-shadow:0 1px 5px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.6);
-}
-.tok-delta-popup.rise{
-  opacity:1;transform:translateY(-26px) scale(1);
-  transition:opacity 0.9s ease-out 0.05s,transform 0.9s ease-out 0.05s;
-}
-.tok-delta-popup.positive{color:#5fd97a;}
-.tok-delta-popup.negative{color:#e86060;}
-
-/* Art fills the full card behind everything */
-.tok-art{
-  position:absolute;inset:0;
-  width:100%;height:100%;
-  object-fit:cover;object-position:center;
-  opacity:0;
-  transition:opacity 0.3s;
-  pointer-events:none;
-  z-index:0;
-}
-.tok-card.lit .tok-art{opacity:0.38;}
-
-/* Dark scrim so numbers stay readable over art */
-.tok-scrim{
-  position:absolute;inset:0;
-  background:rgba(8,10,14,0.55);
-  pointer-events:none;
-  z-index:0;
-  opacity:0;
-  transition:opacity 0.3s;
-}
-.tok-card.lit .tok-scrim{opacity:1;}
-
-/* Everything inside the card needs to sit above the art */
-.tok-name,.tok-half,.tok-mid{position:relative;z-index:1;}
-
-/* Token name */
-.tok-name{
-  font-family:'Cinzel',serif;
-  font-size:clamp(0.75rem,1.8vw,1.1rem);
-  letter-spacing:0.18em;
-  color:rgba(255,255,255,0.2);
-  text-align:center;
-  padding:6px 4px 2px;
-  flex-shrink:0;
-  line-height:1;
-}
-.tok-card.lit .tok-name{color:var(--c);}
-
-/* ── HALF: untapped on top, tapped on bottom ── */
-.tok-half{
-  flex:1;position:relative;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:0;overflow:hidden;
-  cursor:pointer;
-}
-.tok-half.untapped{border-bottom:1px solid rgba(255,255,255,0.06);}
-
-/* full-width left/right tap zones, z:0 */
-.tap-zone{
-  position:absolute;top:0;bottom:0;width:50%;
-  z-index:0;touch-action:none;
-  transition:background-color 0.06s;
-}
-.tap-zone.left{left:0;}
-.tap-zone.right{right:0;}
-.tap-zone.left.active{background:rgba(220,70,60,0.22);}
-.tap-zone.right.active{background:rgba(60,200,110,0.2);}
-
-/* Big number, pointer-events none so zones receive touch */
-.tok-num{
-  position:relative;z-index:1;pointer-events:none;
-  font-size:clamp(2.2rem,7vw,6rem);
-  font-weight:700;line-height:1;
-  color:rgba(255,255,255,0.08);
-  transition:color 0.15s;
-  text-align:center;
-}
-.tok-card.lit .tok-num{color:var(--c);}
-
-/* −  + edge hints */
-.tok-hints{
-  position:absolute;inset:0;z-index:1;pointer-events:none;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 8px;
-}
-.tok-hint{
-  font-size:clamp(0.9rem,2.5vw,1.8rem);
-  font-weight:900;
-  color:rgba(255,255,255,0.2);
-  line-height:1;
-}
-
-/* State label — flows in normal document order directly below the number */
-.tok-state-lbl{
-  position:relative;z-index:1;pointer-events:none;
-  text-align:center;
-  font-family:'Cinzel',serif;
-  font-size:clamp(0.5rem,1.1vw,0.7rem);
-  letter-spacing:0.15em;
-  color:rgba(255,255,255,0.35);
-  margin-top:3px;
-}
-.tok-card.lit .tok-state-lbl{color:rgba(255,255,255,0.6);}
-
-/* ── MIDDLE ROW: tap / untap buttons ── */
-.tok-mid{
-  flex-shrink:0;
-  display:flex;gap:4px;padding:4px 5px;
-  background:rgba(0,0,0,0.35);
-  border-top:1px solid rgba(255,255,255,0.07);
-  border-bottom:1px solid rgba(255,255,255,0.07);
-}
-.mid-btn{
-  flex:1;height:40px;border-radius:6px;
-  border:1px solid rgba(255,255,255,0.18);
-  background:rgba(255,255,255,0.07);
-  color:rgba(255,255,255,0.7);
-  font-family:'Cinzel',serif;
-  font-size:clamp(0.42rem,0.95vw,0.6rem);
-  letter-spacing:0.08em;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:4px;
-}
-.mid-btn:active{background:rgba(255,255,255,0.18);}
-.mtg-sym{
-  display:inline-block;width:32px;height:32px;flex-shrink:0;vertical-align:middle;
-}
-
-/* no flash animation */
-
-/* ── SHARED MODAL PATTERN ──
-   Used by: reset confirm, qty popover, profile name prompt,
-   delete/switch profile confirm, and (with .fullscreen) the
-   first-launch and settings screens. One backdrop+box system
-   instead of several near-duplicate ones. */
-.modal-backdrop{
-  position:fixed;inset:0;background:rgba(0,0,0,0.75);
-  z-index:80;display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity 0.15s;
-}
-.modal-backdrop.open{opacity:1;pointer-events:auto;}
-/* Modals that must render above the settings screen (z-index 90) */
-.modal-backdrop.above-settings{z-index:96;}
-/* Full-screen variant (settings panel, first-launch) instead of a centered box */
-.modal-backdrop.fullscreen{background:#0a0c0f;}
-
-.modal-box{
-  background:#181c26;border:1px solid rgba(255,255,255,0.12);
-  border-radius:16px;padding:22px 20px 16px;
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-  min-width:220px;
-}
-.modal-title{
-  font-family:'Cinzel',serif;font-size:0.8rem;
-  letter-spacing:0.15em;color:rgba(255,255,255,0.7);text-align:center;
-}
-.modal-title strong{color:var(--mc,#fff);}
-.modal-sub{
-  font-size:0.68rem;color:rgba(255,255,255,0.3);
-  font-family:'Cinzel',serif;letter-spacing:0.08em;
-  text-align:center;margin-top:-8px;
-}
-.modal-btns{display:flex;gap:8px;width:100%;}
-.modal-btn{
-  flex:1;height:42px;border-radius:10px;cursor:pointer;
-  font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;
-  border:1px solid rgba(255,255,255,0.12);
-  background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);
-}
-.modal-btn:active{opacity:0.7;}
-.modal-btn.danger{
-  background:rgba(220,70,60,0.2);border-color:rgba(220,70,60,0.5);
-  color:rgba(255,120,110,0.9);
-}
-.modal-btn.accent{
-  background:rgba(96,180,232,0.18);border-color:rgba(96,180,232,0.5);
-  color:#60b4e8;
-}
-
-/* Quantity stepper, used inside .modal-box for the mod-quantity popover */
-.qty-row{display:flex;align-items:center;gap:16px;}
-.qty-btn{
-  width:44px;height:44px;border-radius:10px;cursor:pointer;
-  border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);
-  color:#e8e4dc;font-size:1.4rem;font-weight:700;
-  display:flex;align-items:center;justify-content:center;
-}
-.qty-btn:active{background:rgba(255,255,255,0.18);}
-.qty-val{
-  font-size:2.5rem;font-weight:700;color:#fff;
-  min-width:40px;text-align:center;font-family:'Oswald',sans-serif;
-}
-.mod-qty-badge{
-  position:absolute;top:4px;right:4px;
-  background:rgba(0,0,0,0.7);border-radius:4px;
-  padding:1px 4px;font-family:'Cinzel',serif;
-  font-size:0.5rem;letter-spacing:0.05em;color:#fff;
-  z-index:2;pointer-events:none;
-}
-
-/* Plain text input shared by name prompts (profile name, etc) */
-.modal-text-input{
-  width:100%;height:44px;border-radius:10px;
-  border:1px solid rgba(255,255,255,0.15);background:#1a1e26;
-  color:#e8e4dc;font-family:'Oswald',sans-serif;font-size:0.85rem;
-  padding:0 14px;outline:none;text-align:center;
-}
-.modal-text-input::placeholder{color:rgba(255,255,255,0.25);}
-
-/* ── FLITWING POPUPS ── */
-.flitwing-box{max-width:340px;width:92%;}
-.flitwing-options{display:flex;flex-direction:column;gap:8px;width:100%;}
-.flitwing-option{
-  border:1px solid rgba(255,255,255,0.12);border-radius:10px;
-  padding:10px 12px;cursor:pointer;background:rgba(255,255,255,0.03);
-  text-align:left;
-}
-.flitwing-option:active{background:rgba(255,255,255,0.08);}
-.flitwing-option-label{
-  font-family:'Cinzel',serif;font-size:0.66rem;letter-spacing:0.08em;
-  color:#e8e4dc;margin-bottom:5px;
-}
-.flitwing-option-breakdown{
-  display:flex;flex-wrap:wrap;gap:5px;
-}
-.flitwing-chip{
-  font-family:'Oswald',sans-serif;font-size:0.62rem;
-  padding:2px 7px;border-radius:5px;
-  background:rgba(96,180,232,0.15);color:#60b4e8;
-  border:1px solid rgba(96,180,232,0.3);
-}
-.flitwing-chip.untracked{
-  background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);
-  border:1px dashed rgba(255,255,255,0.2);
-}
-.flitwing-option-breakdown:empty::after{
-  content:'nothing created';
-  font-size:0.6rem;color:rgba(255,255,255,0.25);font-style:italic;
-}
-.flitwing-lock-row{
-  display:flex;align-items:center;gap:8px;
-  font-size:0.66rem;color:rgba(255,255,255,0.5);
-  font-family:'Cinzel',serif;letter-spacing:0.04em;
-  margin-top:2px;cursor:pointer;
-}
-.flitwing-lock-row input{width:15px;height:15px;flex-shrink:0;}
-
-.flitwing-lock-options{display:flex;flex-direction:column;gap:8px;width:100%;}
-.flitwing-lock-option{
-  border:1px solid rgba(255,255,255,0.12);border-radius:10px;
-  padding:11px 12px;cursor:pointer;background:rgba(255,255,255,0.03);
-  font-family:'Cinzel',serif;font-size:0.66rem;letter-spacing:0.06em;
-  color:rgba(255,255,255,0.6);text-align:left;
-}
-.flitwing-lock-option.active{
-  border-color:#60b4e8;background:rgba(96,180,232,0.12);color:#60b4e8;
-}
-.flitwing-lock-option:active{background:rgba(255,255,255,0.08);}
-
-/* ── DRAWER ── */
-.backdrop{
-  position:fixed;inset:0;background:rgba(0,0,0,0.75);
-  z-index:50;opacity:0;pointer-events:none;transition:opacity 0.2s;
-}
-.backdrop.open{opacity:1;pointer-events:auto;}
-.drawer{
-  position:fixed;bottom:0;left:0;right:0;
-  background:#111520;border-top:1px solid rgba(255,255,255,0.09);
-  border-radius:18px 18px 0 0;z-index:51;
-  padding:10px 10px 32px;
-  transform:translateY(100%);
-  transition:transform 0.24s cubic-bezier(0.32,0.72,0,1);
-  max-height:85dvh;overflow-y:auto;
-}
-.drawer.open{transform:translateY(0);}
-.drawer-handle{width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 10px;}
-.mods-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
-.mod-tile{
-  border:2px solid rgba(255,255,255,0.07);
-  border-radius:9px;cursor:pointer;overflow:hidden;position:relative;
-  -webkit-touch-callout:none;
-  touch-action:pan-y;
-}
-.mod-tile.on{border-color:var(--mc);}
-.mod-tile.on::after{
-  content:'';position:absolute;inset:0;
-  background:var(--mc);opacity:0.13;pointer-events:none;
-}
-.mod-art{
-  width:100%;aspect-ratio:3/4;object-fit:cover;object-position:center top;
-  display:block;background:#1e2330;opacity:0.4;transition:opacity 0.15s;
-}
-.mod-tile.on .mod-art{opacity:1;}
-.mod-art-wrap{position:relative;}
-.mod-art-label{
-  position:absolute;bottom:0;left:0;right:0;
-  padding:12px 4px 4px;
-  background:linear-gradient(transparent,rgba(8,10,14,0.9));
-  font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.05em;
-  color:rgba(255,255,255,0.4);line-height:1.2;text-align:center;
-}
-.mod-tile.on .mod-art-label{color:#e8e4dc;}
-.mod-action-tile{
-  aspect-ratio:3/4;border-radius:9px;cursor:pointer;
-  border:1.5px solid rgba(255,255,255,0.09);
-  background:rgba(255,255,255,0.03);
-  color:rgba(255,255,255,0.35);
-  font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.1em;
-  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.5;
-}
-.mod-action-tile:active{background:rgba(255,255,255,0.09);}
-
-/* (qty stepper styles consolidated into the shared modal pattern above) */
-
-/* ── SETTINGS SCREEN ── (uses .modal-backdrop.fullscreen, z-index raised so qty/confirm modals can sit above it via .above-settings) */
-.settings-backdrop{z-index:90;}
-.settings-panel{
-  width:100%;height:100%;display:flex;flex-direction:column;
-  max-width:600px;margin:0 auto;
-}
-.settings-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);
-  flex-shrink:0;
-}
-.settings-title{
-  font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.25em;font-weight:900;
-}
-.settings-close{
-  width:32px;height:32px;border-radius:8px;
-  border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);
-  color:#e8e4dc;font-size:0.9rem;cursor:pointer;
-}
-.settings-close:active{background:rgba(255,255,255,0.12);}
-.settings-body{
-  flex:1;overflow-y:auto;padding:14px 16px;
-}
-.settings-section-label{
-  font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.15em;
-  color:rgba(255,255,255,0.4);text-transform:uppercase;
-  margin:18px 0 8px;
-}
-.settings-section-label:first-child{margin-top:0;}
-.settings-section-label span{color:rgba(255,255,255,0.25);font-style:italic;letter-spacing:0.05em;}
-
-.settings-token-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-}
-.settings-token-tile{
-  border:2px solid rgba(255,255,255,0.08);border-radius:10px;
-  cursor:pointer;overflow:hidden;position:relative;
-  aspect-ratio:1;
-}
-.settings-token-tile.on{border-color:var(--tc);}
-.settings-token-tile.on::after{
-  content:'';position:absolute;inset:0;background:var(--tc);opacity:0.15;pointer-events:none;
-}
-.settings-token-tile.disabled{opacity:0.3;cursor:not-allowed;}
-.settings-token-art{
-  width:100%;height:100%;object-fit:cover;opacity:0.45;
-}
-.settings-token-tile.on .settings-token-art{opacity:0.9;}
-.settings-token-label{
-  position:absolute;bottom:0;left:0;right:0;
-  padding:8px 4px 4px;
-  background:linear-gradient(transparent,rgba(8,10,14,0.92));
-  font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.06em;
-  color:rgba(255,255,255,0.5);text-align:center;
-}
-.settings-token-tile.on .settings-token-label{color:#e8e4dc;}
-.settings-token-check{
-  position:absolute;top:5px;right:5px;
-  width:18px;height:18px;border-radius:50%;
-  background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.3);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.6rem;color:transparent;
-}
-.settings-token-tile.on .settings-token-check{
-  background:var(--tc);border-color:var(--tc);color:#0a0c0f;
-}
-
-.settings-mod-list{
-  display:flex;flex-direction:column;gap:6px;
-}
-.settings-mod-row{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 10px;border-radius:8px;
-  border:1px solid rgba(255,255,255,0.08);
-  background:rgba(255,255,255,0.02);
-  cursor:pointer;
-}
-.settings-mod-row.on{border-color:var(--mc);background:rgba(255,255,255,0.04);}
-.settings-mod-thumb{
-  width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;
-  opacity:0.5;
-}
-.settings-mod-row.on .settings-mod-thumb{opacity:1;}
-.settings-mod-info{flex:1;min-width:0;}
-.settings-mod-name{
-  font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.05em;
-  color:rgba(255,255,255,0.5);
-}
-.settings-mod-row.on .settings-mod-name{color:#e8e4dc;}
-.settings-mod-tag{
-  font-size:0.56rem;color:rgba(255,255,255,0.22);
-  letter-spacing:0.05em;margin-top:2px;
-}
-.settings-mod-toggle{
-  width:38px;height:22px;border-radius:11px;flex-shrink:0;
-  background:rgba(255,255,255,0.1);position:relative;
-  transition:background 0.15s;
-}
-.settings-mod-row.on .settings-mod-toggle{background:var(--mc);}
-.settings-mod-toggle::after{
-  content:'';position:absolute;top:2px;left:2px;
-  width:18px;height:18px;border-radius:50%;background:#fff;
-  transition:transform 0.15s;
-}
-.settings-mod-row.on .settings-mod-toggle::after{transform:translateX(16px);}
-
-/* Alt-art star button — only rendered when a -alt.jpg variant exists */
-.alt-art-btn{
-  width:28px;height:28px;border-radius:50%;flex-shrink:0;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(255,255,255,0.05);
-  color:rgba(255,255,255,0.3);
-  font-size:0.85rem;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;
-}
-.alt-art-btn.active{
-  background:rgba(232,200,75,0.18);border-color:rgba(232,200,75,0.6);
-  color:#e8c84b;
-}
-.alt-art-btn:active{opacity:0.7;}
-
-/* Token settings tile star button, positioned top-left so it doesn't clash with the check mark */
-.settings-token-altbtn{
-  position:absolute;top:5px;left:5px;z-index:3;
-  width:22px;height:22px;border-radius:50%;
-  border:1px solid rgba(255,255,255,0.2);
-  background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.4);
-  font-size:0.7rem;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;
-}
-.settings-token-altbtn.active{
-  background:rgba(232,200,75,0.3);border-color:#e8c84b;color:#e8c84b;
-}
-
-.settings-footer{
-  flex-shrink:0;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);
-}
-.settings-save{
-  width:100%;height:46px;border-radius:10px;cursor:pointer;
-  background:rgba(96,180,232,0.18);border:1px solid rgba(96,180,232,0.5);
-  color:#60b4e8;font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.15em;
-}
-.settings-save:active{background:rgba(96,180,232,0.3);}
-.settings-refresh{
-  width:100%;height:36px;border-radius:10px;cursor:pointer;margin-top:8px;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
-  color:rgba(255,255,255,0.35);font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.12em;
-}
-.settings-refresh:active{background:rgba(255,255,255,0.09);color:rgba(255,255,255,0.6);}
-
-/* ── PROFILE BAR (inside settings) ── */
-.profile-bar{display:flex;gap:8px;}
-.profile-select{
-  flex:1;height:40px;border-radius:8px;
-  border:1px solid rgba(255,255,255,0.15);background:#1a1e26;
-  color:#e8e4dc;font-family:'Cinzel',serif;font-size:0.65rem;
-  letter-spacing:0.05em;padding:0 10px;outline:none;-webkit-appearance:none;
-}
-.profile-select option{background:#1a1e26;color:#e8e4dc;}
-.profile-btn{
-  height:40px;padding:0 14px;border-radius:8px;cursor:pointer;
-  border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);
-  color:#e8e4dc;font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.08em;
-  white-space:nowrap;
-}
-.profile-btn:active{background:rgba(255,255,255,0.12);}
-.profile-actions{display:flex;gap:8px;margin-top:8px;}
-.profile-btn.small{flex:1;height:32px;font-size:0.56rem;}
-.profile-btn.danger{
-  background:rgba(220,70,60,0.12);border-color:rgba(220,70,60,0.4);
-  color:rgba(255,120,110,0.85);
-}
-.profile-btn.danger:active{background:rgba(220,70,60,0.25);}
-
-
-/* ── FIRST LAUNCH SCREEN ── (uses .modal-backdrop.fullscreen) */
-.firstlaunch-box{
-  display:flex;flex-direction:column;align-items:center;gap:18px;
-  padding:32px 28px;max-width:380px;width:90%;
-}
-.firstlaunch-title{
-  font-family:'Cinzel',serif;font-size:1rem;letter-spacing:0.2em;
-  font-weight:900;text-align:center;color:#e8e4dc;
-}
-.firstlaunch-sub{
-  font-size:0.78rem;color:rgba(255,255,255,0.4);text-align:center;
-  line-height:1.6;
-}
-</style>
-</head>
-<body>
-
-<div class="topbar">
-  <div class="topbar-title">MANUFACTOR</div>
-  <div class="topbar-center">
-    <select id="createType" class="tbar-select" onchange="updateGenericFlagsVisibility()">
-      <option value="generic" selected>Generic</option>
-    </select>
-    <input type="number" id="createAmt" class="tbar-input" value="1" min="1" max="99">
-    <button class="tbar-btn create" onclick="bulkCreate()">CREATE</button>
-  </div>
-  <div class="topbar-right">
-    <button class="tbar-btn undo" id="undoBtn" onclick="undo()" title="Undo last action">↺ UNDO</button>
-    <button class="tbar-btn untap" onclick="untapAll()"><svg style="width:14px;height:14px;display:inline-block;vertical-align:middle;transform:rotate(180deg);flex-shrink:0" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg"><path d="m512 353.5-216 0 79.1-56.3c-29.4-23.3-63.4-35-101.9-35-19.3 0-32.5 3.7-39.5 11-7.1 7.4-10.7 20.7-10.7 39.9 0 53.2 27.4 110 82.2 170.4l-62.3 63.1c-72.5-88.2-108.8-167.1-108.8-236.5 0-41.6 12.5-74.7 37.6-99.3 25.1-24.6 58.5-36.9 100-36.9 50.7 0 106 19.3 165.9 57.8l46.4-79.1 28.2 200.8" fill="currentColor"/></svg> ALL</button>
-    <button class="tbar-btn" onclick="openDrawer()">
-      MODS <div class="mod-pips" id="modPips"></div>
-    </button>
-    <button class="tbar-btn gear" onclick="openSettings()" title="Settings">⚙</button>
-  </div>
-</div>
-
-<div class="generic-flags-row" id="genericFlagsRow">
-  <span class="generic-flags-label">this token is:</span>
-  <button class="generic-flag-chip" id="genericArtifactChip" onclick="toggleGenericFlag('artifact')">Artifact</button>
-  <button class="generic-flag-chip" id="genericCreatureChip" onclick="toggleGenericFlag('creature')">Creature</button>
-</div>
-
-<div class="grid" id="tokenGrid"></div>
-
-<div class="backdrop" id="backdrop" onclick="closeDrawer()"></div>
-<div class="drawer" id="drawer">
-  <div class="drawer-handle"></div>
-  <div class="mods-grid" id="modsGrid"></div>
-</div>
-
-<div class="modal-backdrop" id="qtyBackdrop" data-modal="qtyBackdrop">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-title">Copies of <strong id="qtyName"></strong></div>
-    <div class="qty-row">
-      <button class="qty-btn" onclick="adjustQty(-1)">−</button>
-      <div class="qty-val" id="qtyVal">1</div>
-      <button class="qty-btn" onclick="adjustQty(1)">+</button>
+// --- COLOR PICKER COMPONENT ---
+const ColorPicker = ({ selected = [], onToggle }) => {
+  const colors = [
+    { id: 'W', bg: '#fffbeb', text: 'text-gray-800' },
+    { id: 'U', bg: '#3b82f6', text: 'text-white' },
+    { id: 'B', bg: '#1f2937', text: 'text-white' },
+    { id: 'R', bg: '#ef4444', text: 'text-white' },
+    { id: 'G', bg: '#22c55e', text: 'text-white' }
+  ];
+  
+  return (
+    <div className="flex gap-3 md:gap-5 justify-center items-center"> 
+      {colors.map(c => {
+        const isSelected = selected.includes(c.id);
+        return (
+          <button
+            key={c.id}
+            onClick={(e) => { e.stopPropagation(); onToggle(c.id); }}
+            style={{ 
+              backgroundColor: c.bg,
+              width: 'clamp(40px, 8vw, 70px)', 
+              height: 'clamp(40px, 8vw, 70px)',
+              minWidth: 'clamp(40px, 8vw, 70px)'
+            }}
+            className={`rounded-full transition-all duration-300 flex items-center justify-center font-black text-xl md:text-3xl
+              ${c.text} 
+              ${isSelected 
+                ? 'scale-110 border-[3px] border-white shadow-[0_0_25px_rgba(255,255,255,0.4)] opacity-100' 
+                : 'opacity-50 scale-95 border border-white/10 hover:opacity-100 hover:scale-100'}`}
+          >
+            {c.id}
+          </button>
+        );
+      })}
     </div>
-    <button class="modal-btn accent" style="width:100%;" onclick="closeQty()">DONE</button>
-  </div>
-</div>
+  );
+};
 
-<div class="modal-backdrop" id="confirmBackdrop" data-modal="confirmBackdrop">
-  <div class="modal-box">
-    <div class="modal-title">RESET ALL?</div>
-    <div class="modal-sub">Clears all tokens &amp; modifiers</div>
-    <div class="modal-btns">
-      <button class="modal-btn" onclick="closeConfirm()">CANCEL</button>
-      <button class="modal-btn danger" onclick="confirmReset()">RESET</button>
-    </div>
-  </div>
-</div>
+// --- SELECTION CAROUSEL ---
+const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = true, isFlipped, buttonColor, twoRows = false, extraButton = null, axisSwapped = false }) => {
+  const scrollRef = useRef(null);
+  const [isDown, setIsDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const didScroll = useRef(false);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const mountTime = useRef(Date.now());
+  const handledTouch = useRef(false);
+  const [fadeMask, setFadeMask] = useState('none');
+  const fadeRaf = useRef(null);
 
-<div class="modal-backdrop fullscreen" id="settingsBackdrop" data-modal="settingsBackdrop">
-  <div class="settings-panel">
-    <div class="settings-header">
-      <div class="settings-title">SETTINGS</div>
-      <button class="settings-close" onclick="closeSettings()">✕</button>
-    </div>
-    <div class="settings-body">
-      <div class="settings-section-label">Deck Profile</div>
-      <div class="profile-bar">
-        <select id="profileSelect" class="profile-select"></select>
-        <button class="profile-btn" onclick="openNewProfilePrompt()">+ NEW</button>
+  const FADE_START = 'linear-gradient(to right, transparent, black 10%, black)';
+  const FADE_END = 'linear-gradient(to right, black, black 90%, transparent)';
+  const FADE_BOTH = 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)';
+
+  const updateFadeMask = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 2;
+    const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 2;
+    let next = 'none';
+    if (!atStart && !atEnd) next = FADE_BOTH;
+    else if (!atStart && atEnd) next = FADE_START;
+    else if (atStart && !atEnd) next = FADE_END;
+    setFadeMask(next);
+  };
+
+  const scheduleFadeUpdate = () => {
+    if (fadeRaf.current) cancelAnimationFrame(fadeRaf.current);
+    fadeRaf.current = requestAnimationFrame(updateFadeMask);
+  };
+
+  useEffect(() => {
+    mountTime.current = Date.now();
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+    scheduleFadeUpdate();
+  }, [options]);
+
+  const mouseStartX = useRef(0);
+
+  const handleMouseDown = (e) => {
+    setIsDown(true);
+    setStartX(e.pageX - e.currentTarget.offsetLeft);
+    setScrollLeft(e.currentTarget.scrollLeft);
+    mouseStartX.current = e.pageX;
+    didScroll.current = false;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - e.currentTarget.offsetLeft;
+    const walk = (x - startX) * (isFlipped ? -2 : 2);
+    if (scrollRef.current) scrollRef.current.scrollLeft = scrollLeft - walk;
+    if (Math.abs(e.pageX - mouseStartX.current) > 5) didScroll.current = true;
+    scheduleFadeUpdate();
+  };
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    didScroll.current = false;
+    handledTouch.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
+    const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+    if (dx > 5 || dy > 5) didScroll.current = true;
+    scheduleFadeUpdate();
+  };
+
+  const handleTouchEnd = (e) => {
+    if (didScroll.current) return;
+    if (Date.now() - mountTime.current < 300) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (handledTouch.current) return;
+    handledTouch.current = true;
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const button = el?.closest('[data-option-index]');
+    if (!button) return;
+    const index = parseInt(button.dataset.optionIndex);
+    if (!isNaN(index) && options[index] !== undefined) onSelect(options[index]);
+  };
+
+  return (
+    <div className="w-full max-w-[90%] md:max-w-[450px] flex flex-col items-center animate-in fade-in zoom-in duration-500 z-10 mx-auto" style={{ paddingTop: 6, paddingBottom: 6 }}>
+      {title && (
+        <p className="font-black text-[10px] md:text-[14px] uppercase tracking-[0.4em] md:tracking-[0.6em] mb-0.5 md:mb-2 text-white/60 drop-shadow-md">
+          {title}
+        </p>
+      )}
+      <div
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={() => setIsDown(false)}
+        onMouseLeave={() => setIsDown(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onScroll={scheduleFadeUpdate}
+        className={`overflow-x-auto no-scrollbar px-5 md:px-8 w-full cursor-grab ${twoRows ? 'flex flex-col gap-1' : 'flex flex-nowrap gap-4 md:gap-6 py-4'}`}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          touchAction: axisSwapped ? 'pan-x' : 'pan-y',
+          WebkitMaskImage: fadeMask,
+          maskImage: fadeMask,
+        }}
+      >
+        {twoRows ? (() => {
+          const row1 = options.filter((_, i) => i % 2 === 0);
+          const row2 = options.filter((_, i) => i % 2 === 1);
+          return [row1, row2].map((row, ri) => (
+            <div key={ri} className="flex flex-nowrap gap-3">
+              {row.map((opt, i) => {
+                const globalIdx = i * 2 + ri;
+                const isObj = typeof opt === 'object' && opt !== null;
+                const hasArt = isObj && opt.artUrl;
+                const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
+                return (
+                  <button
+                    key={`${title}-${globalIdx}`}
+                    data-option-index={globalIdx}
+                    onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
+                    className={`relative shrink-0 w-[100px] md:w-[130px] h-[54px] md:h-[70px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
+                    style={buttonColor ? { backgroundColor: buttonColor } : {}}
+                  >
+                    {hasArt && (<><img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" /><div className="absolute inset-0 bg-black/15" /></>)}
+                    <span className="relative z-10 text-sm font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ));
+        })() : options.map((opt, i) => {
+          const isObj = typeof opt === 'object' && opt !== null;
+          const hasArt = isObj && opt.artUrl;
+          const label = isObj ? (opt.name || opt.deck || "Unnamed") : opt;
+          return (
+            <button
+  key={`${title}-${i}`}
+  data-option-index={i}
+  onClick={(e) => {
+    if (handledTouch.current) return;
+    if (!didScroll.current) onSelect(opt);
+  }}
+  className={`relative shrink-0 w-[110px] md:w-[140px] h-[68px] md:h-[90px] border border-white/10 rounded-[1.2rem] md:rounded-[2rem] flex items-center justify-center px-3 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.05] backdrop-blur-md'}`}
+  style={buttonColor ? { backgroundColor: buttonColor } : {}}
+>
+              {hasArt && (
+                <>
+                  <img src={opt.artUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-85" />
+                  <div className="absolute inset-0 bg-black/15" />
+                </>
+              )}
+              <span className="relative z-10 text-base md:text-xl font-semibold uppercase tracking-tight text-white text-center drop-shadow-md line-clamp-2 leading-tight">
+                {label}
+              </span>
+            </button>
+          );
+        })}
       </div>
-      <div class="profile-actions">
-        <button class="profile-btn small" onclick="openRenamePrompt()">RENAME</button>
-        <button class="profile-btn small danger" onclick="openDeleteProfileConfirm()">DELETE</button>
+      <div className="shrink-0 flex items-center gap-3 mt-0.5 md:mt-2">
+        {showBack && (
+          <button onClick={onBack} className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+            - Back
+          </button>
+        )}
+        {extraButton}
       </div>
-
-      <div class="settings-section-label">Token Types <span id="tokenPickCount">(0/4)</span></div>
-      <div class="settings-token-grid" id="settingsTokenGrid"></div>
-
-      <div class="settings-section-label">Available Modifiers</div>
-      <div class="settings-mod-list" id="settingsModList"></div>
     </div>
-    <div class="settings-footer">
-      <button class="settings-save" onclick="saveSettings()">SAVE</button>
-      <button class="settings-refresh" onclick="forceRefresh()" title="Force the app to fetch the latest version">↻ REFRESH APP</button>
-    </div>
-  </div>
-</div>
-
-<!-- First-launch: forces creating a profile before the app is usable -->
-<div class="modal-backdrop fullscreen" id="firstLaunchBackdrop" data-modal="firstLaunchBackdrop">
-  <div class="firstlaunch-box">
-    <div class="firstlaunch-title">WELCOME TO MANUFACTOR</div>
-    <div class="firstlaunch-sub">Create a deck profile to get started.<br>Each profile remembers which 4 token types and which modifiers your deck uses.</div>
-    <input type="text" id="firstLaunchName" class="modal-text-input" placeholder="Deck name" maxlength="40">
-    <button class="modal-btn accent" style="width:100%;height:48px;" onclick="createFirstProfile()">CREATE PROFILE</button>
-  </div>
-</div>
-
-<!-- New / Rename profile name prompt -->
-<div class="modal-backdrop above-settings" id="profileNameBackdrop" data-modal="profileNameBackdrop">
-  <div class="modal-box">
-    <div class="modal-title" id="profileNamePromptTitle">New Profile</div>
-    <input type="text" id="profileNameInput" class="modal-text-input" placeholder="Deck name" maxlength="40">
-    <div class="modal-btns">
-      <button class="modal-btn" onclick="closeProfileNamePrompt()">CANCEL</button>
-      <button class="modal-btn danger" id="profileNameConfirmBtn" onclick="confirmProfileName()">CREATE</button>
-    </div>
-  </div>
-</div>
-
-<!-- Delete profile confirm -->
-<div class="modal-backdrop above-settings" id="deleteProfileBackdrop" data-modal="deleteProfileBackdrop">
-  <div class="modal-box">
-    <div class="modal-title">DELETE PROFILE?</div>
-    <div class="modal-sub" id="deleteProfileSub">This cannot be undone.</div>
-    <div class="modal-btns">
-      <button class="modal-btn" onclick="closeDeleteProfileConfirm()">CANCEL</button>
-      <button class="modal-btn danger" onclick="confirmDeleteProfile()">DELETE</button>
-    </div>
-  </div>
-</div>
-
-<!-- Switch profile confirm (board reset warning) -->
-<div class="modal-backdrop above-settings" id="switchProfileBackdrop" data-modal="switchProfileBackdrop">
-  <div class="modal-box">
-    <div class="modal-title">SWITCH PROFILE?</div>
-    <div class="modal-sub">This clears the current board &amp; modifiers.</div>
-    <div class="modal-btns">
-      <button class="modal-btn" onclick="closeSwitchProfileConfirm()">CANCEL</button>
-      <button class="modal-btn danger" onclick="confirmSwitchProfile()">SWITCH</button>
-    </div>
-  </div>
-</div>
-
-<!-- Flitwing: per-event choice popup (shown when active & unlocked) -->
-<div class="modal-backdrop above-settings" id="flitwingChoiceBackdrop" data-modal="flitwingChoiceBackdrop">
-  <div class="modal-box flitwing-box">
-    <div class="modal-title">Flitwing, Lyev Detective</div>
-    <div class="modal-sub">Convert to Clues?</div>
-    <div class="flitwing-options" id="flitwingOptions"></div>
-    <label class="flitwing-lock-row">
-      <input type="checkbox" id="flitwingLockCheckbox">
-      <span>Always do this for this deck</span>
-    </label>
-  </div>
-</div>
-
-<!-- Flitwing: lock configuration popup (hold the tile in the MODS drawer) -->
-<div class="modal-backdrop above-settings" id="flitwingLockBackdrop" data-modal="flitwingLockBackdrop">
-  <div class="modal-box flitwing-box">
-    <div class="modal-title">Flitwing Lock</div>
-    <div class="modal-sub">Choose what happens every time, or ask each time</div>
-    <div class="flitwing-lock-options" id="flitwingLockOptions"></div>
-    <button class="modal-btn accent" style="width:100%;" onclick="closeModal('flitwingLockBackdrop')">DONE</button>
-  </div>
-</div>
-
-
-<script>
-// ── Full known libraries (append-only as new cards get added) ──────
-var TOKEN_LIBRARY = {
-  clue:     { label:'Clue',     c:'#60b4e8', img:'img/clue-token.jpg'     },
-  food:     { label:'Food',     c:'#e8a87c', img:'img/food-token.jpg'     },
-  treasure: { label:'Treasure', c:'#4ecba8', img:'img/treasure-token.jpg' },
-  mutagen:  { label:'Mutagen',  c:'#b87ee8', img:'img/mutagen-token.jpg'  },
-  map:      { label:'Map',      c:'#e8c84b', img:'img/map-token.jpg'      },
-};
-// All 5 tracked types are artifacts (established earlier); none are creatures.
-
-// "Phantom" tokens: creature/artifact types some mods create that the app
-// doesn't track by name on the board (Squirrel, Frog, Soldier, Thopter).
-// They still flow through the pipeline with real flags so other predicate
-// mods (Allenal, Ojer Taq, Stridehangar) can react to them — they just get
-// silently discarded at the final apply-to-state step, same as Generic.
-var PHANTOM_TOKENS = {
-  squirrel: { label:'Squirrel', isArtifact:false, isCreature:true },
-  frog:     { label:'Frog',     isArtifact:false, isCreature:true },
-  soldier:  { label:'Soldier',  isArtifact:false, isCreature:true },
-  thopter:  { label:'Thopter',  isArtifact:true,  isCreature:true },
+  );
 };
 
-// Looks up the correct isArtifact/isCreature flags for a token type.
-function getTokenFlags(type) {
-  if (TOKEN_LIBRARY[type]) return { isArtifact:true, isCreature:false };
-  if (PHANTOM_TOKENS[type]) return { isArtifact:PHANTOM_TOKENS[type].isArtifact, isCreature:PHANTOM_TOKENS[type].isCreature };
-  return { isArtifact:false, isCreature:false }; // generic, unflagged
-}
-function getTokenDisplayLabel(type) {
-  if (TOKEN_LIBRARY[type]) return TOKEN_LIBRARY[type].label;
-  if (PHANTOM_TOKENS[type]) return PHANTOM_TOKENS[type].label;
-  return 'Token';
-}
-
-// Returns token IDs sorted in TOKEN_LIBRARY's canonical display order
-function canonicalTokenOrder(ids) {
-  var order = Object.keys(TOKEN_LIBRARY);
-  return ids.slice().sort(function(a,b){ return order.indexOf(a) - order.indexOf(b); });
-}
-
-var MOD_LIBRARY = [
-  // ── Doublers (alphabetical) ──
-  { id:'adrix',       name:'Adrix & Nev',                  mc:'#7ec8e8', img:'img/adrix-and-nev-twincasters.jpg',     mechanic:'double' },
-  { id:'procession',  name:'Anointed Procession',          mc:'#e8d8a0', img:'img/anointed-procession.jpg',           mechanic:'double' },
-  { id:'bard',        name:'Bard, King of Dale',            mc:'#e8d060', img:'img/bard-king-of-dale.jpg',             mechanic:'double' },
-  { id:'doubling',    name:'Doubling Season',               mc:'#7ecb6f', img:'img/doubling-season.jpg',               mechanic:'double' },
-  { id:'elspeth',     name:'Elspeth',                       mc:'#e8d060', img:'img/elspeth.jpg',                       mechanic:'double' },
-  { id:'exalted',     name:'Exalted Sunborn',               mc:'#e8c060', img:'img/exalted-sunborn.jpg',               mechanic:'double' },
-  { id:'mondrak',     name:'Mondrak',                       mc:'#e8a0c0', img:'img/mondrak-glory-dominus.jpg',         mechanic:'double' },
-  { id:'parallel',    name:'Parallel Lives',                mc:'#7ecb6f', img:'img/parallel-lives.jpg',                mechanic:'double' },
-  { id:'primal',      name:'Primal Vigor',                  mc:'#e87860', img:'img/primal-vigor.jpg',                  mechanic:'double' },
-
-  // ── Replacement (triples Clue/Food/Treasure) ──
-  { id:'manufactor',  name:'Academy Manufactor',           mc:'#e8d060', img:'img/academy-manufactor.jpg',            mechanic:'manufactor' },
-
-  // ── Adds a specific token every time, no condition (alphabetical) ──
-  { id:'pilfered',    name:'Case of the Pilfered Proof',   mc:'#60b4e8', img:'img/case-of-the-pilfered-proof.jpg',    mechanic:'addToken', addsTokenType:'clue' },
-  { id:'donatello',   name:'Donatello',                     mc:'#b87ee8', img:'img/donatello-the-brains.jpg',          mechanic:'addToken', addsTokenType:'mutagen' },
-  { id:'peregrin',    name:'Peregrin Took',                mc:'#7ecb6f', img:'img/peregrin-took.jpg',                 mechanic:'addToken', addsTokenType:'food' },
-  { id:'quina',       name:'Quina, Qu Gourmet',             mc:'#7ecb6f', img:'img/quina-qu-gourmet.jpg',              mechanic:'addToken', addsTokenType:'frog' },
-  { id:'tippy',       name:'Tippy-Toe',                     mc:'#7ecb6f', img:'img/tippy-toe.jpg',                     mechanic:'addToken', addsTokenType:'food' },
-
-  // ── Adds extra only when a specific token type is already being made (alphabetical) ──
-  { id:'bilbo',       name:'Bilbo',                         mc:'#7ecb6f', img:'img/bilbo.jpg',                         mechanic:'replaceToken', triggersOnType:'food', addsTokenType:'treasure' },
-  { id:'jolene',      name:'Jolene',                        mc:'#4ecba8', img:'img/jolene-the-plunder-queen.jpg',      mechanic:'addTokenIfPresent', addsTokenType:'treasure', triggerTokenType:'treasure' },
-  { id:'xorn',        name:'Xorn',                          mc:'#4ecba8', img:'img/xorn.jpg',                          mechanic:'addTokenIfPresent', addsTokenType:'treasure', triggerTokenType:'treasure' },
-
-  // ── Predicate-conditional adds: fire if the batch contains any token
-  //    matching a property (artifact / creature), not a specific named type.
-  //    These join a late-stage permutation search (after Manufactor) since
-  //    they can enable each other and want to see the largest batch.
-  { id:'helm',        name:'Worldwalker Helm',             mc:'#e87860', img:'img/worldwalker-helm.jpg',              mechanic:'predicateAdd', conditionPredicate:'isArtifact', addsTokenType:'map' },
-  { id:'stridehangar',name:'Stridehangar Automaton',        mc:'#a0b8c8', img:'img/stridehangar-automaton.jpg',        mechanic:'predicateAdd', conditionPredicate:'isArtifact', addsTokenType:'thopter' },
-  { id:'allenal',     name:'Queen Allenal of Ruadach',       mc:'#7ecb6f', img:'img/queen-allenal-of-ruadach.jpg',      mechanic:'predicateAdd', conditionPredicate:'isCreature', addsTokenType:'soldier' },
-
-  // ── Wildcard replacement: adds one of a fixed token for EVERY token in
-  //    the batch, regardless of type. Also joins the late-stage search,
-  //    since it wants to see the largest possible batch before it fires.
-  { id:'chatterfang', name:'Chatterfang',                   mc:'#e8a05c', img:'img/chatterfang.jpg',                   mechanic:'wildcardReplace', addsTokenType:'squirrel' },
-
-  // ── Predicate multiply: triples ONLY tokens matching a property,
-  //    leaving the rest of the batch untouched. Also joins the late-stage search.
-  { id:'ojertaq',     name:'Ojer Taq',                       mc:'#c86050', img:'img/ojer-taq.jpg',                      mechanic:'predicateMultiply', conditionPredicate:'isCreature', multiplyBy:3 },
-
-  // ── Sacrifice trigger ──
-  { id:'vending',     name:'Nuke-Cola',                     mc:'#e8b84b', img:'img/nuka-cola-vending-machine.jpg',     mechanic:'vending' },
-
-  // ── May-convert (player choice per event) ──
-  { id:'flitwing',    name:'Flitwing',                      mc:'#60b4e8', img:'img/flitwing-lyev-detective.jpg',       mechanic:'flitwing', addsTokenType:'clue' },
-];
-
-// ── Generic modal helpers ────────────────────────────────────────
-// Every modal in this app is a backdrop div toggled via the 'open' class.
-// These two functions replace what used to be ~14 near-identical
-// open/close function bodies scattered through the file.
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// ── Profiles (each profile = one deck's setup) ─────────────────────
-var STORAGE_KEY = 'manufactor_profiles_v1';
-
-function loadProfileData() {
-  try {
-    var raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { profiles: [], activeId: null };
-    var parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.profiles)) return { profiles: [], activeId: null };
-    return parsed;
-  } catch(e) { return { profiles: [], activeId: null }; }
-}
-function persistProfileData() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      profiles: profiles,
-      activeId: activeProfileId
-    }));
-  } catch(e) { /* localStorage unavailable, ignore */ }
-}
-function makeProfileId() {
-  return 'p' + Date.now() + Math.floor(Math.random()*10000);
-}
-function getActiveProfile() {
-  return profiles.find(function(p){ return p.id === activeProfileId; }) || null;
-}
-
-var profileData = loadProfileData();
-var profiles = profileData.profiles;
-var activeProfileId = profileData.activeId;
-
-// Pull TT/MODS from the active profile, or fall back to empty until one exists
-var activeProfile = getActiveProfile();
-var TT = activeProfile ? canonicalTokenOrder(activeProfile.activeTokens) : [];
-var META = TOKEN_LIBRARY; // alias for existing code that reads META
-var MODS = activeProfile
-  ? MOD_LIBRARY.filter(function(m){ return activeProfile.enabledMods.indexOf(m.id) !== -1; })
-  : [];
-
-var modOn = {};
-MODS.forEach(function(m){ modOn[m.id] = 0; });
-var state = {};
-TT.forEach(function(t){ state[t] = { u:0, ta:0 }; });
-
-// If this profile has a saved in-progress board (from a previous session
-// that didn't end in Reset All), restore it now instead of starting empty.
-if (activeProfileId) {
-  var savedBoard = loadBoardState(activeProfileId);
-  if (savedBoard) {
-    TT.forEach(function(t){ if (savedBoard.state && savedBoard.state[t]) state[t] = savedBoard.state[t]; });
-    MODS.forEach(function(m){ if (savedBoard.modOn && typeof savedBoard.modOn[m.id] === 'number') modOn[m.id] = savedBoard.modOn[m.id]; });
-  }
-}
-
-function persistCurrentBoardToProfile() {
-  // Saves TT/MODS (NOT live counts/quantities) back into the active profile record
-  var p = getActiveProfile();
-  if (!p) return;
-  p.activeTokens = TT.slice();
-  p.enabledMods = MODS.map(function(m){ return m.id; });
-  persistProfileData();
-}
-
-// Flitwing's lock setting: 'ask' (default, prompts every event) | 'off' | 'tokens' | 'clues'
-function getFlitwingLock() {
-  var p = getActiveProfile();
-  return (p && p.flitwingLock) ? p.flitwingLock : 'ask';
-}
-function setFlitwingLock(mode) {
-  var p = getActiveProfile();
-  if (!p) return;
-  p.flitwingLock = mode;
-  persistProfileData();
-}
-
-// ── Repeat-press helpers ──────────────────────────────────────────
-// Each half gets a timer + interval for hold-to-repeat
-var halfTimers  = {};  // type+'_u' or type+'_ta'
-var halfIntervals = {};
-
-function startRepeat(type, sk, delta) {
-  var isFirst = true;
-  function act() {
-    doAction(type, sk, delta, isFirst);
-    isFirst = false;
-  }
-  act();
-  var key = type + '_' + sk;
-  halfTimers[key] = setTimeout(function(){
-    halfIntervals[key] = setInterval(act, 120);
-    halfTimers[key] = null;
-  }, 400);
-}
-function stopRepeat(type, sk) {
-  var key = type + '_' + sk;
-  clearTimeout(halfTimers[key]);
-  clearInterval(halfIntervals[key]);
-  halfTimers[key] = null;
-  halfIntervals[key] = null;
-}
-
-// ── Creation engine ───────────────────────────────────────────────
-// ── Pure pipeline computation ────────────────────────────────────────
-// flitwingMode: 'off' (ignore Flitwing) | 'tokens' (convert right before
-// Manufactor, maximizing total token count) | 'clues' (convert at the very
-// end, after everything, maximizing Clue count). See the Flitwing analysis:
-// converting immediately before Manufactor never produces fewer tokens than
-// converting later, so 'tokens' mode doesn't need to compare candidates live.
-// Computes the batch for one deterministic Flitwing conversion POSITION:
-// 'off' (never converts), 'manufactor' (converts immediately before
-// Manufactor — maximizes what Manufactor has to work with), or 'clues'
-// (converts dead last, after everything — maximizes Clue count specifically).
-// computeBatchForMode (below) is the public entry point; 'tokens' mode calls
-// this twice and picks the winner, since neither fixed position is always
-// the true maximum anymore (see the comment above the 'tokens' dispatch).
-function computeBatchForPosition(tokens, flitwingMode) {
-  flitwingMode = flitwingMode || 'off';
-  var tapped = tokens.every(function(t){ return t.tapped; });
-
-  // Every token in the batch carries isArtifact/isCreature so predicate-based
-  // mods (Helm, Stridehangar, Allenal, Ojer Taq) can react to it, whether it's
-  // one of the 5 tracked types, a phantom creature (Squirrel/Frog/etc), or a
-  // player-flagged Generic token. Explicit flags on the input are respected
-  // (used for Generic's Artifact/Creature toggles); otherwise looked up.
-  function makeToken(type, tok_tapped, explicitFlags) {
-    var flags = explicitFlags || getTokenFlags(type);
-    return { type:type, tapped:tok_tapped, isArtifact:!!flags.isArtifact, isCreature:!!flags.isCreature };
-  }
-
-  var batch = tokens.map(function(t){
-    var hasExplicit = t.hasOwnProperty('isArtifact') || t.hasOwnProperty('isCreature');
-    return makeToken(t.type, t.tapped, hasExplicit ? { isArtifact:t.isArtifact, isCreature:t.isCreature } : null);
-  });
-
-  // ── addTokenIfPresent (Jolene, Xorn) ────────────────────────────
-  // These are replacement effects where the player chooses the order they apply.
-  // Since you always choose the order that benefits you most, we try every
-  // permutation of active mods and pick whichever produces the most tokens.
-  // Applied twice: once pre-Manufactor (triggers already present), once
-  // post-Manufactor (triggers that only appeared via Manufactor's expansion).
-  // Kept as its own system (rather than folded into the late-stage predicate
-  // search below) because Treasure — both their trigger and their output —
-  // IS Manufactor-eligible, so timing relative to Manufactor genuinely matters
-  // for them specifically, unlike the predicate/phantom-token mods.
-  function permutations(arr) {
-    if (arr.length <= 1) return [arr.slice()];
-    var result = [];
-    arr.forEach(function(item, i) {
-      var rest = arr.slice(0,i).concat(arr.slice(i+1));
-      permutations(rest).forEach(function(p){ result.push([item].concat(p)); });
-    });
-    return result;
-  }
-  function applyPermutation(startBatch, orderedMods, tapped) {
-    var b = startBatch.slice();
-    orderedMods.forEach(function(mod) {
-      var n = modOn[mod.id] || 0;
-      if (n > 0 && b.some(function(t){ return t.type === mod.triggerTokenType; })) {
-        for (var i = 0; i < n; i++) b.push(makeToken(mod.addsTokenType, tapped));
-      }
-    });
-    return b;
-  }
-  function bestPermutation(startBatch, candidateMods, tapped) {
-    if (candidateMods.length === 0) return startBatch;
-    var best = startBatch;
-    permutations(candidateMods).forEach(function(perm) {
-      var result = applyPermutation(startBatch, perm, tapped);
-      if (result.length > best.length) best = result;
-    });
-    return best;
-  }
-
-  var ifPresentMods = MODS.filter(function(m){
-    return m.mechanic === 'addTokenIfPresent' && (modOn[m.id] || 0) > 0;
-  });
-
-  // Pre-Manufactor pass: only consider mods whose trigger is already in the batch
-  var preCandiates = ifPresentMods.filter(function(mod) {
-    return batch.some(function(t){ return t.type === mod.triggerTokenType; });
-  });
-  batch = bestPermutation(batch, preCandiates, tapped);
-  var firedPreManufactor = preCandiates.map(function(m){ return m.id; });
-
-  // Step 1: addToken — unconditional per-event adders (Peregrin, Tippy-Toe, etc)
-  MODS.forEach(function(mod) {
-    if (mod.mechanic === 'addToken') {
-      var n = modOn[mod.id] || 0;
-      for (var i = 0; i < n; i++) batch.push(makeToken(mod.addsTokenType, tapped));
-    }
-  });
-
-  // Step 1c: replaceToken — e.g. Bilbo: for each Food in the batch, also add a Treasure.
-  // Each copy of the mod adds one extra token per matching token in the batch.
-  // Runs before Manufactor so the extras also get tripled.
-  MODS.forEach(function(mod) {
-    if (mod.mechanic === 'replaceToken') {
-      var n = modOn[mod.id] || 0;
-      if (n > 0) {
-        var toAdd = [];
-        batch.forEach(function(tok) {
-          if (tok.type === mod.triggersOnType) {
-            for (var i = 0; i < n; i++) toAdd.push(makeToken(mod.addsTokenType, tok.tapped));
-          }
-        });
-        batch = batch.concat(toAdd);
-      }
-    }
-  });
-
-  // Flitwing "Optimize for Manufactor" position: convert here, immediately
-  // before Manufactor, so Manufactor-immune types (Mutagen, Map, and any
-  // creature-flagged phantom token) become Clue-eligible and get tripled too.
-  // NOTE: this is no longer provably the global maximum on its own — it can
-  // lose to the 'clues' position when a creature-predicate mod (Allenal,
-  // Ojer Taq, Chatterfang) would have produced more value from an
-  // untouched creature flag than Manufactor's triple does. That's exactly
-  // why 'tokens' mode (below) compares both positions instead of assuming
-  // this one always wins.
-  if (flitwingMode === 'manufactor') {
-    batch = batch.map(function(t){ return makeToken('clue', t.tapped); });
-  }
-
-  // Step 2: manufactor — apply N times in sequence (each pass triples Clue/Food/Treasure)
-  MODS.forEach(function(mod) {
-    if (mod.mechanic === 'manufactor') {
-      var n = modOn[mod.id] || 0;
-      for (var pass = 0; pass < n; pass++) {
-        var ex = [];
-        batch.forEach(function(tok) {
-          if (tok.type==='clue'||tok.type==='food'||tok.type==='treasure') {
-            ex.push(makeToken('clue',     tok.tapped));
-            ex.push(makeToken('food',     tok.tapped));
-            ex.push(makeToken('treasure', tok.tapped));
-          } else { ex.push(tok); }
-        });
-        batch = ex;
-      }
-    }
-  });
-
-  // Post-Manufactor pass: mods that didn't fire pre-Manufactor, but whose
-  // trigger now appears in the batch thanks to Manufactor's expansion
-  var postCandidates = ifPresentMods.filter(function(mod) {
-    return firedPreManufactor.indexOf(mod.id) === -1 &&
-           batch.some(function(t){ return t.type === mod.triggerTokenType; });
-  });
-  batch = bestPermutation(batch, postCandidates, tapped);
-
-  // ── Late-stage predicate search (Helm, Stridehangar, Allenal, Chatterfang,
-  // Ojer Taq) ──────────────────────────────────────────────────────
-  // None of these deal in Manufactor-eligible types (Clue/Food/Treasure), so
-  // there's no benefit to running them earlier — they only ever gain value
-  // from seeing a LARGER batch, so they run here, after Manufactor and after
-  // Jolene/Xorn have had their say, when the batch is as big as it'll get pre-
-  // doublers. They CAN enable each other (e.g. Chatterfang's Squirrel can
-  // satisfy Allenal's creature-condition), so — same principle as above — we
-  // try every firing order and keep whichever produces the most tokens.
-  function applyLateStagePermutation(startBatch, orderedMods, tapped) {
-    var b = startBatch.slice();
-    orderedMods.forEach(function(mod) {
-      var n = modOn[mod.id] || 0;
-      if (n <= 0) return;
-      if (mod.mechanic === 'predicateAdd') {
-        if (b.some(function(t){ return t[mod.conditionPredicate]; })) {
-          for (var i = 0; i < n; i++) b.push(makeToken(mod.addsTokenType, tapped));
-        }
-      } else if (mod.mechanic === 'wildcardReplace') {
-        var toAdd = [];
-        b.forEach(function(tok) {
-          for (var i = 0; i < n; i++) toAdd.push(makeToken(mod.addsTokenType, tok.tapped));
-        });
-        b = b.concat(toAdd);
-      } else if (mod.mechanic === 'predicateMultiply') {
-        var factor = Math.pow(mod.multiplyBy || 1, n); // n copies stack multiplicatively, same as doublers
-        var ex = [];
-        b.forEach(function(tok) {
-          if (tok[mod.conditionPredicate]) {
-            for (var i = 0; i < factor; i++) ex.push(makeToken(tok.type, tok.tapped));
-          } else {
-            ex.push(tok);
-          }
-        });
-        b = ex;
-      }
-    });
-    return b;
-  }
-  function bestLateStagePermutation(startBatch, candidateMods, tapped) {
-    if (candidateMods.length === 0) return startBatch;
-    var best = startBatch;
-    permutations(candidateMods).forEach(function(perm) {
-      var result = applyLateStagePermutation(startBatch, perm, tapped);
-      if (result.length > best.length) best = result;
-    });
-    return best;
-  }
-  var lateStageMods = MODS.filter(function(m){
-    return (m.mechanic === 'predicateAdd' || m.mechanic === 'wildcardReplace' || m.mechanic === 'predicateMultiply')
-      && (modOn[m.id] || 0) > 0;
-  });
-  batch = bestLateStagePermutation(batch, lateStageMods, tapped);
-
-  // Step 3: double — every enabled doubler (any quantity) multiplies the batch by 2^n
-  var mul = 1;
-  MODS.forEach(function(mod) {
-    if (mod.mechanic === 'double') {
-      var n = modOn[mod.id] || 0;
-      for (var i = 0; i < n; i++) mul *= 2;
-    }
-  });
-  if (mul > 1) {
-    var copies = [];
-    for (var i2 = 1; i2 < mul; i2++)
-      batch.forEach(function(tok){ copies.push(makeToken(tok.type, tok.tapped)); });
-    batch = batch.concat(copies);
-  }
-
-  // Flitwing "Optimize for Clues": convert dead last, after everything else,
-  // so the entire final (largest possible) batch becomes Clues.
-  if (flitwingMode === 'clues') {
-    batch = batch.map(function(t){ return makeToken('clue', t.tapped); });
-  }
-
-  // Step 4: vending — handled in doAction (triggered by sacrifice, not creation)
-
-  return batch;
-}
-
-// Public entry point. 'off' | 'manufactor' | 'clues' delegate straight to a
-// single deterministic position. 'tokens' computes BOTH candidate positions
-// (feed Manufactor, vs. wait for the late-stage predicate mods) and returns
-// whichever produces more total tokens — this is the true maximum, and isn't
-// reducible to a single fixed position now that predicate mods exist.
-function computeBatchForMode(tokens, flitwingMode) {
-  flitwingMode = flitwingMode || 'off';
-  if (flitwingMode !== 'tokens') {
-    return computeBatchForPosition(tokens, flitwingMode);
-  }
-  var viaManufactor = computeBatchForPosition(tokens, 'manufactor');
-  var viaClues      = computeBatchForPosition(tokens, 'clues');
-  return viaManufactor.length >= viaClues.length ? viaManufactor : viaClues;
-}
-
-function applyBatchToState(batch) {
-  batch.forEach(function(tok){
-    if (tok.type !== 'generic' && state[tok.type]) {
-      state[tok.type][tok.tapped?'ta':'u']++;
-    }
-  });
-}
-
-// Direct/synchronous creation with an explicit, already-known Flitwing mode.
-// Used once we know what mode applies (Flitwing inactive, or locked).
-function runCreate(tokens, flitwingMode) {
-  var batch = computeBatchForMode(tokens, flitwingMode || 'off');
-  applyBatchToState(batch);
-}
-
-// Tallies a batch into per-token-type counts, in TT's canonical order —
-// used to build the Flitwing choice preview.
-function tallyBatch(batch) {
-  var counts = {};
-  TT.forEach(function(t){ counts[t] = 0; });
-  batch.forEach(function(tok){
-    if (tok.type !== 'generic' && counts.hasOwnProperty(tok.type)) counts[tok.type]++;
-  });
-  return counts;
-}
-
-// Tallies EVERY token type in a batch, including untracked ones (phantom
-// creature tokens like Squirrel/Frog/Soldier/Thopter, and plain 'generic').
-// Used so the Flitwing preview's total actually adds up to something visible,
-// instead of leaving untracked tokens as an unexplained gap between the
-// shown chips and the total count.
-function tallyBatchAll(batch) {
-  var counts = {};
-  batch.forEach(function(tok){
-    counts[tok.type] = (counts[tok.type] || 0) + 1;
-  });
-  return counts;
-}
-
-// ── Flitwing dispatch: the entry point everything else should call ─────
-// Decides whether Flitwing needs to ask the player (opens a popup) or can
-// proceed immediately (Flitwing inactive, or a choice is locked), then calls
-// onDone() once the batch has been applied to state. Multiple calls queue
-// and resolve one at a time, so e.g. 2x Nuke-Cola (two separate creation
-// events) doesn't try to show two popups at once.
-var flitwingQueue = [];
-var flitwingBusy = false;
-var pendingFlitwingJob = null;
-
-function getFlitwingMod() {
-  return MODS.find ? MODS.find(function(m){ return m.mechanic === 'flitwing'; })
-                    : MODS.filter(function(m){ return m.mechanic === 'flitwing'; })[0];
-}
-
-function createTokens(tokens, onDone) {
-  flitwingQueue.push({ tokens: tokens, onDone: onDone || function(){} });
-  processFlitwingQueue();
-}
-
-function processFlitwingQueue() {
-  if (flitwingBusy || flitwingQueue.length === 0) return;
-  var job = flitwingQueue.shift();
-  var flitwingMod = getFlitwingMod();
-  var active = flitwingMod && (modOn[flitwingMod.id] || 0) > 0;
-
-  if (!active) {
-    runCreate(job.tokens, 'off');
-    job.onDone();
-    processFlitwingQueue();
-    return;
-  }
-
-  var lock = getFlitwingLock();
-  if (lock !== 'ask') {
-    runCreate(job.tokens, lock);
-    job.onDone();
-    processFlitwingQueue();
-    return;
-  }
-
-  flitwingBusy = true;
-  pendingFlitwingJob = job;
-  openFlitwingChoicePopup(job.tokens);
-}
-
-function resolveFlitwingChoice(mode, lockIt) {
-  var job = pendingFlitwingJob;
-  if (!job) return;
-  pendingFlitwingJob = null;
-  if (lockIt) setFlitwingLock(mode);
-  runCreate(job.tokens, mode);
-  closeModal('flitwingChoiceBackdrop');
-  flitwingBusy = false;
-  job.onDone();
-  processFlitwingQueue();
-}
-
-// Renders the per-event choice popup: for each of the 4 modes, shows the
-// total token count and a full per-token-type breakdown of what that choice
-// would actually create.
-var FLITWING_MODE_LABELS = {
-  off:        "Don't Apply",
-  manufactor: 'Optimize for Manufactor',
-  tokens:     'Optimize for Tokens',
-  clues:      'Optimize for Clues'
+// --- QUADRANT WRAPPER ---
+const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, isWinner }) => {
+  const hasArt = !!artUrl && typeof artUrl === 'string' && artUrl.startsWith('http');
+  const hasPartner = !!artUrlPartner && (artUrlPartner === 'partner' || artUrlPartner.startsWith('http'));
+  
+  const bgStyle = hasArt && !isOut ? {
+    backgroundImage: `url(${artUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  } : {};
+  
+  return (
+    <div 
+      className={`
+        relative h-[calc(100%-8px)] md:h-[calc(100%-20px)] w-[calc(100%-8px)] md:w-[calc(100%-20px)] 
+        rounded-[1.5rem] md:rounded-[3.5rem] transition-all duration-700
+        flex flex-col items-center justify-center overflow-hidden
+        ${isFlipped ? 'rotate-180' : ''}
+        ${isOut ? (isWinner ? 'bg-[#0a0a0a]' : 'bg-[#050505]') : (!hasArt ? 'bg-gradient-to-br from-[#b8cedc] via-[#a3b8c9] to-[#8da3b5]' : '')}
+      `}
+      style={bgStyle}
+    >
+      {/* Partner commander - left/right split, each half independently centered/covered */}
+      {hasArt && hasPartner && !isOut && (
+        <>
+          <div className="absolute inset-y-0" style={{
+            left: isFlipped ? '50%' : 0, width: '50%',
+            backgroundImage: `url(${artUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }} />
+          <div className="absolute inset-y-0" style={{
+            left: isFlipped ? 0 : '50%', width: '50%',
+            backgroundImage: `url(${artUrlPartner})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }} />
+        </>
+      )}
+      {hasArt && !isOut && (
+        <div className="absolute inset-0 bg-black/55" />
+      )}
+      <div className="relative z-10 w-full h-full flex flex-col items-stretch justify-center p-1">
+        {children}
+      </div>
+    </div>
+  );
 };
-function openFlitwingChoicePopup(tokens) {
-  var box = document.getElementById('flitwingOptions');
-  box.innerHTML = '';
-  ['off','manufactor','tokens','clues'].forEach(function(mode){
-    var batch = computeBatchForMode(tokens, mode);
-    var allCounts = tallyBatchAll(batch);
-    var row = document.createElement('div');
-    row.className = 'flitwing-option';
-    var breakdownHtml = '';
-    // Tracked types first, in canonical order
-    TT.forEach(function(t){
-      if (allCounts[t] > 0) {
-        breakdownHtml += '<span class="flitwing-chip">' + TOKEN_LIBRARY[t].label + ' +' + allCounts[t] + '</span>';
-      }
-    });
-    // Then anything untracked (phantom creature tokens, plain generic) —
-    // dimmed/muted styling to signal these won't show up as a board counter,
-    // so the total on the label always fully accounts for itself.
-    Object.keys(allCounts).forEach(function(type){
-      if (TT.indexOf(type) !== -1 || allCounts[type] <= 0) return; // already shown above
-      var label = type === 'generic' ? 'Untracked' : getTokenDisplayLabel(type);
-      breakdownHtml += '<span class="flitwing-chip untracked">' + label + ' +' + allCounts[type] + '</span>';
-    });
-    row.innerHTML =
-      '<div class="flitwing-option-label">' + FLITWING_MODE_LABELS[mode] + ': ' + batch.length + '</div>' +
-      '<div class="flitwing-option-breakdown">' + breakdownHtml + '</div>';
-    row.onclick = function() {
-      var lockIt = document.getElementById('flitwingLockCheckbox').checked;
-      resolveFlitwingChoice(mode, lockIt);
-    };
-    box.appendChild(row);
-  });
-  document.getElementById('flitwingLockCheckbox').checked = false;
-  openModal('flitwingChoiceBackdrop');
-}
 
-// Renders the lock-configuration popup (opened by holding the Flitwing tile
-// in the in-game MODS drawer). Lets the player permanently pin a choice for
-// this deck, or set it back to "ask every time".
-var FLITWING_LOCK_LABELS = {
-  ask:        'Ask every time',
-  off:        "Always: Don't Apply",
-  manufactor: 'Always: Optimize Manufactor',
-  tokens:     'Always: Optimize Tokens',
-  clues:      'Always: Optimize Clues'
+// --- GRID PICKER ---
+// Two-row grid replacing carousel for players/decks
+const GridPicker = ({ title, options, onSelect, onBack }) => {
+  const mid = Math.ceil(options.length / 2);
+  const row1 = options.slice(0, mid);
+  const row2 = options.slice(mid);
+
+  const btnStyle = (hasArt) => ({
+    flex: 1, minWidth: 0, height: 52, borderRadius: 12, fontWeight: 900, fontSize: 11,
+    color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em',
+    backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
+    position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap',
+  });
+
+  const renderBtn = (opt, i) => {
+    const isObj = typeof opt === 'object' && opt !== null;
+    const label = isObj ? (opt.name || opt.deck || 'Unnamed') : String(opt);
+    const art = isObj ? opt.artUrl : null;
+    return (
+      <button key={i} onClick={() => onSelect(opt)} style={btnStyle(!!art)}>
+        {art && <img src={art} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />}
+        <span style={{ position: 'relative', zIndex: 1, textShadow: art ? '0 1px 4px rgba(0,0,0,0.9)' : 'none', padding: '0 6px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 8, padding: '0 10px' }}>
+      {title && <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">{title}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
+        <div style={{ display: 'flex', gap: 7 }}>{row1.map((opt, i) => renderBtn(opt, i))}</div>
+        {row2.length > 0 && <div style={{ display: 'flex', gap: 7 }}>{row2.map((opt, i) => renderBtn(opt, mid + i))}</div>}
+      </div>
+      <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">- Back</button>
+    </div>
+  );
 };
-function openFlitwingLockPopup() {
-  var box = document.getElementById('flitwingLockOptions');
-  box.innerHTML = '';
-  var current = getFlitwingLock();
-  ['ask','off','manufactor','tokens','clues'].forEach(function(mode){
-    var btn = document.createElement('div');
-    btn.className = 'flitwing-lock-option' + (mode === current ? ' active' : '');
-    btn.textContent = FLITWING_LOCK_LABELS[mode];
-    btn.onclick = function() {
-      setFlitwingLock(mode);
-      openFlitwingLockPopup(); // re-render to show the new active state
-    };
-    box.appendChild(btn);
-  });
-  openModal('flitwingLockBackdrop');
-}
 
-function snapshot() { return TT.map(function(t){ return state[t].u+state[t].ta; }); }
 
-// ── Action history (for the +X badges and Undo button) ──────────────
-// Every user-facing action wraps itself with beginAction()/endAction(),
-// which diffs `state` before vs after and pushes one history entry
-// capturing the full per-type {u,ta} deltas. The +X badge reads the
-// most recent entry's deltas; Undo pops it and reverses them exactly.
-var actionHistory = [];
-var MAX_HISTORY = 20; // how many undo steps to keep
-function cloneState() {
-  var c = {};
-  TT.forEach(function(t){ c[t] = { u: state[t].u, ta: state[t].ta }; });
-  return c;
-}
-function beginAction() { return cloneState(); }
-function endAction(before) {
-  var after = cloneState();
-  var deltas = {};
-  var changed = false;
-  TT.forEach(function(t){
-    var du = after[t].u  - before[t].u;
-    var dta = after[t].ta - before[t].ta;
-    if (du !== 0 || dta !== 0) { deltas[t] = { u: du, ta: dta }; changed = true; }
-  });
-  if (changed) {
-    actionHistory.push(deltas);
-    if (actionHistory.length > MAX_HISTORY) actionHistory.shift();
-    showDeltaBadges(deltas);
-  }
-}
-function undo() {
-  var deltas = actionHistory.pop();
-  if (!deltas) return;
-  Object.keys(deltas).forEach(function(t){
-    if (!state[t]) return; // token type no longer active, nothing to reverse visually
-    state[t].u  -= deltas[t].u;
-    state[t].ta -= deltas[t].ta;
-    // clamp defensively so a partial/edge-case undo never goes negative
-    if (state[t].u  < 0) state[t].u  = 0;
-    if (state[t].ta < 0) state[t].ta = 0;
-  });
-  render();
-}
+const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
+  const [step, setStep] = useState(0); 
+  const [tempColors, setTempColors] = useState([]);
+  
+  const playerOptions = playerDataMap.map(p => ({
+    name: p.player_name,
+    artUrl: p.pfp
+  }));
+  const players = playerOptions;
 
-var deltaStackCount = {}; // type -> how many popups currently stacked, so new ones spawn above
-function showDeltaBadges(deltas) {
-  Object.keys(deltas).forEach(function(t){
-    var net = deltas[t].u + deltas[t].ta;
-    if (net === 0) return;
-    var container = document.getElementById('delta-'+t);
-    if (!container) return; // token type not currently on the grid
+  const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
+  const rawDecks = (playerEntry.decks || []).filter(d => !d.exclude);
+  const decks = rawDecks;
+  const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
-    var stackIndex = deltaStackCount[t] || 0;
-    deltaStackCount[t] = stackIndex + 1;
+  useEffect(() => {
+    if (firstSeatIndex !== null && seat.order !== '' && step === 0) {
+      setStep(1);
+    } else if (firstSeatIndex === null) {
+      setStep(0);
+    }
+  }, [firstSeatIndex, seat.order]);
 
-    var sign = net > 0 ? '+' : '−';
-    var popup = document.createElement('div');
-    popup.className = 'tok-delta-popup' + (net > 0 ? ' positive' : ' negative');
-    popup.textContent = sign + Math.abs(net);
-    // each new popup starts a bit further down than the last still-visible
-    // one, so rapid taps cascade upward past each other instead of overlapping
-    popup.style.top = (stackIndex * 26) + 'px';
-    container.appendChild(popup);
-
-    // trigger the rise+fade animation on the next frame (so the initial
-    // state actually paints before the transition starts)
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
-        popup.classList.add('rise');
-      });
-    });
-
-    setTimeout(function(){
-      if (popup.parentNode) popup.parentNode.removeChild(popup);
-      deltaStackCount[t] = Math.max(0, (deltaStackCount[t]||1) - 1);
-    }, 1100);
-  });
-}
-
-// ── Core action ───────────────────────────────────────────────────
-function doAction(type, sk, delta, doFlash) {
-  var before = beginAction();
-  if (delta > 0) {
-    createTokens([{ type:type, tapped:(sk==='ta') }], function(){
-      endAction(before);
-      render();
-    });
-  } else {
-    if (state[type][sk] > 0) {
-      state[type][sk]--;
-      if (type === 'food') {
-        var totalVending = 0;
-        MODS.forEach(function(mod) {
-          if (mod.mechanic === 'vending') totalVending += (modOn[mod.id] || 0);
-        });
-        if (totalVending === 0) {
-          endAction(before);
-          render();
-        } else {
-          var completed = 0;
-          for (var v = 0; v < totalVending; v++) {
-            createTokens([{ type:'treasure', tapped:true }], function(){
-              completed++;
-              if (completed === totalVending) { endAction(before); render(); }
-            });
-          }
-        }
+  const handleBack = () => {
+    if (step === 1) {
+      onResetAll();
+    } else if (step === 2) {
+      onUpdate(id, 'name', '');
+      setStep(1);
+    } else if (step === 3 || step === 4 || step === 5 || step === 6 || step === 8) {
+      onUpdate(id, 'artUrl', '');
+      onUpdate(id, 'colors', '');
+      if (step === 6) {
+        onUpdate(id, 'deckOwner', '');
+        setStep(1);
       } else {
-        endAction(before);
-        render();
+        setStep(2);
       }
     } else {
-      endAction(before);
-      render();
+      setStep(Math.max(0, step - 1));
     }
-  }
-}
+  };
 
-function tapTokens(type) {
-  // move one untapped → tapped
-  if (state[type].u > 0) { state[type].u--; state[type].ta++; render(); }
-}
-function untapTokens(type) {
-  if (state[type].ta > 0) { state[type].ta--; state[type].u++; render(); }
-}
-function untapAll() {
-  TT.forEach(function(t){ state[t].u += state[t].ta; state[t].ta = 0; });
-  render();
-}
-function openConfirm()  { openModal('confirmBackdrop'); }
-function closeConfirm() { closeModal('confirmBackdrop'); }
-function confirmReset() { closeConfirm(); closeDrawer(); resetAll(); }
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <QuadrantWrapper isFlipped={isFlipped} artUrl={seat.artUrl} artUrlPartner={seat.artUrlPartner}>
+        {step === 0 && firstSeatIndex === null && (
+          <div className="w-full h-full flex items-center justify-center">
+            <button 
+              onClick={() => onSetFirst(id)}
+              className="w-[85%] h-[40%] bg-white/90 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+            >
+              <span className="text-white font-black text-sm md:text-xl uppercase text-center leading-tight px-2">Goes First</span>
+            </button>
+          </div>
+        )}
 
-function rebuildCreateDropdown() {
-  var sel = document.getElementById('createType');
-  var prevVal = sel.value;
-  sel.innerHTML = '<option value="generic">Generic</option>';
-  TT.forEach(function(t){
-    var opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = META[t].label;
-    sel.appendChild(opt);
-  });
-  // restore selection if still valid, else default to generic
-  var stillValid = Array.prototype.some.call(sel.options, function(o){ return o.value === prevVal; });
-  sel.value = stillValid ? prevVal : 'generic';
-}
+        {step >= 1 && !mulliganType && (
+          seat.order === 4 ? (
+            <SelectionCarousel axisSwapped={axisSwapped}
+              title="Select Mulligan (Last Player)" 
+              isFlipped={isFlipped} 
+              options={mulliganOptions} 
+              onBack={onResetAll} 
+              onSelect={(val) => {
+                const finalVal = val === "Other" ? (prompt("Mulligan Type:") || "Other") : val;
+                onSetMulligan(finalVal);
+              }} 
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center animate-pulse">
+                <p className="text-white/20 font-black text-[10px] md:text-xs uppercase tracking-[0.4em]">Waiting for Seat 4</p>
+                <p className="text-white/40 font-black text-lg md:text-2xl uppercase">Choosing Mulligan...</p>
+              </div>
+            </div>
+          )
+        )}
 
-// ── Generic token Artifact/Creature flags ───────────────────────────
-var genericFlags = { artifact:false, creature:false };
-function toggleGenericFlag(kind) {
-  genericFlags[kind] = !genericFlags[kind];
-  document.getElementById('genericArtifactChip').classList.toggle('on', genericFlags.artifact);
-  document.getElementById('genericCreatureChip').classList.toggle('on', genericFlags.creature);
-}
-// Only show the toggle row when Generic is selected AND this deck actually
-// has a predicate-based mod enabled (Helm/Stridehangar/Allenal/Chatterfang/
-// Ojer Taq) — otherwise the flags would have nothing to matter to, so keep
-// the UI clean and hide them.
-function updateGenericFlagsVisibility() {
-  var type = document.getElementById('createType').value;
-  var hasPredicateMod = MODS.some(function(m){
-    return m.mechanic === 'predicateAdd' || m.mechanic === 'wildcardReplace' || m.mechanic === 'predicateMultiply';
-  });
-  var row = document.getElementById('genericFlagsRow');
-  row.classList.toggle('show', type === 'generic' && hasPredicateMod);
-}
+        {step === 1 && mulliganType && (
+          <SelectionCarousel axisSwapped={axisSwapped}
+            title={`Seat ${seat.order}`} 
+            isFlipped={isFlipped} 
+            options={players}
+            twoRows
+            onBack={handleBack} 
+            extraButton={
+              <button onClick={() => { onUpdate(id, 'name', 'Guest'); onUpdate(id, 'pfpUrl', ''); setStep(2); }}
+                className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                + Guest
+              </button>
+            }
+            onSelect={(val) => { 
+              onUpdate(id, 'name', val.name); 
+              onUpdate(id, 'pfpUrl', val.artUrl); 
+              setStep(2); 
+            }} 
+          />
+        )}
+        
+        {step === 2 && (
+          <SelectionCarousel axisSwapped={axisSwapped}
+            title="Deck" 
+            isFlipped={isFlipped} 
+            options={decks}
+            twoRows
+            onBack={handleBack} 
+            extraButton={
+              <>
+                <button onClick={() => setStep(5)}
+                  className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  Borrowed
+                </button>
+                <button onClick={() => {
+                  if (seat.name === 'Guest') {
+                    onUpdate(id, 'deck', '');
+                    setStep(4);
+                  } else {
+                    const deckName = prompt("Deck Name:");
+                    if (deckName === null) return;
+                    onUpdate(id, 'deck', deckName || "Other"); setStep(4);
+                  }
+                }}
+                  className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                  + Other
+                </button>
+              </>
+            }
+            onSelect={(val) => { 
+              onUpdate(id, 'deck', val.deck); 
+              onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
+              onUpdate(id, 'colors', val.colors || ''); 
+              setStep(3); 
+            }}
+          />
+        )}
 
-function bulkCreate() {
-  var type = document.getElementById('createType').value;
-  var amt  = Math.max(1, parseInt(document.getElementById('createAmt').value) || 1);
-  var tokens = [];
-  for (var i = 0; i < amt; i++) {
-    var tok = { type:type, tapped:false };
-    if (type === 'generic') {
-      tok.isArtifact = genericFlags.artifact;
-      tok.isCreature = genericFlags.creature;
-    }
-    tokens.push(tok);
-  }
-  var before = beginAction();
-  createTokens(tokens, function(){
-    endAction(before);
-    render();
-  });
-}
+        {step === 4 && (
+          <div className="flex flex-col items-center justify-between h-full w-full px-6 py-8 md:py-12 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] md:text-sm uppercase tracking-[0.6em]">Select Colors</p>
+            <div className="flex-1 flex items-center justify-center w-full">
+              <ColorPicker selected={tempColors} onToggle={(c) => setTempColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])} />
+            </div>
+            <div className="flex gap-4 w-full max-w-[420px]">
+              <button onClick={handleBack} className="px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                - Back
+              </button>
+              <button onClick={() => {
+                const colorStr = tempColors.join('');
+                onUpdate(id, 'colors', colorStr);
+                // For guests, use colors as deck name
+                if (seat.name === 'Guest') onUpdate(id, 'deck', colorStr || 'Guest');
+                setStep(8); // partner toggle
+              }} className="flex-1 px-6 md:px-8 py-3 md:py-4 bg-white text-black rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest hover:bg-white/90 transition-colors shadow-2xl whitespace-nowrap">
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
 
-function resetAll() {
-  TT.forEach(function(t){ state[t].u = 0; state[t].ta = 0; });
-  MODS.forEach(function(m){ modOn[m.id] = 0; });
-  actionHistory = []; // undo shouldn't reach back past a full reset
-  renderMods(); render();
-}
+        {step === 8 && (
+          <div className="flex flex-col items-center justify-center h-full w-full px-6 animate-in zoom-in duration-300">
+            <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.6em] mb-6">Partner Commanders?</p>
+            <div style={{ display: 'flex', gap: 24, width: '100%', maxWidth: 280 }}>
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', ''); setStep(3); }}
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
+                No
+              </button>
+              <button onClick={() => { onUpdate(id, 'artUrlPartner', 'partner'); setStep(3); }}
+                style={{ flex: 1, height: 56, borderRadius: 14, fontWeight: 900, fontSize: 16, color: '#000', backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)' }}>
+                Yes
+              </button>
+            </div>
+            <button onClick={handleBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+              - Back
+            </button>
+          </div>
+        )}
 
-// ── Render ────────────────────────────────────────────────────────
-var BOARD_STORAGE_PREFIX = 'manufactor_board_';
+        {step === 5 && (
+          <SelectionCarousel axisSwapped={axisSwapped}
+            title="Borrow From?" 
+            isFlipped={isFlipped} 
+            options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
+            twoRows
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
+              setStep(6); 
+            }} 
+          />
+        )}
+        {step === 6 && (
+          <SelectionCarousel axisSwapped={axisSwapped}
+            title={`${seat.deckOwner}'s Decks`} 
+            isFlipped={isFlipped} 
+            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks || []).filter(d => !d.exclude)}
+            twoRows
+            onBack={handleBack} 
+            onSelect={(val) => { 
+              onUpdate(id, 'deck', val.deck); 
+              onUpdate(id, 'artUrl', val.artUrl); 
+              onUpdate(id, 'artUrlPartner', val.artUrlPartner || '');
+              onUpdate(id, 'colors', val.colors || ''); 
+              setStep(3); 
+            }} 
+          />
+        )}
+        {step === 3 && (
+          <div className="flex flex-col items-center w-full max-w-[90%] md:max-w-[450px] mx-auto animate-in fade-in zoom-in duration-500" style={{ gap: 4, paddingTop: 6, paddingBottom: 6 }}>
+            <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em] text-center">Starting Lands</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', maxWidth: 280 }}>
+              {[[0,1,2,3],[4,5,6,7]].map((row, ri) => (
+                <div key={ri} style={{ display: 'flex', gap: 6 }}>
+                  {row.map(n => (
+                    <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
+                      style={{
+                        flex: 1, height: 52, borderRadius: 12,
+                        fontSize: 20, fontWeight: 900, color: '#fff',
+                        backgroundColor: 'rgba(255,255,255,0.55)',
+                        border: '1px solid rgba(255,255,255,0.7)',
+                        color: '#000',
+                      }}
+                    >{n}</button>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <button onClick={handleBack} className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+              - Back
+            </button>
+          </div>
+        )}
+        
+        {step === 7 && (
+          <div className="text-center animate-in fade-in zoom-in duration-500 px-2">
+            <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/70 font-black text-[8px] md:text-[16px] uppercase tracking-[0.4em] mb-1 truncate max-w-[200px] mx-auto">
+              {seat.deck}
+            </p>
+            {seat.deckOwner && seat.deckOwner !== seat.name && (
+              <p style={seat.artUrl ? textShadowStyle : {}} className="text-white/40 font-black text-[7px] md:text-[12px] uppercase tracking-[0.3em] mb-1">
+                borrowed from {seat.deckOwner}
+              </p>
+            )}
+            <h2 style={seat.artUrl ? textShadowStyle : {}} className="text-white text-2xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
+              {seat.name}
+            </h2>
+            <button onClick={() => { setStep(1); onUpdate(id, 'artUrl', ''); }} className="text-white/40 font-black text-[9px] uppercase tracking-[0.2em]">Edit</button>
+          </div>
+        )}
+      </QuadrantWrapper>
+    </div>
+  );
+};
 
-function persistBoardState() {
-  if (!activeProfileId) return;
-  try {
-    localStorage.setItem(BOARD_STORAGE_PREFIX + activeProfileId, JSON.stringify({ state: state, modOn: modOn }));
-  } catch(e) { /* localStorage unavailable or full, ignore */ }
-}
-function loadBoardState(profileId) {
-  try {
-    var raw = localStorage.getItem(BOARD_STORAGE_PREFIX + profileId);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch(e) { return null; }
-}
-function clearBoardState(profileId) {
-  try { localStorage.removeItem(BOARD_STORAGE_PREFIX + profileId); } catch(e) {}
-}
+// Only re-render a seat's setup screen when its OWN data actually changes -
+// prevents unrelated seats from re-rendering (and their scroll position
+// resetting) whenever any other seat updates.
+const SetupQuadrant = React.memo(SetupQuadrantInner, (prev, next) => (
+  prev.seat === next.seat &&
+  prev.isFlipped === next.isFlipped &&
+  prev.axisSwapped === next.axisSwapped &&
+  prev.playerDataMap === next.playerDataMap &&
+  prev.firstSeatIndex === next.firstSeatIndex &&
+  prev.mulliganType === next.mulliganType
+));
 
-function render() {
-  TT.forEach(function(type) {
-    var s = state[type];
-    var total = s.u + s.ta;
-    var card = document.getElementById('tc-'+type);
-    if (!card) return;
-    card.className = 'tok-card' + (total > 0 ? ' lit' : '');
-    card.querySelector('.num-u').textContent  = s.u;
-    card.querySelector('.num-ta').textContent = s.ta;
-  });
-  var pips = document.getElementById('modPips'); pips.innerHTML = '';
-  var MAX_PIPS = 5;
-  var activeMods = MODS.filter(function(m){ return modOn[m.id] > 0; });
-  var shown = MODS.slice(0, MAX_PIPS);
-  shown.forEach(function(m){
-    var d = document.createElement('div');
-    d.className = 'mod-pip' + (modOn[m.id] > 0 ? ' on' : '');
-    pips.appendChild(d);
-  });
-  if (MODS.length > MAX_PIPS) {
-    var overflow = document.createElement('div');
-    overflow.className = 'mod-pip-overflow';
-    var extraOn = activeMods.length - shown.filter(function(m){ return modOn[m.id] > 0; }).length;
-    overflow.textContent = '+' + (MODS.length - MAX_PIPS);
-    pips.appendChild(overflow);
-  }
-  var undoBtn = document.getElementById('undoBtn');
-  if (undoBtn) undoBtn.disabled = actionHistory.length === 0;
-  persistBoardState();
-}
+// --- CMD DAMAGE CELL ---
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
+  const [activeHalfA, setActiveHalfA] = useState(null);
+  const [activeHalfB, setActiveHalfB] = useState(null);
+  const holdTimer = useRef(null);
+  const tapRepeat = useRef(null);
+  const tapTimer = useRef(null);
 
-// ── Build DOM ─────────────────────────────────────────────────────
-function makeHalf(type, sk) {
-  // sk = 'u' or 'ta'
-  var isUntapped = (sk === 'u');
-  var half = document.createElement('div');
-  half.className = 'tok-half ' + (isUntapped ? 'untapped' : 'tapped');
+  const startHold = () => {
+    holdTimer.current = setTimeout(() => {
+      onHold(true);
+      holdTimer.current = null;
+    }, 400);
+  };
+  const cancelHold = () => {
+    clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
 
-  // Left zone (sacrifice / decrement)
-  var zoneL = document.createElement('div');
-  zoneL.className = 'tap-zone left';
-  (function(t,s){
-    zoneL.addEventListener('pointerdown', function(e){
-      e.preventDefault(); e.stopPropagation();
-      zoneL.classList.add('active');
-      startRepeat(t, s, -1);
-    });
-    var stop = function(){ zoneL.classList.remove('active'); stopRepeat(t,s); };
-    zoneL.addEventListener('pointerup',     stop);
-    zoneL.addEventListener('pointerleave',  stop);
-    zoneL.addEventListener('pointercancel', stop);
-  })(type, sk);
-  half.appendChild(zoneL);
+  const startTap = (fn, delta) => {
+    fn(delta);
+    tapTimer.current = setTimeout(() => {
+      tapRepeat.current = setInterval(() => fn(delta * 10), 300);
+      tapTimer.current = null;
+    }, 400);
+  };
+  const stopTap = (setHalf) => {
+    clearTimeout(tapTimer.current);
+    clearInterval(tapRepeat.current);
+    tapTimer.current = null;
+    tapRepeat.current = null;
+    setHalf(null);
+  };
 
-  // Right zone (create / increment)
-  var zoneR = document.createElement('div');
-  zoneR.className = 'tap-zone right';
-  (function(t,s){
-    zoneR.addEventListener('pointerdown', function(e){
-      e.preventDefault(); e.stopPropagation();
-      zoneR.classList.add('active');
-      startRepeat(t, s, +1);
-    });
-    var stop = function(){ zoneR.classList.remove('active'); stopRepeat(t,s); };
-    zoneR.addEventListener('pointerup',     stop);
-    zoneR.addEventListener('pointerleave',  stop);
-    zoneR.addEventListener('pointercancel', stop);
-  })(type, sk);
-  half.appendChild(zoneR);
+  const tapZones = (fn, activeHalf, setHalf) => (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('left'); startTap(fn, -1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.stopPropagation(); setHalf('right'); startTap(fn, 1); }}
+        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
+        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
+      >
+        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
+      </div>
+    </div>
+  );
 
-  // Big number
-  var num = document.createElement('div');
-  num.className = 'tok-num num-' + sk;
-  num.textContent = '0';
-  half.appendChild(num);
-
-  // Edge hints
-  var hints = document.createElement('div');
-  hints.className = 'tok-hints';
-  hints.innerHTML = '<span class="tok-hint">−</span><span class="tok-hint">+</span>';
-  half.appendChild(hints);
-
-  // State label
-  var lbl = document.createElement('div');
-  lbl.className = 'tok-state-lbl';
-  lbl.textContent = isUntapped ? 'UNTAPPED' : 'TAPPED';
-  half.appendChild(lbl);
-
-  return half;
-}
-
-function buildGrid() {
-  var grid = document.getElementById('tokenGrid'); grid.innerHTML = '';
-  TT.forEach(function(type) {
-    var m = META[type];
-    var card = document.createElement('div');
-    card.className = 'tok-card'; card.id = 'tc-'+type;
-    card.style.setProperty('--c', m.c);
-
-    // Art background
-    var art = document.createElement('img');
-    art.className = 'tok-art';
-    art.src = resolveArtPath(m.img, type);
-    art.alt = '';
-    card.appendChild(art);
-
-    // Scrim
-    var scrim = document.createElement('div');
-    scrim.className = 'tok-scrim';
-    card.appendChild(scrim);
-
-    // Delta popup container ("+3" etc spawn inside here, transiently)
-    var deltaContainer = document.createElement('div');
-    deltaContainer.className = 'tok-delta-container';
-    deltaContainer.id = 'delta-'+type;
-    card.appendChild(deltaContainer);
-
-    // Name
-    var name = document.createElement('div');
-    name.className = 'tok-name';
-    name.textContent = m.label.toUpperCase();
-    card.appendChild(name);
-
-    // Untapped half
-    card.appendChild(makeHalf(type, 'u'));
-
-    // Middle: TAP / UNTAP
-    var mid = document.createElement('div');
-    mid.className = 'tok-mid';
-    var tapBtn = document.createElement('button');
-    tapBtn.className = 'mid-btn';
-    tapBtn.innerHTML = '<svg class="mtg-sym" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg"><path d="m512 353.5-216 0 79.1-56.3c-29.4-23.3-63.4-35-101.9-35-19.3 0-32.5 3.7-39.5 11-7.1 7.4-10.7 20.7-10.7 39.9 0 53.2 27.4 110 82.2 170.4l-62.3 63.1c-72.5-88.2-108.8-167.1-108.8-236.5 0-41.6 12.5-74.7 37.6-99.3 25.1-24.6 58.5-36.9 100-36.9 50.7 0 106 19.3 165.9 57.8l46.4-79.1 28.2 200.8" fill="currentColor"/></svg>';
-    (function(t){ tapBtn.onclick = function(e){ e.stopPropagation(); tapTokens(t); }; })(type);
-    var untapBtn = document.createElement('button');
-    untapBtn.className = 'mid-btn';
-    untapBtn.innerHTML = '<svg class="mtg-sym" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(180deg)"><path d="m512 353.5-216 0 79.1-56.3c-29.4-23.3-63.4-35-101.9-35-19.3 0-32.5 3.7-39.5 11-7.1 7.4-10.7 20.7-10.7 39.9 0 53.2 27.4 110 82.2 170.4l-62.3 63.1c-72.5-88.2-108.8-167.1-108.8-236.5 0-41.6 12.5-74.7 37.6-99.3 25.1-24.6 58.5-36.9 100-36.9 50.7 0 106 19.3 165.9 57.8l46.4-79.1 28.2 200.8" fill="currentColor"/></svg>';;
-    (function(t){ untapBtn.onclick = function(e){ e.stopPropagation(); untapTokens(t); }; })(type);
-    mid.appendChild(untapBtn);
-    mid.appendChild(tapBtn);
-    card.appendChild(mid);
-
-    // Tapped half
-    card.appendChild(makeHalf(type, 'ta'));
-
-    grid.appendChild(card);
-  });
-}
-
-var qtyCurrentId = null;
-function openQty(mod) {
-  qtyCurrentId = mod.id;
-  document.getElementById('qtyName').textContent = mod.name;
-  document.getElementById('qtyName').style.color = mod.mc;
-  document.getElementById('qtyVal').textContent = modOn[mod.id] || 1;
-  openModal('qtyBackdrop');
-}
-function closeQty() {
-  if (qtyCurrentId) {
-    modOn[qtyCurrentId] = parseInt(document.getElementById('qtyVal').textContent);
-  }
-  closeModal('qtyBackdrop');
-  qtyCurrentId = null;
-  renderMods(); render();
-}
-function adjustQty(d) {
-  var cur = parseInt(document.getElementById('qtyVal').textContent);
-  document.getElementById('qtyVal').textContent = Math.max(1, cur + d);
-}
-
-function renderMods() {
-  var grid = document.getElementById('modsGrid'); grid.innerHTML = '';
-  MODS.forEach(function(mod) {
-    var qty = modOn[mod.id];
-    var on = qty > 0;
-    var tile = document.createElement('div');
-    tile.className = 'mod-tile' + (on ? ' on' : '');
-    tile.style.setProperty('--mc', mod.mc);
-    var badgeHtml = '';
-    if (mod.mechanic === 'flitwing') {
-      var lock = getFlitwingLock();
-      if (lock !== 'ask') {
-        badgeHtml = '<div class="mod-qty-badge">🔒</div>';
+  const subCell = (art, val, isDanger, isSelfCell, onTap, activeHalf, setHalf) => (
+    <div
+      style={{
+        flex: 1, position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        backgroundImage: art && art !== 'partner' ? `url(${art})` : 'none',
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundColor: art && art !== 'partner' ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
+        WebkitTapHighlightColor: held ? 'transparent' : undefined,
+      }}
+      onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); }
+      }}
+      onPointerLeave={cancelHold} onPointerCancel={cancelHold}
+    >
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
+      {held && tapZones(onTap, activeHalf, setHalf)}
+      {isSelfCell && val === 0
+        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
+        : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
       }
-    } else if (qty > 1) {
-      badgeHtml = '<div class="mod-qty-badge">×' + qty + '</div>';
+    </div>
+  );
+
+  if (hasPartner) {
+    return (
+      <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
+        {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, activeHalfB, setActiveHalfB)}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
+      {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+    </div>
+  );
+};
+
+// --- STAT PICKER ---
+const StatPicker = ({ label, color, onConfirm, onBack }) => {
+  const [value, setValue] = useState(0);
+  const [activeHalf, setActiveHalf] = useState(null);
+  const timerRef = useRef(null);
+  const repeatRef = useRef(null);
+
+  const change = (delta) => setValue(prev => Math.max(0, prev + delta));
+
+  const startRepeat = (delta) => {
+    change(delta);
+    timerRef.current = setTimeout(() => {
+      repeatRef.current = setInterval(() => change(delta), 80);
+      timerRef.current = null;
+    }, 350);
+  };
+  const stopRepeat = () => {
+    clearTimeout(timerRef.current);
+    clearInterval(repeatRef.current);
+    timerRef.current = null;
+    repeatRef.current = null;
+    setActiveHalf(null);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
+
+      {/* Full-quadrant tap zones at z-index 0 */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); startRepeat(-1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+      <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', touchAction: 'none', zIndex: 0,
+          backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent', transition: 'background-color 0.08s' }}
+        onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); startRepeat(1); }}
+        onPointerUp={(e) => { e.preventDefault(); stopRepeat(); }}
+        onPointerLeave={stopRepeat} onPointerCancel={stopRepeat}
+      />
+
+      {/* Number + edge hints, pointerEvents none */}
+      <div style={{ flex: '1 1 0', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
+        </div>
+      </div>
+
+      {/* Big colored label, pointerEvents none */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px' }}>
+        <span style={{ fontSize: 'clamp(28px, 9vw, 52px)', fontWeight: 900, color: color, textTransform: 'uppercase', letterSpacing: '0.25em', userSelect: 'none', textShadow: `0 0 30px ${color}, 0 2px 8px rgba(0,0,0,0.8)` }}>
+          {label.replace('Final ', '')}
+        </span>
+      </div>
+
+      {/* Buttons at z-index 10 */}
+      <div style={{ flex: '0 0 auto', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 8px 10px' }}
+        onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+      >
+        <button onClick={onBack}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Back</button>
+        <button onClick={() => onConfirm(null)}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >Skip</button>
+        <button onClick={() => onConfirm(value)}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 10, color: '#fff', textTransform: 'uppercase', backgroundColor: color, border: 'none' }}
+        >Next</button>
+      </div>
+
+    </div>
+  );
+};
+
+// --- GAMEPLAY QUADRANT ---
+const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
+  // Matches the same seatIndex -> area mapping used at the top level for cross layout,
+  // so the commander damage grid mirrors the actual seating arrangement.
+  const crossAreaBySeat = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
+  const cmdAreaMapBySeat = {
+    0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+    1: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
+    2: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+    3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
+  };
+  const cmdAreaFor = (opSeatIndex) => cmdAreaMapBySeat[seatIndex]?.[opSeatIndex] ?? crossAreaBySeat[opSeatIndex];
+  const myArea = tableLayout === 'cross' ? crossAreaBySeat[seatIndex] : null;
+  const isTopBot = myArea === 'top' || myArea === 'bot';
+  const isMidLR = myArea === 'midl' || myArea === 'midr';
+  const isOut = player.status === 'done' || player.status === 'out';
+  const isWinner = isOut && player.stats.turnDied === 'win';
+  const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
+
+  // Life tap-and-hold: tap=+/-1, hold 400ms=+/-10, with highlight and delta display
+  const lifeTimerRef = useRef(null);
+  const lifeRepeatRef = useRef(null);
+  const deltaFadeRef = useRef(null);
+  const [activeHalf, setActiveHalf] = useState(null); // 'left' | 'right' | null
+  const [lifeDelta, setLifeDelta] = useState(0);
+  const [showDelta, setShowDelta] = useState(false);
+
+  const applyLifeChange = (delta) => {
+    onLifeChange(id, delta);
+    setLifeDelta(prev => prev + delta);
+    setShowDelta(true);
+    clearTimeout(deltaFadeRef.current);
+    deltaFadeRef.current = setTimeout(() => {
+      setShowDelta(false);
+      setLifeDelta(0);
+    }, 2000);
+  };
+
+  const startLifeRepeat = (delta) => {
+    lifeTimerRef.current = setTimeout(() => {
+      // hold triggered - do +/-10 once, then keep repeating +/-10
+      applyLifeChange(delta * 9); // already did +/-1 on pointerdown, so add 9 more = 10 total
+      lifeRepeatRef.current = setInterval(() => applyLifeChange(delta * 10), 400);
+      lifeTimerRef.current = null;
+    }, 400);
+  };
+  const stopLifeRepeat = (delta) => {
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
+    setActiveHalf(null);
+  };
+  const cancelLifeRepeat = () => {
+    clearTimeout(lifeTimerRef.current);
+    clearInterval(lifeRepeatRef.current);
+    lifeTimerRef.current = null;
+    lifeRepeatRef.current = null;
+    setActiveHalf(null);
+  };
+
+  const [cmdModal, setCmdModal] = useState(null);
+  const [cmdHeld, setCmdHeld] = useState(false); // when true, all cells show +/- zones
+
+  const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
+
+  const life = player.stats.life ?? 40;
+  const isLow = life <= 10;
+  const isDead = life <= 0;
+  const lifeColor = isDead ? '#ef4444' : isLow ? '#f97316' : (hasArt ? '#ffffff' : '#111111');
+  const allOpponents = opponents || [];
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <QuadrantWrapper isFlipped={isFlipped} isOut={isOut} artUrl={player.artUrl} artUrlPartner={player.artUrlPartner} isWinner={isWinner}>
+        {player.status === 'active' && (
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', touchAction: 'none', position: 'relative' }}>
+
+            {/* FULL-QUADRANT TAP ZONES - z-index 0, behind everything */}
+            {/* Left half = subtract */}
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 0, touchAction: 'none',
+                backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.22)' : 'transparent',
+                transition: 'background-color 0.08s',
+              }}
+              onPointerDown={(e) => { e.preventDefault(); setActiveHalf('left'); applyLifeChange(-1); startLifeRepeat(-1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(-1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            />
+            {/* Right half = add */}
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', zIndex: 0, touchAction: 'none',
+                backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.22)' : 'transparent',
+                transition: 'background-color 0.08s',
+              }}
+              onPointerDown={(e) => { e.preventDefault(); setActiveHalf('right'); applyLifeChange(1); startLifeRepeat(1); }}
+              onPointerUp={(e) => { e.preventDefault(); stopLifeRepeat(1); }}
+              onPointerLeave={cancelLifeRepeat} onPointerCancel={cancelLifeRepeat}
+            />
+
+            {/* ROW 1 - [Lose] [Name] [Win] - z-index 10 so it sits above the full-quadrant tap zones */}
+            <div style={{
+                flex: '0 0 auto', position: 'relative', zIndex: 10,
+                display: 'flex', flexDirection: 'row', alignItems: 'center',
+                gap: 6,
+                paddingTop: 10, paddingBottom: 40,
+                paddingLeft: isTopBot ? 10 : myArea === 'midl' ? 82 : myArea === 'midr' ? 10 : (seatIndex === 0 || seatIndex === 3) ? 95 : 10,
+                paddingRight: isTopBot ? 10 : myArea === 'midr' ? 82 : myArea === 'midl' ? 10 : (seatIndex === 1 || seatIndex === 2) ? 95 : 10,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+            >
+              <button onClick={(e) => { e.stopPropagation(); onLose(id); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+              }}>Lose</button>
+              <div style={{
+                flex: 1, minWidth: 0,
+                backgroundColor: hasArt ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.10)',
+                border: hasArt ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                borderRadius: 999, padding: '5px 14px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: hasArt ? '#fff' : '#111', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.name}</span>
+                {player.deck && <span style={{ fontSize: 8, fontWeight: 700, color: hasArt ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', userSelect: 'none' }}>{player.deck}</span>}
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); onLose(id, null, true); }} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 900,
+                padding: '6px 14px', borderRadius: 999, textTransform: 'uppercase',
+                backgroundColor: 'rgba(180,148,40,0.6)', color: '#fff',
+              }}>Win</button>
+            </div>
+            {/* ROW 2 - Life number + delta indicator (tap zones are full-quadrant overlays above) */}
+            <div style={{ flex: '1 1 0', position: 'relative', minHeight: 0, zIndex: 5, pointerEvents: 'none' }}>
+              {/* Life number */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 'clamp(56px, 21vw, 115px)', fontWeight: 900, lineHeight: 1, color: lifeColor, textShadow: hasArt ? '0px 2px 20px rgba(0,0,0,0.95)' : 'none', transition: 'color 0.2s', userSelect: 'none' }}>{life}</span>
+              </div>
+              {/* Delta - negative shown on left half, positive on right half */}
+              {showDelta && lifeDelta < 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '50%' }}>
+                  <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, userSelect: 'none', color: 'rgba(255,70,70,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>{lifeDelta}</span>
+                </div>
+              )}
+              {showDelta && lifeDelta > 0 && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '50%' }}>
+                  <span style={{ fontSize: 'clamp(18px, 7vw, 38px)', fontWeight: 900, userSelect: 'none', color: 'rgba(60,220,110,0.95)', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>+{lifeDelta}</span>
+                </div>
+              )}
+              {/* -/+ edge hints */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>-</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: hasArt ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)', userSelect: 'none', textShadow: hasArt ? '0 1px 6px rgba(0,0,0,0.9)' : 'none' }}>+</span>
+              </div>
+            </div>
+
+            {/* ROW 3 - CMD damage 2x2 grid button */}
+            <div style={{ flex: '0 0 auto', minHeight: 66, paddingTop: 32, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              {(() => {
+                const isCross = tableLayout === 'cross';
+                const orderedOpponents = (!isCross && isFlipped) ? [...opponents].reverse() : opponents;
+                const gridStyle = isMidLR
+                  ? { display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"', gap: 2, width: 62, height: 46, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
+                  : isCross
+                  ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1.6fr 1fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 2, width: 46, height: 62, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
+                  : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' };
+                return (
+                  <div
+                    onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
+                    style={gridStyle}
+                  >
+                    {orderedOpponents.map((op) => {
+                  const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
+                  const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                  const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
+                  const isSelf = op.id === id;
+                  const danger0 = val0 >= 21;
+                  const danger1 = val1 >= 21;
+
+                  const miniCell = (art, val, isDanger, isSelfCell) => (
+                    <div style={{
+                      flex: 1, position: 'relative', overflow: 'hidden',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundImage: art ? `url(${art})` : 'none',
+                      backgroundSize: 'cover', backgroundPosition: 'center',
+                      backgroundColor: art ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.85)' : 'rgba(80,80,80,0.5)'),
+                    }}>
+                      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.65)' : 'rgba(0,0,0,0.55)' }} />
+                      {isSelfCell && val === 0
+                        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+                        : <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
+                      }
+                    </div>
+                  );
+
+                  if (hasPartner) {
+                    return (
+                      <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', flexDirection: 'row', gridArea: isCross ? cmdAreaFor(op.id) : undefined }}>
+                        {miniCell(op.artUrl, val0, danger0, isSelf)}
+                        {miniCell(op.artUrlPartner, val1, danger1, isSelf)}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={op.id} style={{ borderRadius: 4, overflow: 'hidden', display: 'flex', gridArea: isCross ? cmdAreaFor(op.id) : undefined }}>
+                      {miniCell(op.artUrl, val0, danger0, isSelf)}
+                    </div>
+                  );
+                })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* CMD DAMAGE MODAL */}
+            {cmdModal === 'grid' && (
+              <div
+                style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onClick={() => { setCmdModal(null); setCmdHeld(false); }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
+                <div
+                  style={isMidLR
+                    ? { display: 'grid', gridTemplateColumns: '0.8fr 1.4fr 0.8fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"', gap: 8, width: 'clamp(240px, 58vw, 320px)', height: 'clamp(200px, 52vw, 280px)' }
+                    : tableLayout === 'cross'
+                    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.8fr 1.4fr 0.8fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(240px, 58vw, 320px)' }
+                    : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 8, width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' }}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                >
+                  {(tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
+                    const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
+                    const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+                    const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
+                    const isSelf = op.id === id;
+                    return (
+                      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined }}>
+                      <CmdCell
+                        value={val0}
+                        value2={val1}
+                        hasPartner={hasPartner}
+                        danger={val0 >= 21}
+                        danger2={val1 >= 21}
+                        isSelf={isSelf}
+                        artUrl={op.artUrl}
+                        artUrlPartner={op.artUrlPartner}
+                        onChange={(delta) => {
+                          const key = hasPartner ? `${op.id}_0` : op.id;
+                          const current = (player.stats.cmdDamage || {})[key] ?? 0;
+                          const actual = delta > 0 ? delta : Math.max(-current, delta);
+                          if (actual === 0) return;
+                          onCmdDamage(id, key, actual);
+                          onLifeChange(id, -actual);
+                        }}
+                        onChange2={(delta) => {
+                          const key2 = `${op.id}_1`;
+                          const current2 = (player.stats.cmdDamage || {})[key2] ?? 0;
+                          const actual2 = delta > 0 ? delta : Math.max(-current2, delta);
+                          if (actual2 === 0) return;
+                          onCmdDamage(id, key2, actual2);
+                          onLifeChange(id, -actual2);
+                        }}
+                        held={cmdHeld}
+                        onHold={setCmdHeld}
+                      />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+        
+        {player.status === 'questionnaire' && (
+          <div className="w-full h-full" style={{ position: 'relative' }}>
+            {/* Dim the background art */}
+            <div style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 }} />
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <StatPicker
+                key={player.step}
+                label={['Final Lands', 'Final Rocks', 'Final Dorks'][player.step]}
+                color={statColors[player.step]}
+                onConfirm={(val) => onLose(id, val)}
+                onBack={() => onBackStep(id)}
+              />
+            </div>
+          </div>
+        )}
+
+        {isOut && (
+          <div className="relative flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
+            <div className="opacity-10 scale-75 md:scale-150">
+              <h1 className="text-[5rem] md:text-[11rem] font-black italic uppercase tracking-tighter -rotate-12" style={{ color: isWinner ? '#D4AF37' : '#FFFFFF' }}>
+                {isWinner ? 'WINNER' : 'OUT'}
+              </h1>
+            </div>
+            {!isWinner && (
+              <p className="absolute inset-0 flex items-center justify-center text-white/40 font-black text-[12px] md:text-[20px] uppercase tracking-[0.4em]">
+                Eliminated Turn {player.stats.turnDied}
+              </p>
+            )}
+          </div>
+        )}
+      </QuadrantWrapper>
+    </div>
+  );
+};
+
+// --- MAIN APP ---
+const IS_REAL = new URLSearchParams(window.location.search).get('key') === 'toski';
+const submitUrl = IS_REAL 
+  ? 'https://edh-backend.onrender.com/submit'
+  : 'https://edh-backend.onrender.com/submit-demo';
+
+// --- SETTINGS ROW ---
+const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-4 px-5 py-5 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/10'} ${!last ? 'mb-3' : ''}`}
+    style={{
+      background: destructive ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.06)',
+      border: destructive ? '1px solid rgba(248,113,113,0.2)' : '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 18,
+    }}
+  >
+    <span style={{ width: 26, height: 26, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.65)' }}>{icon}</span>
+    <span className={`flex-1 text-left font-bold text-[16px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
+    {value && <span className="text-[13px] font-bold text-white/40 uppercase tracking-wide">{value}</span>}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2.5">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  </button>
+);
+
+export default function App() {
+  const [gameStarted, setGameStarted] = useState(false);
+  const [turn, setTurn] = useState(1);
+  const [playerDataMap, setPlayerDataMap] = useState([]);
+  const [pendingGames, setPendingGames] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_games') || '[]'));
+  const [pendingEdits, setPendingEdits] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_edits') || '[]'));
+  const [isSyncingEdits, setIsSyncingEdits] = useState(false);
+  const syncPendingRef = useRef(() => {});
+  const syncPendingEditsRef = useRef(() => {});
+  const [firstSeatIndex, setFirstSeatIndex] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [mulliganType, setMulliganType] = useState('');
+  
+  const clockwiseOrder = [0, 1, 3, 2];
+
+  const initialSeats = Array(4).fill(null).map((_, i) => ({ 
+    id: i, name: '', deck: '', artUrl: '', artUrlPartner: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
+    stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0, life: 40, cmdDamage: {} } 
+  }));
+  const [seats, setSeats] = useState(initialSeats);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    const CACHE_VERSION = 'v2_artUrlPartner';
+    const cachedVersion = localStorage.getItem('mtg_cache_version');
+    
+    // Clear stale cache if version doesn't match
+    if (cachedVersion !== CACHE_VERSION) {
+      localStorage.removeItem('mtg_player_cache');
+      localStorage.setItem('mtg_cache_version', CACHE_VERSION);
     }
-    tile.innerHTML =
-      '<div class="mod-art-wrap">' +
-        '<img class="mod-art" src="' + resolveArtPath(mod.img, mod.id) + '" alt="' + mod.name + '" onerror="this.style.background=\'#1e2330\'">' +
-        '<div class="mod-art-label">' + mod.name + '</div>' +
-      '</div>' +
-      badgeHtml;
+    
+    const cachedData = localStorage.getItem('mtg_player_cache');
+    if (cachedData) {
+      try {
+        setPlayerDataMap(JSON.parse(cachedData));
+      } catch (e) {
+        console.error("Cache corrupted:", e);
+      }
+    }
 
-    // tap = toggle on/off, hold = open qty picker
-    var holdTimer = null;
-    var holdFired = false;
-    (function(m) {
-      tile.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-      var startX, startY;
-      tile.addEventListener('pointerdown', function(e) {
-        holdFired = false;
-        startX = e.clientX; startY = e.clientY;
-        holdTimer = setTimeout(function() {
-          holdFired = true;
-          if (modOn[m.id] === 0) modOn[m.id] = 1;
-          if (m.mechanic === 'flitwing') {
-            openFlitwingLockPopup();
-          } else {
-            openQty(m);
-          }
-          renderMods(); render();
-        }, 500);
-      });
-      tile.addEventListener('pointermove', function(e) {
-        if (holdTimer && (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8)) {
-          clearTimeout(holdTimer);
-          holdTimer = null;
-          holdFired = true; // treat as scroll, not a tap
+    fetch('https://edh-backend.onrender.com/players')
+      .then(r => r.json())
+      .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
+        setPlayerDataMap(d);
+        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+      })
+      .catch(() => console.log("Offline: Using cached player data"));
+
+    if (pendingGames.length > 0) syncPending();
+    if (pendingEdits.length > 0) syncPendingEdits();
+
+    const handleOnline = () => { syncPendingRef.current(); syncPendingEditsRef.current(); };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
+  useEffect(() => {
+    let wakeLock = null;
+    let audioContext = null;
+    let silentSource = null;
+
+    const startSilentAudio = () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+        silentSource = audioContext.createBufferSource();
+        silentSource.buffer = buffer;
+        silentSource.loop = true;
+        silentSource.connect(audioContext.destination);
+        silentSource.start();
+      } catch (err) {
+        console.log('Silent audio failed:', err);
+      }
+    };
+
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake lock acquired');
+          return;
+        } catch (err) {
+          console.log('Wake lock failed, using audio fallback');
         }
-      });
-      tile.addEventListener('pointerup', function() {
-        clearTimeout(holdTimer);
-        if (!holdFired) {
-          modOn[m.id] = modOn[m.id] > 0 ? 0 : 1;
-          renderMods(); render();
+      }
+      startSilentAudio();
+    };
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await requestWakeLock();
+        if (audioContext?.state === 'suspended') audioContext.resume();
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      requestWakeLock();
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+    };
+
+    document.addEventListener('pointerdown', handleFirstInteraction);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleFirstInteraction);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) wakeLock.release();
+      if (silentSource) silentSource.stop();
+      if (audioContext) audioContext.close();
+    };
+  }, []);
+
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinHighlight, setSpinHighlight] = useState(null);
+  const [winnerHighlight, setWinnerHighlight] = useState(null);
+
+  const handleRandom = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+    const winner = Math.floor(Math.random() * 4);
+    // Spin: start fast, slow down, land on winner
+    let step = 0;
+    const totalSteps = 16;
+    const delays = Array.from({length: totalSteps}, (_, i) => {
+      // Start at 60ms, slow to 300ms
+      return Math.floor(60 + (240 * (i / totalSteps) ** 2));
+    });
+    let current = Math.floor(Math.random() * 4);
+    const spin = () => {
+      setSpinHighlight(current);
+      step++;
+      if (step < totalSteps) {
+        // Last few steps: guide toward winner
+        if (step >= totalSteps - 4) {
+          current = (winner + (totalSteps - step)) % 4;
+        } else {
+          current = (current + 1) % 4;
         }
-      });
-      tile.addEventListener('pointerleave',  function() { clearTimeout(holdTimer); });
-      tile.addEventListener('pointercancel', function() { clearTimeout(holdTimer); });
-    })(mod);
-
-    grid.appendChild(tile);
-  });
-
-  var actionsDiv = document.createElement('div');
-  actionsDiv.style.cssText = 'display:flex;flex-direction:column;gap:5px;aspect-ratio:3/4;';
-  var reset = document.createElement('button');
-  reset.className = 'mod-action-tile';
-  reset.style.cssText = 'aspect-ratio:unset;flex:1;background:rgba(232,200,75,0.15);border-color:rgba(232,200,75,0.5);color:rgba(232,200,75,0.9);';
-  reset.innerHTML = 'RESET<br>ALL';
-  reset.onclick = function(){ openConfirm(); };
-  var closeBtn = document.createElement('button');
-  closeBtn.className = 'mod-action-tile';
-  closeBtn.style.cssText = 'aspect-ratio:unset;flex:1;background:rgba(220,70,60,0.15);border-color:rgba(220,70,60,0.5);color:rgba(255,100,90,0.9);';
-  closeBtn.innerHTML = 'CLOSE';
-  closeBtn.onclick = function(){ closeDrawer(); };
-  actionsDiv.appendChild(reset);
-  actionsDiv.appendChild(closeBtn);
-  grid.appendChild(actionsDiv);
-}
-
-function openDrawer()  { openModal('backdrop');  openModal('drawer'); }
-function closeDrawer() { closeModal('backdrop'); closeModal('drawer'); }
-
-// ── Settings screen ───────────────────────────────────────────────
-var pendingTokens = [];   // working copy while settings is open
-var pendingMods = [];
-
-function forceRefresh() {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    // Tell the SW to check for an update, then reload once it activates
-    navigator.serviceWorker.getRegistration().then(function(reg) {
-      if (reg) {
-        reg.update().then(function() {
-          // If a new SW is waiting, skip waiting and reload
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
-          window.location.reload(true);
-        });
+        setTimeout(spin, delays[step]);
       } else {
-        window.location.reload(true);
+        // Land on winner - show gold flash
+        setSpinHighlight(null);
+        setWinnerHighlight(winner);
+        setTimeout(() => {
+          setIsSpinning(false);
+          setWinnerHighlight(null);
+          handleSetFirst(winner);
+        }, 1500);
       }
+    };
+    setTimeout(spin, delays[0]);
+  };
+
+  const handleResetAll = () => {
+    setFirstSeatIndex(null);
+    setMulliganType('');
+    setSeats(initialSeats);
+  };
+
+  const handleSetFirst = (idx) => {
+    if (idx === null) { handleResetAll(); return; }
+    setFirstSeatIndex(idx);
+    setSeats(prev => {
+      const ns = [...prev];
+      const startPos = clockwiseOrder.indexOf(idx);
+      clockwiseOrder.forEach((seatId, i) => { ns[seatId].order = ((i - startPos + 4) % 4) + 1; });
+      return ns;
     });
-  } else {
-    window.location.reload(true);
-  }
-}
-
-function openSettings() {
-  pendingTokens = TT.slice();
-  pendingMods = MODS.map(function(m){ return m.id; });
-  renderProfileSelect();
-  renderSettingsTokens();
-  renderSettingsMods();
-  openModal('settingsBackdrop');
-}
-function closeSettings() {
-  closeModal('settingsBackdrop');
-}
-
-function renderProfileSelect() {
-  var sel = document.getElementById('profileSelect');
-  sel.innerHTML = '';
-  profiles.forEach(function(p) {
-    var opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
-  });
-  sel.value = activeProfileId;
-  sel.onchange = function() {
-    if (sel.value === activeProfileId) return;
-    pendingSwitchProfileId = sel.value;
-    openSwitchProfileConfirm();
   };
-}
 
-// ── Alt art support ──────────────────────────────────────────────
-// For any token/mod image "name.jpg", if "name-alt.jpg" also exists in the
-// img/ folder, a star button appears letting the user switch to it.
-// Choice is stored per-profile under profile.artVariants = { tokenId/modId: 'default'|'alt' }
-function altPathFor(basePath) {
-  return basePath.replace(/\.jpg$/i, '-alt.jpg');
-}
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [tableLayout, setTableLayout] = useState(() => localStorage.getItem('mtg_table_layout') || 'grid');
+  const [showPlayerEditor, setShowPlayerEditor] = useState(false);
+  const [expandedPlayer, setExpandedPlayer] = useState(null);
+  const [editingDeck, setEditingDeck] = useState(null); // { isNew, originalDeck, deck, artUrl, artUrlPartner, hasPartner, colors[] }
+  const [editorBusy, setEditorBusy] = useState(false);
 
-var altArtAvailable = {}; // cache of probed results: { basePath: true|false }
-function probeAltArt(basePath, callback) {
-  if (altArtAvailable.hasOwnProperty(basePath)) {
-    callback(altArtAvailable[basePath]);
-    return;
-  }
-  var img = new Image();
-  var altPath = altPathFor(basePath);
-  img.onload = function() { altArtAvailable[basePath] = true;  callback(true); };
-  img.onerror = function() { altArtAvailable[basePath] = false; callback(false); };
-  img.src = altPath;
-}
+  const toggleTableLayout = () => {
+    setTableLayout(prev => {
+      const next = prev === 'grid' ? 'cross' : 'grid';
+      localStorage.setItem('mtg_table_layout', next);
+      return next;
+    });
+  };
+  const selectTableLayout = (mode) => {
+    setTableLayout(mode);
+    localStorage.setItem('mtg_table_layout', mode);
+  };
 
-function getArtVariant(key) {
-  var p = getActiveProfile();
-  if (!p || !p.artVariants) return 'default';
-  return p.artVariants[key] || 'default';
-}
-function setArtVariant(key, variant) {
-  var p = getActiveProfile();
-  if (!p) return;
-  if (!p.artVariants) p.artVariants = {};
-  p.artVariants[key] = variant;
-  persistProfileData();
-}
-function resolveArtPath(basePath, key) {
-  return getArtVariant(key) === 'alt' ? altPathFor(basePath) : basePath;
-}
+  const refetchPlayers = () => {
+    fetch('https://edh-backend.onrender.com/players')
+      .then(r => r.json())
+      .then(d => {
+        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
+        setPlayerDataMap(d);
+        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+      })
+      .catch(() => {});
+  };
 
-function renderSettingsTokens() {
-  var grid = document.getElementById('settingsTokenGrid');
-  grid.innerHTML = '';
-  Object.keys(TOKEN_LIBRARY).forEach(function(tokenId) {
-    var t = TOKEN_LIBRARY[tokenId];
-    var isOn = pendingTokens.indexOf(tokenId) !== -1;
-    var atCap = pendingTokens.length >= 4 && !isOn;
-    var tile = document.createElement('div');
-    tile.className = 'settings-token-tile' + (isOn ? ' on' : '') + (atCap ? ' disabled' : '');
-    tile.style.setProperty('--tc', t.c);
-    var artImg = document.createElement('img');
-    artImg.className = 'settings-token-art';
-    artImg.alt = '';
-    artImg.src = resolveArtPath(t.img, tokenId);
-    var checkDiv = document.createElement('div');
-    checkDiv.className = 'settings-token-check';
-    checkDiv.textContent = '✓';
-    var labelDiv = document.createElement('div');
-    labelDiv.className = 'settings-token-label';
-    labelDiv.textContent = t.label;
-    tile.appendChild(artImg);
-    tile.appendChild(checkDiv);
-    tile.appendChild(labelDiv);
-    tile.onclick = function() {
-      var idx = pendingTokens.indexOf(tokenId);
-      if (idx !== -1) {
-        pendingTokens.splice(idx, 1);
-      } else if (pendingTokens.length < 4) {
-        pendingTokens.push(tokenId);
+  // Mirrors what each editor endpoint does server-side, so the UI reflects the
+  // change immediately instead of waiting on a round-trip (or being stuck until
+  // the connection comes back).
+  const applyEditOptimistically = (path, body) => {
+    setPlayerDataMap(prev => {
+      let next = prev;
+      if (path === '/players/add_player') {
+        next = [...prev, { player_name: body.player_name, decks: [], pfp: '' }];
+      } else if (path === '/players/delete_player') {
+        next = prev.filter(p => p.player_name !== body.player_name);
+      } else if (path === '/players/add_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: [...(p.decks || []), { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }] }
+          : p);
+      } else if (path === '/players/update_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: (p.decks || []).map(d => d.deck === body.original_deck
+              ? { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }
+              : d) }
+          : p);
+      } else if (path === '/players/delete_deck') {
+        next = prev.map(p => p.player_name === body.player_name
+          ? { ...p, decks: (p.decks || []).filter(d => d.deck !== body.deck) }
+          : p);
+      } else if (path === '/players/update_pfp') {
+        next = prev.map(p => p.player_name === body.player_name ? { ...p, pfp: body.art_url } : p);
       }
-      renderSettingsTokens();
-      updateTokenPickCount();
-    };
-    grid.appendChild(tile);
-
-    // Probe for alt art; if found, add the star button
-    probeAltArt(t.img, function(tokenIdClosure, tileClosure, artImgClosure, exists) {
-      if (!exists) return;
-      var starBtn = document.createElement('div');
-      starBtn.className = 'settings-token-altbtn' + (getArtVariant(tokenIdClosure) === 'alt' ? ' active' : '');
-      starBtn.textContent = '★';
-      starBtn.onclick = function(e) {
-        e.stopPropagation();
-        var current = getArtVariant(tokenIdClosure);
-        var next = current === 'alt' ? 'default' : 'alt';
-        setArtVariant(tokenIdClosure, next);
-        artImgClosure.src = resolveArtPath(t.img, tokenIdClosure);
-        starBtn.className = 'settings-token-altbtn' + (next === 'alt' ? ' active' : '');
-        // also refresh the main grid art if this token is active
-        if (TT.indexOf(tokenIdClosure) !== -1) buildGrid();
-      };
-      tileClosure.appendChild(starBtn);
-    }.bind(null, tokenId, tile, artImg));
-  });
-  updateTokenPickCount();
-}
-function updateTokenPickCount() {
-  document.getElementById('tokenPickCount').textContent = '(' + pendingTokens.length + '/4)';
-}
-
-function renderSettingsMods() {
-  var list = document.getElementById('settingsModList');
-  list.innerHTML = '';
-  MOD_LIBRARY.forEach(function(mod) {
-    var isOn = pendingMods.indexOf(mod.id) !== -1;
-    var row = document.createElement('div');
-    row.className = 'settings-mod-row' + (isOn ? ' on' : '');
-    row.style.setProperty('--mc', mod.mc);
-    var tl = TOKEN_LIBRARY;
-    var tagText = 'tokens → 2× tokens';
-    if (mod.mechanic === 'manufactor') tagText = 'clue, food, & treasure → clue, food, & treasure × 3';
-    if (mod.mechanic === 'addToken')          tagText = 'tokens → tokens + ' + getTokenDisplayLabel(mod.addsTokenType).toLowerCase();
-    if (mod.mechanic === 'addTokenIfPresent')  tagText = tl[mod.triggerTokenType].label.toLowerCase() + 's → ' + tl[mod.triggerTokenType].label.toLowerCase() + 's + 1';
-    if (mod.mechanic === 'replaceToken')      tagText = tl[mod.triggersOnType].label.toLowerCase() + ' → ' + tl[mod.triggersOnType].label.toLowerCase() + ' + ' + getTokenDisplayLabel(mod.addsTokenType).toLowerCase();
-    if (mod.mechanic === 'vending')           tagText = 'sac a food: tapped treasure';
-    if (mod.mechanic === 'flitwing')          tagText = 'tokens → may become all clues';
-    if (mod.mechanic === 'predicateAdd')      tagText = (mod.conditionPredicate === 'isArtifact' ? 'artifact' : 'creature') + ' tokens → also + ' + getTokenDisplayLabel(mod.addsTokenType).toLowerCase();
-    if (mod.mechanic === 'wildcardReplace')   tagText = 'X tokens → X tokens + X ' + getTokenDisplayLabel(mod.addsTokenType).toLowerCase() + 's';
-    if (mod.mechanic === 'predicateMultiply') tagText = 'creature tokens → creature tokens × ' + mod.multiplyBy;
-
-    var thumbImg = document.createElement('img');
-    thumbImg.className = 'settings-mod-thumb';
-    thumbImg.alt = '';
-    thumbImg.onerror = function(){ thumbImg.style.background = '#1e2330'; };
-    thumbImg.src = resolveArtPath(mod.img, mod.id);
-
-    var infoDiv = document.createElement('div');
-    infoDiv.className = 'settings-mod-info';
-    infoDiv.innerHTML =
-      '<div class="settings-mod-name">' + mod.name + '</div>' +
-      '<div class="settings-mod-tag">' + tagText + '</div>';
-
-    var toggleDiv = document.createElement('div');
-    toggleDiv.className = 'settings-mod-toggle';
-
-    row.appendChild(thumbImg);
-    row.appendChild(infoDiv);
-    row.appendChild(toggleDiv);
-
-    row.onclick = function() {
-      var idx = pendingMods.indexOf(mod.id);
-      if (idx !== -1) pendingMods.splice(idx, 1);
-      else pendingMods.push(mod.id);
-      renderSettingsMods();
-    };
-    list.appendChild(row);
-
-    // Probe for alt art; if found, insert the star button before the toggle
-    probeAltArt(mod.img, function(modClosure, thumbImgClosure, toggleDivClosure, rowClosure, exists) {
-      if (!exists) return;
-      var starBtn = document.createElement('div');
-      starBtn.className = 'alt-art-btn' + (getArtVariant(modClosure.id) === 'alt' ? ' active' : '');
-      starBtn.textContent = '★';
-      starBtn.onclick = function(e) {
-        e.stopPropagation();
-        var current = getArtVariant(modClosure.id);
-        var next = current === 'alt' ? 'default' : 'alt';
-        setArtVariant(modClosure.id, next);
-        thumbImgClosure.src = resolveArtPath(modClosure.img, modClosure.id);
-        starBtn.className = 'alt-art-btn' + (next === 'alt' ? ' active' : '');
-        // refresh the in-game mods drawer if this mod is currently enabled
-        if (MODS.some(function(m){ return m.id === modClosure.id; })) renderMods();
-      };
-      rowClosure.insertBefore(starBtn, toggleDivClosure);
-    }.bind(null, mod, thumbImg, toggleDiv, row));
-  });
-}
-
-function saveSettings() {
-  if (pendingTokens.length === 0) {
-    alert('Select at least 1 token type.');
-    return;
-  }
-  TT = canonicalTokenOrder(pendingTokens);
-  MODS = MOD_LIBRARY.filter(function(m){ return pendingMods.indexOf(m.id) !== -1; });
-
-  // Rebuild state for new token set, preserving counts for tokens that survived
-  var newState = {};
-  TT.forEach(function(t){ newState[t] = state[t] || { u:0, ta:0 }; });
-  state = newState;
-
-  // Rebuild modOn for new mod set, preserving quantities for mods that survived
-  var newModOn = {};
-  MODS.forEach(function(m){ newModOn[m.id] = modOn[m.id] || 0; });
-  modOn = newModOn;
-
-  persistCurrentBoardToProfile();
-  rebuildCreateDropdown();
-  updateGenericFlagsVisibility();
-  buildGrid();
-  renderMods();
-  render();
-  closeSettings();
-}
-
-// ── Profile management ───────────────────────────────────────────
-function openNewProfilePrompt() {
-  document.getElementById('profileNamePromptTitle').textContent = 'New Profile';
-  document.getElementById('profileNameInput').value = '';
-  document.getElementById('profileNameConfirmBtn').textContent = 'CREATE';
-  profileNamePromptMode = 'create';
-  openModal('profileNameBackdrop');
-}
-function openRenamePrompt() {
-  var p = getActiveProfile();
-  if (!p) return;
-  document.getElementById('profileNamePromptTitle').textContent = 'Rename Profile';
-  document.getElementById('profileNameInput').value = p.name;
-  document.getElementById('profileNameConfirmBtn').textContent = 'SAVE';
-  profileNamePromptMode = 'rename';
-  openModal('profileNameBackdrop');
-}
-function closeProfileNamePrompt() {
-  closeModal('profileNameBackdrop');
-}
-var profileNamePromptMode = 'create';
-function confirmProfileName() {
-  var name = document.getElementById('profileNameInput').value.trim();
-  if (!name) { alert('Please enter a name.'); return; }
-
-  if (profileNamePromptMode === 'rename') {
-    var p = getActiveProfile();
-    if (p) { p.name = name; persistProfileData(); renderProfileSelect(); }
-  } else {
-    var newProfile = {
-      id: makeProfileId(),
-      name: name,
-      activeTokens: pendingTokens.length ? pendingTokens.slice() : Object.keys(TOKEN_LIBRARY).slice(0,4),
-      enabledMods: [],
-      flitwingLock: 'ask',
-      artVariants: {}
-    };
-    profiles.push(newProfile);
-    activeProfileId = newProfile.id;
-    persistProfileData();
-    loadActiveProfileIntoApp();
-    renderProfileSelect();
-    pendingTokens = TT.slice();
-    pendingMods = MODS.map(function(m){ return m.id; });
-    renderSettingsTokens();
-    renderSettingsMods();
-  }
-  closeProfileNamePrompt();
-}
-
-function openDeleteProfileConfirm() {
-  var p = getActiveProfile();
-  if (!p) return;
-  document.getElementById('deleteProfileSub').textContent = 'Delete "' + p.name + '"? This cannot be undone.';
-  openModal('deleteProfileBackdrop');
-}
-function closeDeleteProfileConfirm() {
-  closeModal('deleteProfileBackdrop');
-}
-function confirmDeleteProfile() {
-  var idx = profiles.findIndex(function(p){ return p.id === activeProfileId; });
-  var deletedId = activeProfileId;
-  if (idx !== -1) profiles.splice(idx, 1);
-  if (deletedId) clearBoardState(deletedId); // don't leave an orphaned board save behind
-
-  if (profiles.length === 0) {
-    // No profiles left — drop back to first-launch gate
-    activeProfileId = null;
-    persistProfileData();
-    closeDeleteProfileConfirm();
-    closeSettings();
-    showFirstLaunch();
-    return;
-  }
-
-  activeProfileId = profiles[0].id;
-  persistProfileData();
-  loadActiveProfileIntoApp();
-  renderProfileSelect();
-  pendingTokens = TT.slice();
-  pendingMods = MODS.map(function(m){ return m.id; });
-  renderSettingsTokens();
-  renderSettingsMods();
-  closeDeleteProfileConfirm();
-}
-
-var pendingSwitchProfileId = null;
-function openSwitchProfileConfirm() { openModal('switchProfileBackdrop'); }
-function closeSwitchProfileConfirm() {
-  closeModal('switchProfileBackdrop');
-  renderProfileSelect(); // revert dropdown to actual active profile if cancelled
-}
-function confirmSwitchProfile() {
-  activeProfileId = pendingSwitchProfileId;
-  pendingSwitchProfileId = null;
-  persistProfileData();
-  loadActiveProfileIntoApp();
-  renderProfileSelect();
-  pendingTokens = TT.slice();
-  pendingMods = MODS.map(function(m){ return m.id; });
-  renderSettingsTokens();
-  renderSettingsMods();
-  closeModal('switchProfileBackdrop');
-}
-
-function loadActiveProfileIntoApp() {
-  var p = getActiveProfile();
-  if (!p) return;
-  TT = canonicalTokenOrder(p.activeTokens);
-  MODS = MOD_LIBRARY.filter(function(m){ return p.enabledMods.indexOf(m.id) !== -1; });
-  state = {}; TT.forEach(function(t){ state[t] = { u:0, ta:0 }; });
-  modOn = {}; MODS.forEach(function(m){ modOn[m.id] = 0; });
-  actionHistory = []; // a different deck's history shouldn't carry over
-
-  // Restore this profile's saved in-progress board, if it has one
-  var savedBoard = loadBoardState(p.id);
-  if (savedBoard) {
-    TT.forEach(function(t){ if (savedBoard.state && savedBoard.state[t]) state[t] = savedBoard.state[t]; });
-    MODS.forEach(function(m){ if (savedBoard.modOn && typeof savedBoard.modOn[m.id] === 'number') modOn[m.id] = savedBoard.modOn[m.id]; });
-  }
-
-  rebuildCreateDropdown();
-  updateGenericFlagsVisibility();
-  buildGrid();
-  renderMods();
-  render();
-}
-
-// ── First launch gate ────────────────────────────────────────────
-function showFirstLaunch() { openModal('firstLaunchBackdrop'); }
-function hideFirstLaunch()  { closeModal('firstLaunchBackdrop'); }
-function createFirstProfile() {
-  var name = document.getElementById('firstLaunchName').value.trim();
-  if (!name) { alert('Please enter a deck name.'); return; }
-  var newProfile = {
-    id: makeProfileId(),
-    name: name,
-    activeTokens: ['clue','food','treasure','mutagen'],
-    enabledMods: [],
-    flitwingLock: 'ask',
-    artVariants: {}
+      localStorage.setItem('mtg_player_cache', JSON.stringify(next));
+      return next;
+    });
   };
-  profiles.push(newProfile);
-  activeProfileId = newProfile.id;
-  persistProfileData();
-  loadActiveProfileIntoApp();
-  hideFirstLaunch();
-}
 
-if (!getActiveProfile()) {
-  showFirstLaunch();
-}
+  const editorCall = async (path, body) => {
+    setEditorBusy(true);
+    // Apply locally right away - the UI never waits on the network for this.
+    applyEditOptimistically(path, body);
+    try {
+      const r = await fetch(`https://edh-backend.onrender.com${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error('Request failed');
+      refetchPlayers(); // reconcile with the server's canonical state
+    } catch (e) {
+      // Offline (or the backend is unreachable/cold-starting) - queue it and
+      // retry automatically once we're back online, same pattern as game submission.
+      setPendingEdits(prev => {
+        const next = [...prev, { id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, path, body }];
+        localStorage.setItem('pending_mtg_edits', JSON.stringify(next));
+        return next;
+      });
+    } finally {
+      setEditorBusy(false);
+    }
+  };
 
-buildGrid(); renderMods(); render(); rebuildCreateDropdown();
-  updateGenericFlagsVisibility();
+  const syncPendingEdits = async () => {
+    if (isSyncingEdits || pendingEdits.length === 0) return;
+    setIsSyncingEdits(true);
+    const edits = [...pendingEdits];
+    let remaining = [...pendingEdits];
+    for (const edit of edits) {
+      try {
+        const r = await fetch(`https://edh-backend.onrender.com${edit.path}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edit.body)
+        });
+        if (r.ok) {
+          remaining = remaining.filter(e => e.id !== edit.id);
+          setPendingEdits([...remaining]);
+          localStorage.setItem('pending_mtg_edits', JSON.stringify(remaining));
+        } else { break; }
+      } catch (e) { break; }
+    }
+    setIsSyncingEdits(false);
+    refetchPlayers(); // pick up the server's canonical state after syncing
+  };
+  syncPendingEditsRef.current = syncPendingEdits;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
+  // Layout config: maps visual grid position -> seat index + flip + grid-area name
+  const layoutConfig = tableLayout === 'cross'
+    ? [
+        { seatIndex: 0, area: 'top', flipped: true },
+        { seatIndex: 1, area: 'midl', flipped: false },
+        { seatIndex: 2, area: 'midr', flipped: false },
+        { seatIndex: 3, area: 'bot', flipped: false },
+      ]
+    : [
+        { seatIndex: 0, area: 'tl', flipped: true },
+        { seatIndex: 1, area: 'tr', flipped: true },
+        { seatIndex: 2, area: 'bl', flipped: false },
+        { seatIndex: 3, area: 'br', flipped: false },
+      ];
+  const gridTemplate = tableLayout === 'cross'
+    ? { gridTemplateColumns: '0.85fr 1.3fr 0.85fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
+    : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"tl tr" "bl br"' };
+
+  // Cross layout: outer 90deg app rotation turns a horizontal top/bottom strip into a vertical
+  // one, so we counter-rotate the content of those cells back. top/bot need a 90deg swap (so
+  // their pre-rotation box is sized using the outer container's vh/vw units, matching the actual
+  // fraction of the grid they occupy), midr just needs a straight 180 flip.
+  const topBotWidthPct = (0.85 / 3) * 100;
+  const crossRotationFix = {
+    top: { deg: -90, width: '100svw', height: `${topBotWidthPct}svh` },
+    bot: { deg: -90, width: '100svw', height: `${topBotWidthPct}svh` },
+    midl: { deg: 180, width: '100%', height: '100%' },
+  };
+
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    // Hold (400ms) = decrement turn
+    timerRef.current = setTimeout(() => { 
+      setTurn(prev => Math.max(1, prev - 1)); 
+      timerRef.current = null; 
+    }, 400);
+  };
+
+  const handlePointerUp = (e) => {
+    e.preventDefault();
+    if (timerRef.current) { 
+      clearTimeout(timerRef.current); 
+      if (gameStarted) setTurn(prev => prev + 1); 
+      else if (allFilled) setGameStarted(true);
+      timerRef.current = null; 
+    }
+  };
+
+  const updateSeat = (id, field, value) => {
+    setSeats(prev => prev.map((s, idx) => {
+      if (idx !== id) return s; // unrelated seats keep the exact same reference
+      if (field === 'startLands') return { ...s, stats: { ...s.stats, startLands: value } };
+      return { ...s, [field]: value };
+    }));
+  };
+
+  const handleLifeChange = (id, delta) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      ns[id] = { ...ns[id], stats: { ...ns[id].stats, life: (ns[id].stats.life ?? 40) + delta } };
+      return ns;
+    });
+  };
+
+  const handleCmdDamage = (targetId, sourceId, deltaOrReset) => {
+    setSeats(prev => {
+      const ns = [...prev];
+      const current = ns[targetId].stats.cmdDamage || {};
+      const newVal = deltaOrReset === 'reset' ? 0 : Math.max(0, (current[sourceId] || 0) + deltaOrReset);
+      ns[targetId] = { ...ns[targetId], stats: { ...ns[targetId].stats, cmdDamage: { ...current, [sourceId]: newVal } } };
+      return ns;
+    });
+  };
+
+  const handleLose = (id, val = null, isWin = false) => {
+    const ns = [...seats];
+    if (isWin) { 
+      ns.forEach((p, idx) => { 
+        if (p.status === 'active') { 
+          p.status = 'questionnaire'; 
+          p.stats.turnDied = (idx === id) ? 'win' : turn; 
+        } 
+      }); 
+    } else {
+      const p = ns[id];
+      if (p.status === 'active') { p.status = 'questionnaire'; p.stats.turnDied = turn; }
+      else { p.stats[['lands', 'rocks', 'dorks'][p.step]] = val; p.step += 1; if (p.step > 2) p.status = 'done'; }
+    }
+    setSeats(ns);
+  };
+
+  const handleBackStep = (id) => {
+    const ns = [...seats];
+    const p = ns[id];
+    if (p.step === 0) { p.status = 'active'; p.stats.turnDied = 0; } else p.step -= 1;
+    setSeats(ns);
+  };
+
+  const syncPending = async () => {
+    if (isSyncing || pendingGames.length === 0) return;
+    setIsSyncing(true);
+    const games = [...pendingGames];
+    let remaining = [...pendingGames];
+    for (const g of games) {
+      try {
+        const r = await fetch(submitUrl, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(g) 
+        });
+        if (r.ok) {
+          remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
+          setPendingGames([...remaining]);
+          localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
+        } else { break; }
+      } catch (e) { break; }
+    }
+    setIsSyncing(false);
+  };
+  syncPendingRef.current = syncPending;
+
+  const submitGame = () => {
+    const gameData = {
+      timestamp: new Date().toISOString(),
+      turn,
+      mulligan_type: mulliganType,
+      players: seats.map(s => ({ 
+        player: s.name, 
+        deck: s.deck, 
+        turn_died: s.stats.turnDied, 
+        stats: s.stats, 
+        colors: s.colors, 
+        deck_owner: s.deckOwner || s.name, 
+        seat_position: s.order
+      }))
+    };
+
+    // Always save locally first
+    const updated = [...pendingGames, gameData];
+    setPendingGames(updated);
+    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+
+    // Move on immediately - no waiting
+    setGameStarted(false); 
+    setTurn(1); 
+    setSeats(initialSeats); 
+    setFirstSeatIndex(null); 
+    setMulliganType('');
+
+    // Try to sync in the background
+    setTimeout(() => syncPending(), 500);
+  };
+  
+  const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
+  const allFinished = seats.every(s => s.status === 'done');
+  const hasPending = pendingGames.length > 0;
+
+  return (
+    <div className="min-h-screen w-screen bg-black overflow-hidden">
+      <div
+        style={{
+          width: '100vh',
+          height: '100vw',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: 'rotate(90deg)',
+          transformOrigin: 'center center',
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          translate: '-50% -50%',
+          touchAction: 'pan-y',
+        }}
+      >
+        <div
+          className="grid gap-0"
+          style={{ width: '100%', height: '100%', ...gridTemplate }}
+        >
+          {layoutConfig.map((cfg) => {
+            const i = cfg.seatIndex;
+            const s = seats[i];
+            const fix = tableLayout === 'cross' ? crossRotationFix[cfg.area] : null;
+            const content = !gameStarted ?
+              <SetupQuadrant
+                id={i} seat={s} isFlipped={cfg.flipped}
+                axisSwapped={!!(fix && fix.deg !== 180)}
+                playerDataMap={playerDataMap} onUpdate={updateSeat}
+                onSetFirst={handleSetFirst} firstSeatIndex={firstSeatIndex}
+                onResetAll={handleResetAll}
+                mulliganType={mulliganType} onSetMulligan={setMulliganType}
+              /> :
+              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} tableLayout={tableLayout} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
+            return (
+              <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area, position: 'relative' }}>
+                {fix ? (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    width: fix.width, height: fix.height,
+                    transform: `translate(-50%, -50%) rotate(${fix.deg}deg)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {content}
+                  </div>
+                ) : content}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Spin highlight grid - matches active layout via shared grid template */}
+        {spinHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', pointerEvents: 'none', zIndex: 9999, ...gridTemplate }}>
+            {layoutConfig.map(cfg => (
+              <div key={cfg.seatIndex} style={{
+                gridArea: cfg.area,
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: spinHighlight === cfg.seatIndex ? '4px solid rgba(255,255,255,0.95)' : '4px solid transparent',
+                backgroundColor: spinHighlight === cfg.seatIndex ? 'rgba(255,255,255,0.18)' : 'transparent',
+                boxShadow: spinHighlight === cfg.seatIndex ? '0 0 60px rgba(255,255,255,0.6)' : 'none',
+                transition: 'border-color 0.04s, background-color 0.04s, box-shadow 0.04s',
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Gold winner flash grid */}
+        {winnerHighlight !== null && (
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', pointerEvents: 'none', zIndex: 9999, ...gridTemplate }}>
+            {layoutConfig.map(cfg => (
+              <div key={cfg.seatIndex} style={{
+                gridArea: cfg.area,
+                margin: '10px',
+                borderRadius: '1.5rem',
+                border: winnerHighlight === cfg.seatIndex ? '5px solid rgba(212,175,55,1)' : '4px solid transparent',
+                backgroundColor: winnerHighlight === cfg.seatIndex ? 'rgba(212,175,55,0.25)' : 'transparent',
+                boxShadow: winnerHighlight === cfg.seatIndex ? '0 0 80px rgba(212,175,55,0.8)' : 'none',
+              }} />
+            ))}
+          </div>
+        )}
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
+          {/* Settings gear icon - always visible, offset near center */}
+          {!showResetConfirm && !showSettings && (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="pointer-events-auto flex items-center justify-center rounded-full"
+              style={{
+                position: 'absolute', width: 34, height: 34,
+                top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 30px)' : 'calc(50% + 95px)',
+                backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                zIndex: 15000,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
+
+          {!gameStarted && !showSettings && !showResetConfirm && (
+            <>
+              {/* RANDOM button - always available before goes-first is picked, regardless of pending syncs */}
+              {firstSeatIndex === null && !allFilled && (
+                <button
+                  onClick={handleRandom}
+                  disabled={isSpinning}
+                  className="pointer-events-auto font-black rounded-full flex items-center justify-center text-center bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
+                >
+                  <span className="text-xs font-bold">{isSpinning ? '...' : 'RANDOM'}</span>
+                </button>
+              )}
+              {/* START button */}
+              {allFilled && (
+                <button
+                  onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+                  className="pointer-events-auto font-black rounded-full transition-all flex items-center justify-center text-center p-4 bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                  style={{ width: tableLayout === 'cross' ? '90px' : '120px', height: tableLayout === 'cross' ? '90px' : '120px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
+                >
+                  <span className="text-xs font-bold">START</span>
+                </button>
+              )}
+            </>
+          )}
+          {gameStarted && !allFinished && !showSettings && !showResetConfirm && (
+            <button
+              onPointerDown={handlePointerDown} 
+              onPointerUp={handlePointerUp}
+              className="pointer-events-auto rounded-full flex flex-col items-center justify-center border-none outline-none select-none"
+              style={{ 
+                width: tableLayout === 'cross' ? '130px' : '180px', 
+                height: tableLayout === 'cross' ? '130px' : '180px', 
+                backgroundColor: '#000000',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none',
+                transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none',
+              }}
+            >
+              <span className="font-black text-white/50 uppercase tracking-[0.3em] select-none" style={{ fontSize: tableLayout === 'cross' ? '8px' : '12px' }}>Turn</span>
+              <span 
+                className="font-black tabular-nums text-white select-none" 
+                style={{ fontSize: tableLayout === 'cross' ? '70px' : '100px', lineHeight: 0.9, userSelect: 'none', WebkitUserSelect: 'none' }}
+              >
+                {turn}
+              </span>
+            </button>
+          )}
+          {gameStarted && allFinished && !showSettings && !showResetConfirm && (
+            <button
+              onClick={submitGame}
+              className="pointer-events-auto font-black rounded-full bg-[#D4AF37] text-black shadow-[0_0_40px_rgba(212,175,55,0.5)] p-4"
+              style={{ width: tableLayout === 'cross' ? '90px' : '150px', height: tableLayout === 'cross' ? '90px' : '150px', transform: tableLayout === 'cross' ? 'translateX(128px)' : 'none' }}
+            >
+              SUBMIT
+            </button>
+          )}
+        </div>
+
+        {/* Giant invisible full-screen close catcher - sits above everything else in the app,
+            definitively topmost regardless of any nested stacking-context ambiguity. Only active
+            (and only visible as a dim/blur backdrop) while a modal is open. The modals themselves
+            are rendered right after it so they draw on top and remain fully interactive. */}
+        {(showSettings || showPlayerEditor || showResetConfirm) && (
+          <div
+            style={{ position: 'absolute', inset: 0, zIndex: 600000, pointerEvents: 'auto' }}
+            onPointerDown={(e) => {
+              if (showResetConfirm) { setShowResetConfirm(false); return; }
+              if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
+            }}
+          >
+            {showResetConfirm && (
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
+            )}
+            {(showSettings || showPlayerEditor) && !showResetConfirm && (
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} />
+            )}
+          </div>
+        )}
+
+          {/* Reset confirm modal */}
+          {showResetConfirm && (
+            <div className="pointer-events-auto flex flex-col items-center gap-4" style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '32px 28px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 621000, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }} onPointerDown={(e) => e.stopPropagation()}>
+              <span className="text-white font-black text-sm uppercase tracking-widest">Reset Game?</span>
+              <span className="text-white/50 font-bold text-xs uppercase tracking-wider text-center">Returns to "Who Goes First?"</span>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                >Cancel</button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
+                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                >Reset</button>
+              </div>
+            </div>
+          )}
+
+          {/* Settings modal - large, Lifetap-style panel, always upright regardless of table layout */}
+          {showSettings && !showResetConfirm && !showPlayerEditor && (
+            <div
+              className="pointer-events-auto flex flex-col overflow-hidden"
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="flex items-center justify-center rounded-full"
+                  style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+                <span className="text-white font-black text-base uppercase tracking-[0.15em]">Settings</span>
+                <div style={{ width: 34 }} />
+              </div>
+
+              <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
+                <div style={{ width: '100%', maxWidth: 420 }}>
+                {/* Section: Game */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div>
+                  <SettingsRow
+                    label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
+                    value={(hasPending || pendingEdits.length > 0) ? String(pendingGames.length + pendingEdits.length) : null}
+                    disabled={(!hasPending && pendingEdits.length === 0) || isSyncing || isSyncingEdits}
+                    onClick={() => { syncPending(); syncPendingEdits(); }}
+                    icon={
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
+                      </svg>
+                    }
+                  />
+                  <div className="w-full flex items-center gap-4 px-5 py-5 mb-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18 }}>
+                    <span style={{ width: 26, height: 26, flexShrink: 0, color: 'rgba(255,255,255,0.65)' }}>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                    </span>
+                    <span className="flex-1 text-left font-bold text-[16px] text-white" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Table Layout</span>
+                    <div className="flex gap-2" style={{ flexShrink: 0 }}>
+                      <button
+                        onClick={() => selectTableLayout('grid')}
+                        style={{
+                          width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'grid' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'grid' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tableLayout === 'grid' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} strokeWidth="2">
+                          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => selectTableLayout('cross')}
+                        style={{
+                          width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: tableLayout === 'cross' ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: tableLayout === 'cross' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.15)',
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill={tableLayout === 'cross' ? '#38bdf8' : 'rgba(255,255,255,0.6)'} stroke="none">
+                          <rect x="2" y="1" width="20" height="6" rx="1.5" />
+                          <rect x="2" y="9" width="9" height="9" rx="1.5" />
+                          <rect x="13" y="9" width="9" height="9" rx="1.5" />
+                          <rect x="2" y="19" width="20" height="4" rx="1.5" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  {!gameStarted && (
+                    <SettingsRow
+                      label="Manage Players"
+                      onClick={() => setShowPlayerEditor(true)}
+                      icon={
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                        </svg>
+                      }
+                      last
+                    />
+                  )}
+                </div>
+
+                {/* Section: Danger */}
+                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div className="pb-6">
+                  <SettingsRow
+                    label="Reset Game"
+                    destructive
+                    onClick={() => setShowResetConfirm(true)}
+                    icon={
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+                      </svg>
+                    }
+                    last
+                  />
+                </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Player / Deck editor - drill-down: list view -> player detail view */}
+          {showPlayerEditor && (() => {
+            const detailPlayer = playerDataMap.find(p => p.player_name === expandedPlayer);
+            return (
+              <div
+                className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
+                style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {/* Header - swaps between "Players" list header and player-name detail header */}
+                <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    onClick={() => editingDeck ? setEditingDeck(null) : detailPlayer ? setExpandedPlayer(null) : setShowPlayerEditor(false)}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                  <span className="text-white font-black text-base uppercase tracking-[0.15em]">{detailPlayer ? detailPlayer.player_name : 'Players'}</span>
+                  <button
+                    onClick={() => { setShowPlayerEditor(false); setExpandedPlayer(null); setShowSettings(false); }}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
+                  <div className="px-6 py-6 flex flex-col" style={{ width: '100%', maxWidth: 420 }}>
+
+                    {editingDeck ? (
+                      <>
+                        {/* DECK EDIT FORM */}
+                        <div className="flex items-center gap-3 mb-5">
+                          <button
+                            onClick={() => setEditingDeck(null)}
+                            style={{ background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                          </button>
+                          <span className="text-white font-black text-sm uppercase tracking-wide">{editingDeck.isNew ? 'New Deck' : 'Edit Deck'}</span>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Deck Name</span>
+                        <input
+                          type="text"
+                          value={editingDeck.deck}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, deck: e.target.value }))}
+                          placeholder="e.g. Aragorn, Uniter"
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Art URL</span>
+                        <input
+                          type="text"
+                          value={editingDeck.artUrl}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrl: e.target.value }))}
+                          placeholder="https://..."
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-1"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+                        <span className="text-[9px] font-semibold text-white/30 mb-4">Tip: use Scryfall's "Download Art Crop" link</span>
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Archidekt Link</span>
+                        <input
+                          type="text"
+                          value={editingDeck.archidekt || ''}
+                          onChange={(e) => setEditingDeck(prev => ({ ...prev, archidekt: e.target.value }))}
+                          placeholder="https://archidekt.com/decks/..."
+                          className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                        />
+
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Exclude from Setup</span>
+                            <span className="text-[9px] font-semibold text-white/25">Hides this deck from the game setup screen</span>
+                          </div>
+                          <button
+                            onClick={() => setEditingDeck(prev => ({ ...prev, exclude: !prev.exclude }))}
+                            style={{
+                              flexShrink: 0, width: 46, height: 26, borderRadius: 999, position: 'relative',
+                              backgroundColor: editingDeck.exclude ? '#ef4444' : 'rgba(255,255,255,0.12)',
+                              transition: 'background-color 0.15s',
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute', top: 3, left: editingDeck.exclude ? 23 : 3,
+                              width: 20, height: 20, borderRadius: '50%', backgroundColor: '#fff',
+                              transition: 'left 0.15s',
+                            }} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Partner Commander</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingDeck(prev => ({ ...prev, hasPartner: false, artUrlPartner: '' }))}
+                              style={{
+                                padding: '4px 14px', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+                                backgroundColor: !editingDeck.hasPartner ? '#fff' : 'rgba(255,255,255,0.08)',
+                                color: !editingDeck.hasPartner ? '#000' : 'rgba(255,255,255,0.5)',
+                              }}
+                            >No</button>
+                            <button
+                              onClick={() => setEditingDeck(prev => ({ ...prev, hasPartner: true }))}
+                              style={{
+                                padding: '4px 14px', borderRadius: 999, fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+                                backgroundColor: editingDeck.hasPartner ? '#fff' : 'rgba(255,255,255,0.08)',
+                                color: editingDeck.hasPartner ? '#000' : 'rgba(255,255,255,0.5)',
+                              }}
+                            >Yes</button>
+                          </div>
+                        </div>
+                        {editingDeck.hasPartner && (
+                          <input
+                            type="text"
+                            value={editingDeck.artUrlPartner}
+                            onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrlPartner: e.target.value }))}
+                            placeholder="Partner art URL..."
+                            className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4 mt-2"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                          />
+                        )}
+                        {!editingDeck.hasPartner && <div className="mb-4" />}
+
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-3 self-center">Colors</span>
+                        <div className="mb-6 self-center">
+                          <ColorPicker
+                            selected={editingDeck.colors}
+                            onToggle={(c) => setEditingDeck(prev => ({
+                              ...prev,
+                              colors: prev.colors.includes(c) ? prev.colors.filter(x => x !== c) : [...prev.colors, c],
+                            }))}
+                          />
+                        </div>
+
+                        <button
+                          disabled={editorBusy || !editingDeck.deck.trim()}
+                          onClick={() => {
+                            const payload = {
+                              player_name: detailPlayer.player_name,
+                              deck: editingDeck.deck.trim(),
+                              art_url: editingDeck.artUrl.trim(),
+                              art_url_partner: editingDeck.hasPartner ? (editingDeck.artUrlPartner.trim() || 'partner') : '',
+                              colors: editingDeck.colors.join(''),
+                              exclude: !!editingDeck.exclude,
+                              archidekt: (editingDeck.archidekt || '').trim(),
+                            };
+                            if (editingDeck.isNew) {
+                              editorCall('/players/add_deck', payload);
+                            } else {
+                              editorCall('/players/update_deck', { ...payload, original_deck: editingDeck.originalDeck });
+                            }
+                            setEditingDeck(null);
+                          }}
+                          className="font-black uppercase text-sm text-black px-6 py-3.5 rounded-full bg-white self-center"
+                          style={{ opacity: (!editingDeck.deck.trim()) ? 0.4 : 1 }}
+                        >Save Deck</button>
+                      </>
+                    ) : !detailPlayer ? (
+                      <>
+                        {/* LIST VIEW */}
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            const name = prompt("New Player Name:");
+                            if (!name) return;
+                            editorCall('/players/add_player', { player_name: name });
+                          }}
+                          className="font-black uppercase text-[13px] text-black px-6 py-3 rounded-full bg-white self-start mb-4"
+                        >+ Add Player</button>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                          {playerDataMap.map((p) => (
+                            <button
+                              key={p.player_name}
+                              onClick={() => setExpandedPlayer(p.player_name)}
+                              className="flex flex-col items-center gap-2"
+                              style={{ background: 'transparent', border: 'none' }}
+                            >
+                              <div style={{
+                                width: '100%', aspectRatio: '1 / 1', borderRadius: 18, flexShrink: 0, overflow: 'hidden',
+                                backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                                backgroundImage: p.pfp ? `url(${p.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {!p.pfp && <span className="text-white/30 text-xl font-black">{p.player_name?.[0]?.toUpperCase()}</span>}
+                              </div>
+                              <span className="text-white font-black text-[12px] uppercase text-center leading-tight">{p.player_name}</span>
+                              <span className="text-white/30 text-[10px] font-bold">{(p.decks || []).length} deck{(p.decks || []).length === 1 ? '' : 's'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* DETAIL VIEW */}
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            const url = prompt("Profile Picture URL (tip: use Scryfall's Download Art Crop link):", detailPlayer.pfp || '');
+                            if (url === null) return;
+                            editorCall('/players/update_pfp', { player_name: detailPlayer.player_name, art_url: url });
+                          }}
+                          className="flex flex-col items-center gap-2 self-center mb-6"
+                          style={{ background: 'transparent', border: 'none' }}
+                        >
+                          <div style={{
+                            width: 84, height: 84, borderRadius: '50%', overflow: 'hidden',
+                            backgroundColor: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.15)',
+                            backgroundImage: detailPlayer.pfp ? `url(${detailPlayer.pfp})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {!detailPlayer.pfp && <span className="text-white/30 text-2xl font-black">{detailPlayer.player_name?.[0]?.toUpperCase()}</span>}
+                          </div>
+                          <span className="text-[11px] font-bold text-white/40 uppercase tracking-wide">Edit Photo</span>
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">
+                            Decks ({(detailPlayer.decks || []).length})
+                          </span>
+                          <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                          {(detailPlayer.decks || []).map(d => (
+                            <div
+                              key={d.deck}
+                              onClick={() => { if (d.archidekt) window.open(d.archidekt, '_blank', 'noopener,noreferrer'); }}
+                              style={{
+                                position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '1 / 0.85',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                cursor: d.archidekt ? 'pointer' : 'default',
+                              }}>
+                              {/* Art layer - only this gets dimmed/grayscaled, so buttons below stay full brightness */}
+                              <div style={{
+                                position: 'absolute', inset: 0,
+                                backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+                                backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
+                                filter: d.exclude ? 'grayscale(1) brightness(0.45)' : 'none',
+                              }} />
+                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
+                              {d.exclude && (
+                                <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                  </svg>
+                                </div>
+                              )}
+                              <span style={{ position: 'absolute', top: 8, left: 10, right: d.exclude ? 34 : 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: 6 }}>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingDeck({
+                                      isNew: false, originalDeck: d.deck, deck: d.deck,
+                                      artUrl: d.artUrl || '',
+                                      hasPartner: !!(d.artUrlPartner && d.artUrlPartner !== ''),
+                                      artUrlPartner: (d.artUrlPartner && d.artUrlPartner !== 'partner') ? d.artUrlPartner : '',
+                                      colors: (d.colors || '').split('').filter(Boolean),
+                                      exclude: !!d.exclude,
+                                      archidekt: d.archidekt || '',
+                                    });
+                                  }}
+                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(4px)' }}
+                                >Edit</button>
+                                <button
+                                  disabled={editorBusy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!confirm(`Delete deck "${d.deck}"?`)) return;
+                                    editorCall('/players/delete_deck', { player_name: detailPlayer.player_name, deck: d.deck });
+                                  }}
+                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
+                                >Del</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => setEditingDeck({ isNew: true, deck: '', artUrl: '', hasPartner: false, artUrlPartner: '', colors: [], exclude: false, archidekt: '' })}
+                          className="text-[13px] font-black uppercase text-white px-6 py-3 rounded-full bg-white/10 border border-white/15 self-center mt-5"
+                        >+ Add Deck</button>
+
+                        <button
+                          disabled={editorBusy}
+                          onClick={() => {
+                            if (!confirm(`Delete player "${detailPlayer.player_name}" and all their decks?`)) return;
+                            editorCall('/players/delete_player', { player_name: detailPlayer.player_name });
+                            setExpandedPlayer(null);
+                          }}
+                          className="text-[13px] font-black uppercase text-red-400 px-6 py-3 rounded-full bg-red-500/10 self-center mt-3 mb-2"
+                        >Delete Player</button>
+                      </>
+                    )}
+
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+      </div>
+    </div>
+  );
 }
-</script>
-</body>
-</html>
