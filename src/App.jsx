@@ -766,21 +766,130 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
   );
 };
 
-// --- GAMEPLAY QUADRANT ---
-const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLose, onBackStep, onLifeChange, onCmdDamage, opponents }) => {
-  // Matches the same seatIndex -> area mapping used at the top level for cross layout,
-  // so the commander damage grid mirrors the actual seating arrangement.
-  const crossAreaBySeat = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
-  const cmdAreaMapBySeat = {
-    0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
-    1: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
-    2: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
-    3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
-  };
-  const cmdAreaFor = (opSeatIndex) => cmdAreaMapBySeat[seatIndex]?.[opSeatIndex] ?? crossAreaBySeat[opSeatIndex];
-  const myArea = tableLayout === 'cross' ? crossAreaBySeat[seatIndex] : null;
+// Matches the seatIndex -> area mapping used at the top level for cross layout, so the
+// commander damage grid mirrors the actual seating arrangement. Shared (not a hook) so both
+// Quadrant and the top-level small-screen commander damage modal can compute it identically.
+const CROSS_AREA_BY_SEAT = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
+const CMD_AREA_MAP_BY_SEAT = {
+  0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+  1: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
+  2: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+  3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
+};
+const getSeatCmdInfo = (seatIndex, tableLayout) => {
+  const cmdAreaFor = (opSeatIndex) => CMD_AREA_MAP_BY_SEAT[seatIndex]?.[opSeatIndex] ?? CROSS_AREA_BY_SEAT[opSeatIndex];
+  const myArea = tableLayout === 'cross' ? CROSS_AREA_BY_SEAT[seatIndex] : null;
   const isTopBot = myArea === 'top' || myArea === 'bot';
   const isMidLR = myArea === 'midl' || myArea === 'midr';
+  return { cmdAreaFor, myArea, isTopBot, isMidLR };
+};
+
+// Shared commander-damage cell renderer, usable both by Quadrant's in-quadrant modal (large
+// screens) and the top-level full-screen modal (small screens) so they can't drift apart.
+const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld }) => {
+  return (tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
+    const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
+    const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
+    const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
+    const isSelf = op.id === id;
+    return (
+      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined }}>
+        <CmdCell
+          value={val0}
+          value2={val1}
+          hasPartner={hasPartner}
+          danger={val0 >= 21}
+          danger2={val1 >= 21}
+          isSelf={isSelf}
+          artUrl={op.artUrl}
+          artUrlPartner={op.artUrlPartner}
+          onChange={(delta) => {
+            const key = hasPartner ? `${op.id}_0` : op.id;
+            const current = (player.stats.cmdDamage || {})[key] ?? 0;
+            const actual = delta > 0 ? delta : Math.max(-current, delta);
+            if (actual === 0) return;
+            onCmdDamage(id, key, actual);
+            onLifeChange(id, -actual);
+          }}
+          onChange2={(delta) => {
+            const key2 = `${op.id}_1`;
+            const current2 = (player.stats.cmdDamage || {})[key2] ?? 0;
+            const actual2 = delta > 0 ? delta : Math.max(-current2, delta);
+            if (actual2 === 0) return;
+            onCmdDamage(id, key2, actual2);
+            onLifeChange(id, -actual2);
+          }}
+          held={cmdHeld}
+          onHold={setCmdHeld}
+        />
+      </div>
+    );
+  });
+};
+
+// Grid-area layout and sizing for a seat's commander-damage grid, shared between the in-quadrant
+// (large screen) and full-screen (small screen) modal variants.
+const getCmdGridLayout = (isMidLR, tableLayout) => {
+  const gridAreaStyle = isMidLR
+    ? { gridTemplateColumns: '0.8fr 1.4fr 0.8fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
+    : tableLayout === 'cross'
+    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.8fr 1.4fr 0.8fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
+    : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
+  const largeScreenSize = isMidLR
+    ? { width: 'clamp(240px, 58vw, 320px)', height: 'clamp(200px, 52vw, 280px)' }
+    : tableLayout === 'cross'
+    ? { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(240px, 58vw, 320px)' }
+    : { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' };
+  const smallScreenSize = isMidLR
+    ? { width: 'clamp(300px, 88vw, 480px)', height: 'clamp(240px, 72vw, 380px)' }
+    : tableLayout === 'cross'
+    ? { width: 'clamp(240px, 72vw, 380px)', height: 'clamp(300px, 88vw, 480px)' }
+    : { width: 'clamp(260px, 82vw, 460px)', height: 'clamp(260px, 82vw, 460px)' };
+  return { gridAreaStyle, largeScreenSize, smallScreenSize };
+};
+
+// Top-level full-screen commander damage modal for small screens (phones). Rendered directly by
+// App as a sibling of the seat grid - i.e. inside the single base 90deg rotation only, never
+// nested inside cross-layout's extra per-seat counter-rotation wrapper - so there's no nested
+// transform ancestor to fight with; it just naturally covers the whole rotated app area.
+const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeChange, onClose }) => {
+  const [cmdHeld, setCmdHeld] = useState(false);
+  const player = seats[seatId];
+  if (!player) return null;
+  const opponents = seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }));
+  const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
+  const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
+  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: false, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
+  const closeModal = () => { onClose(); setCmdHeld(false); };
+
+  return (
+    <div
+      style={{ position: 'absolute', inset: 0, zIndex: 400000, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(14px)' }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onClick={closeModal}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); closeModal(); }}
+        style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >×</button>
+      <span style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 20, userSelect: 'none' }}>Commander Damage</span>
+      <div
+        style={{ display: 'grid', gap: 12, ...smallScreenSize, ...gridAreaStyle }}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+      >
+        {cells}
+      </div>
+      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
+    </div>
+  );
+};
+
+// --- GAMEPLAY QUADRANT ---
+const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLose, onBackStep, onLifeChange, onCmdDamage, onOpenCmdModal, opponents }) => {
+  const { cmdAreaFor, myArea, isTopBot, isMidLR } = getSeatCmdInfo(seatIndex, tableLayout);
   const isOut = player.status === 'done' || player.status === 'out';
   const isWinner = isOut && player.stats.turnDied === 'win';
   const hasArt = !!player.artUrl && typeof player.artUrl === 'string' && player.artUrl.startsWith('http');
@@ -939,7 +1048,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                   : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' };
                 return (
                   <div
-                    onClick={(e) => { e.stopPropagation(); setCmdModal('grid'); }}
+                    onClick={(e) => { e.stopPropagation(); if (isLargeScreen) { setCmdModal('grid'); } else { onOpenCmdModal(id); } }}
                     style={gridStyle}
                   >
                     {orderedOpponents.map((op) => {
@@ -986,111 +1095,27 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
               })()}
             </div>
 
-            {/* CMD DAMAGE MODAL */}
-            {cmdModal === 'grid' && (() => {
-              const gridAreaStyle = isMidLR
-                ? { gridTemplateColumns: '0.8fr 1.4fr 0.8fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
-                : tableLayout === 'cross'
-                ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.8fr 1.4fr 0.8fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
-                : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
-              const largeScreenSize = isMidLR
-                ? { width: 'clamp(240px, 58vw, 320px)', height: 'clamp(200px, 52vw, 280px)' }
-                : tableLayout === 'cross'
-                ? { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(240px, 58vw, 320px)' }
-                : { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' };
-              const smallScreenSize = isMidLR
-                ? { width: 'clamp(300px, 88vw, 480px)', height: 'clamp(240px, 72vw, 380px)' }
-                : tableLayout === 'cross'
-                ? { width: 'clamp(240px, 72vw, 380px)', height: 'clamp(300px, 88vw, 480px)' }
-                : { width: 'clamp(260px, 82vw, 460px)', height: 'clamp(260px, 82vw, 460px)' };
-
-              const cells = (tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
-                const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
-                const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
-                const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
-                const isSelf = op.id === id;
-                return (
-                  <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined }}>
-                    <CmdCell
-                      value={val0}
-                      value2={val1}
-                      hasPartner={hasPartner}
-                      danger={val0 >= 21}
-                      danger2={val1 >= 21}
-                      isSelf={isSelf}
-                      artUrl={op.artUrl}
-                      artUrlPartner={op.artUrlPartner}
-                      onChange={(delta) => {
-                        const key = hasPartner ? `${op.id}_0` : op.id;
-                        const current = (player.stats.cmdDamage || {})[key] ?? 0;
-                        const actual = delta > 0 ? delta : Math.max(-current, delta);
-                        if (actual === 0) return;
-                        onCmdDamage(id, key, actual);
-                        onLifeChange(id, -actual);
-                      }}
-                      onChange2={(delta) => {
-                        const key2 = `${op.id}_1`;
-                        const current2 = (player.stats.cmdDamage || {})[key2] ?? 0;
-                        const actual2 = delta > 0 ? delta : Math.max(-current2, delta);
-                        if (actual2 === 0) return;
-                        onCmdDamage(id, key2, actual2);
-                        onLifeChange(id, -actual2);
-                      }}
-                      held={cmdHeld}
-                      onHold={setCmdHeld}
-                    />
-                  </div>
-                );
-              });
-
+            {/* CMD DAMAGE MODAL - large screens only; small screens use App-level SmallScreenCmdModal */}
+            {cmdModal === 'grid' && isLargeScreen && (() => {
+              const { gridAreaStyle, largeScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
+              const cells = renderCmdCells({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
               const closeModal = () => { setCmdModal(null); setCmdHeld(false); };
-
-              if (isLargeScreen) {
-                // Large screens (tablets): stays confined to this quadrant, as before.
-                return (
-                  <div
-                    style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onPointerUp={(e) => e.stopPropagation()}
-                    onClick={closeModal}
-                  >
-                    <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
-                    <div
-                      style={{ display: 'grid', gap: 8, ...largeScreenSize, ...gridAreaStyle }}
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
-                    >
-                      {cells}
-                    </div>
-                  </div>
-                );
-              }
-
-              // Small screens (phones): true full-screen overlay (position:fixed is contained by the
-              // rotated root, not the individual quadrant, since a CSS transform ancestor becomes the
-              // containing block for fixed descendants) with bigger tap targets and an explicit close button.
               return (
                 <div
-                  style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(14px)' }}
+                  style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                   onClick={closeModal}
                 >
-                  <button
-                    onClick={(e) => { e.stopPropagation(); closeModal(); }}
-                    style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >×</button>
-                  <span style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 20, userSelect: 'none' }}>Commander Damage</span>
+                  <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                   <div
-                    style={{ display: 'grid', gap: 12, ...smallScreenSize, ...gridAreaStyle }}
+                    style={{ display: 'grid', gap: 8, ...largeScreenSize, ...gridAreaStyle }}
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                   >
                     {cells}
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
                 </div>
               );
             })()}
@@ -1276,6 +1301,7 @@ export default function App() {
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinHighlight, setSpinHighlight] = useState(null);
+  const [cmdModalSeatId, setCmdModalSeatId] = useState(null);
   const [winnerHighlight, setWinnerHighlight] = useState(null);
 
   const handleRandom = () => {
@@ -1615,6 +1641,20 @@ export default function App() {
           touchAction: 'pan-y',
         }}
       >
+        {/* Top-level small-screen commander damage modal - rendered here as a sibling of the seat
+            grid, i.e. inside the single base 90deg rotation only, never nested inside cross-layout's
+            extra per-seat counter-rotation wrapper - so it naturally covers the whole rotated app
+            area without fighting a nested transform's containing block. */}
+        {cmdModalSeatId !== null && (
+          <SmallScreenCmdModal
+            seatId={cmdModalSeatId}
+            seats={seats}
+            tableLayout={tableLayout}
+            onCmdDamage={handleCmdDamage}
+            onLifeChange={handleLifeChange}
+            onClose={() => setCmdModalSeatId(null)}
+          />
+        )}
         <div
           className="grid gap-0"
           style={{ width: '100%', height: '100%', ...gridTemplate }}
@@ -1632,7 +1672,7 @@ export default function App() {
                 onResetAll={handleResetAll}
                 mulliganType={mulliganType} onSetMulligan={setMulliganType}
               /> :
-              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} tableLayout={tableLayout} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
+              <Quadrant id={i} seatIndex={i} player={s} isFlipped={cfg.flipped} tableLayout={tableLayout} onLose={handleLose} onBackStep={handleBackStep} onLifeChange={handleLifeChange} onCmdDamage={handleCmdDamage} onOpenCmdModal={setCmdModalSeatId} opponents={seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }))} />;
             return (
               <div key={i} className="w-full h-full flex items-center justify-center overflow-hidden" style={{ gridArea: cfg.area, position: 'relative' }}>
                 {fix ? (
