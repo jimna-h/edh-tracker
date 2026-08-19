@@ -771,7 +771,7 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
 // Quadrant and the top-level small-screen commander damage modal can compute it identically.
 const CROSS_AREA_BY_SEAT = { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' };
 const CMD_AREA_MAP_BY_SEAT = {
-  0: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
+  0: { 0: 'bot', 1: 'midl', 2: 'midr', 3: 'top' },
   1: { 0: 'bot', 1: 'midr', 2: 'midl', 3: 'top' },
   2: { 0: 'top', 1: 'midl', 2: 'midr', 3: 'bot' },
   3: { 0: 'top', 1: 'midr', 2: 'midl', 3: 'bot' },
@@ -888,17 +888,9 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
   const player = seats[seatId];
   if (!player) return null;
   const opponents = seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }));
-  const { cmdAreaFor: rawCmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
+  const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
   const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
-  const { deg, flipped, swapped } = getSeatOrientation(seatId, tableLayout);
-  // The real Quadrant's cmdAreaFor mapping was tuned for its nested per-seat transform structure.
-  // This modal reaches the same final rotation via one flat rotate() instead, which - confirmed by
-  // direct testing, not re-derived from theory (per the handoff notes' own warning about this area) -
-  // needs top/bot swapped specifically for the seats on the +/-90 "swapped" branch to match. Left as
-  // a local wrapper here so the shared mapping (and the large-screen view that uses it) is untouched.
-  const cmdAreaFor = swapped
-    ? (opId) => { const a = rawCmdAreaFor(opId); return a === 'top' ? 'bot' : a === 'bot' ? 'top' : a; }
-    : rawCmdAreaFor;
+  const { deg, flipped } = getSeatOrientation(seatId, tableLayout);
   const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
   const closeModal = () => { onClose(); setCmdHeld(false); };
 
