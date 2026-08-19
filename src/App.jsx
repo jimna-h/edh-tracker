@@ -890,7 +890,7 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
   const opponents = seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }));
   const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
   const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
-  const { deg, flipped } = getSeatOrientation(seatId, tableLayout);
+  const { deg, flipped, swapped } = getSeatOrientation(seatId, tableLayout);
   const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
   const closeModal = () => { onClose(); setCmdHeld(false); };
 
