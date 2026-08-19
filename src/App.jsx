@@ -867,7 +867,7 @@ const SEAT_LAYOUT_BY_MODE = {
     { seatIndex: 3, area: 'br', flipped: false },
   ],
 };
-const CROSS_FIX_DEG_BY_AREA = { top: -90, bot: -90, midl: 180 }; // midr: no extra rotation
+const CROSS_FIX_DEG_BY_AREA = { top: 90, bot: 90, midl: 180 }; // midr: no extra rotation
 
 const getSeatOrientation = (seatIndex, tableLayout) => {
   const cfg = SEAT_LAYOUT_BY_MODE[tableLayout === 'cross' ? 'cross' : 'grid'].find(c => c.seatIndex === seatIndex);
