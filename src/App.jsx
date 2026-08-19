@@ -848,10 +848,41 @@ const getCmdGridLayout = (isMidLR, tableLayout) => {
   return { gridAreaStyle, largeScreenSize, smallScreenSize };
 };
 
+// Mirrors App's own layoutConfig/crossRotationFix (kept in sync manually - see those definitions
+// in App) so a seat's total on-screen rotation can be computed from just its seatIndex, without
+// needing to be inside that seat's own per-seat wrapper. Used to orient the top-level small-screen
+// modal to face whichever player's commander damage is being viewed, the same way their own
+// quadrant already faces them.
+const SEAT_LAYOUT_BY_MODE = {
+  cross: [
+    { seatIndex: 0, area: 'top', flipped: true },
+    { seatIndex: 1, area: 'midl', flipped: false },
+    { seatIndex: 2, area: 'midr', flipped: false },
+    { seatIndex: 3, area: 'bot', flipped: false },
+  ],
+  grid: [
+    { seatIndex: 0, area: 'tl', flipped: true },
+    { seatIndex: 1, area: 'tr', flipped: true },
+    { seatIndex: 2, area: 'bl', flipped: false },
+    { seatIndex: 3, area: 'br', flipped: false },
+  ],
+};
+const CROSS_FIX_DEG_BY_AREA = { top: -90, bot: -90, midl: 180 }; // midr: no extra rotation
+
+const getSeatOrientation = (seatIndex, tableLayout) => {
+  const cfg = SEAT_LAYOUT_BY_MODE[tableLayout === 'cross' ? 'cross' : 'grid'].find(c => c.seatIndex === seatIndex);
+  if (!cfg) return { deg: 0, flipped: false, swapped: false };
+  const fixDeg = tableLayout === 'cross' ? (CROSS_FIX_DEG_BY_AREA[cfg.area] || 0) : 0;
+  const deg = fixDeg + (cfg.flipped ? 180 : 0);
+  return { deg, flipped: cfg.flipped, swapped: Math.abs(deg % 180) === 90 };
+};
+
 // Top-level full-screen commander damage modal for small screens (phones). Rendered directly by
 // App as a sibling of the seat grid - i.e. inside the single base 90deg rotation only, never
 // nested inside cross-layout's extra per-seat counter-rotation wrapper - so there's no nested
-// transform ancestor to fight with; it just naturally covers the whole rotated app area.
+// transform ancestor to fight with; it just naturally covers the whole rotated app area. Its
+// content is then rotated to match that seat's own orientation via getSeatOrientation, so it
+// still reads correctly from that specific player's side of the table.
 const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeChange, onClose }) => {
   const [cmdHeld, setCmdHeld] = useState(false);
   const player = seats[seatId];
@@ -859,30 +890,40 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
   const opponents = seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }));
   const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
   const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
-  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: false, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
+  const { deg, flipped, swapped } = getSeatOrientation(seatId, tableLayout);
+  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
   const closeModal = () => { onClose(); setCmdHeld(false); };
 
   return (
     <div
-      style={{ position: 'absolute', inset: 0, zIndex: 400000, pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(14px)' }}
+      style={{ position: 'absolute', inset: 0, zIndex: 400000, pointerEvents: 'auto', backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(14px)' }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
       onClick={closeModal}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); closeModal(); }}
-        style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >×</button>
-      <span style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 20, userSelect: 'none' }}>Commander Damage</span>
       <div
-        style={{ display: 'grid', gap: 12, ...smallScreenSize, ...gridAreaStyle }}
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: swapped ? '100svh' : '100%', height: swapped ? '100svw' : '100%',
+          transform: `translate(-50%, -50%) rotate(${deg}deg)`,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}
       >
-        {cells}
+        <button
+          onClick={(e) => { e.stopPropagation(); closeModal(); }}
+          style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >×</button>
+        <span style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 20, userSelect: 'none' }}>Commander Damage</span>
+        <div
+          style={{ display: 'grid', gap: 12, ...smallScreenSize, ...gridAreaStyle }}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          {cells}
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
       </div>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
     </div>
   );
 };
