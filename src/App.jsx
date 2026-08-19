@@ -867,7 +867,7 @@ const SEAT_LAYOUT_BY_MODE = {
     { seatIndex: 3, area: 'br', flipped: false },
   ],
 };
-const CROSS_FIX_DEG_BY_AREA = { top: 90, bot: 90, midl: 180 }; // midr: no extra rotation
+const CROSS_FIX_DEG_BY_AREA = { top: -90, bot: -90, midl: 180 }; // midr: no extra rotation
 
 const getSeatOrientation = (seatIndex, tableLayout) => {
   const cfg = SEAT_LAYOUT_BY_MODE[tableLayout === 'cross' ? 'cross' : 'grid'].find(c => c.seatIndex === seatIndex);
@@ -904,7 +904,7 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
       <div
         style={{
           position: 'absolute', top: '50%', left: '50%',
-          width: swapped ? '100svh' : '100%', height: swapped ? '100svw' : '100%',
+          width: swapped ? '100svw' : '100%', height: swapped ? '100svh' : '100%',
           transform: `translate(-50%, -50%) rotate(${deg}deg)`,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}
