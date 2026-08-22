@@ -51,6 +51,8 @@ def get_players():
                 art_url = row[1] if len(row) > 1 else ""
                 art_url_partner = row[2] if len(row) > 2 else ""
                 color_id = row[3] if len(row) > 3 else ""
+                exclude = (row[4] if len(row) > 4 else "").strip().upper() == "TRUE"
+                archidekt = row[5] if len(row) > 5 else ""
                 
                 if deck_name.upper() == "PFP":
                     pfp_url = art_url
@@ -60,6 +62,8 @@ def get_players():
                         "artUrl": art_url,
                         "artUrlPartner": art_url_partner,
                         "colors": color_id,
+                        "exclude": exclude,
+                        "archidekt": archidekt,
                     })
             
             # Add each player as an object to the list
@@ -121,7 +125,8 @@ def submit_stats():
     p.get('stats', {}).get('dorks'),
     p.get('turn_died'),
     p.get('seat_position'),
-    p.get('colors', '')
+    p.get('colors', ''),
+    p.get('art_url', '')  # Column L
 ]
             rows_to_insert.append(perf_row)
 
@@ -181,7 +186,8 @@ def submit_demo():
                 p.get('stats', {}).get('dorks'),
                 p.get('turn_died'),
                 p.get('seat_position'),
-                p.get('colors', '')
+                p.get('colors', ''),
+                p.get('art_url', '')  # Column L
             ]
             rows_to_insert.append(perf_row)
 
@@ -207,8 +213,10 @@ def add_player():
         if not player_name:
             return jsonify({"error": "player_name required"}), 400
         sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.add_worksheet(title=player_name, rows=50, cols=4)
-        ws.append_row(["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID"])
+        ws = sh.add_worksheet(title=player_name, rows=50, cols=6)
+        ws.update('A1:F1', [["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID", "Exclude", "Archidekt"]])
+        ws.format('A1:F1', {'textFormat': {'bold': True}})
+        ws.update('A2', [["PFP"]])
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding player: {e}")
@@ -247,11 +255,13 @@ def add_deck():
         sh = client.open_by_key(PLAYERS_ID)
         ws = sh.worksheet(data.get('player_name', ''))
         row = _find_next_blank_row(ws)
-        ws.update(f"A{row}:D{row}", [[
+        ws.update(f"A{row}:F{row}", [[
             data.get('deck', ''),
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
+            bool(data.get('exclude')),
+            data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
     except Exception as e:
@@ -267,11 +277,13 @@ def update_deck():
         row = _find_deck_row(ws, data.get('original_deck', ''))
         if row is None:
             return jsonify({"error": "Deck not found"}), 404
-        ws.update(f"A{row}:D{row}", [[
+        ws.update(f"A{row}:F{row}", [[
             data.get('deck', ''),
             data.get('art_url', ''),
             data.get('art_url_partner', ''),
             data.get('colors', ''),
+            bool(data.get('exclude')),
+            data.get('archidekt', ''),
         ]])
         return jsonify({"status": "success"})
     except Exception as e:
