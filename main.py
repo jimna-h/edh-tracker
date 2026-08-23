@@ -125,7 +125,8 @@ def submit_stats():
     p.get('stats', {}).get('dorks'),
     p.get('turn_died'),
     p.get('seat_position'),
-    p.get('colors', '')
+    p.get('colors', ''),
+    p.get('art_url', '')  # Column L
 ]
             rows_to_insert.append(perf_row)
 
@@ -185,7 +186,8 @@ def submit_demo():
                 p.get('stats', {}).get('dorks'),
                 p.get('turn_died'),
                 p.get('seat_position'),
-                p.get('colors', '')
+                p.get('colors', ''),
+                p.get('art_url', '')  # Column L
             ]
             rows_to_insert.append(perf_row)
 
