@@ -332,7 +332,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
-  const playerOptions = playerDataMap.map(p => ({
+  const playerOptions = playerDataMap.filter(p => p.player_name !== 'Precons').map(p => ({
     name: p.player_name,
     artUrl: p.pfp
   }));
@@ -363,6 +363,11 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
       if (step === 6) {
         onUpdate(id, 'deckOwner', '');
         setStep(1);
+      } else if (step === 5) {
+        onUpdate(id, 'deckOwner', '');
+        setStep(2);
+      } else if (step === 4 && seat.deckOwner) {
+        setStep(5);
       } else {
         setStep(2);
       }
@@ -515,6 +520,22 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             options={playerDataMap.filter(p => p.player_name !== seat.name).map(p => ({ name: p.player_name, artUrl: p.pfp }))}
             twoRows
             onBack={handleBack} 
+            extraButton={
+              <button onClick={() => {
+                const strangerName = prompt("Borrowing from (name):");
+                if (!strangerName) return;
+                const deckName = prompt("Deck Name:");
+                if (deckName === null) return;
+                onUpdate(id, 'deckOwner', strangerName);
+                onUpdate(id, 'deck', deckName || 'Borrowed Deck');
+                onUpdate(id, 'artUrl', '');
+                onUpdate(id, 'artUrlPartner', '');
+                setStep(4);
+              }}
+                className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
+                + Stranger
+              </button>
+            }
             onSelect={(val) => { 
               onUpdate(id, 'deckOwner', typeof val === 'object' ? val.name : val); 
               setStep(6); 
@@ -922,7 +943,7 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
         >
           {cells}
         </div>
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold to edit</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
       </div>
     </div>
   );
@@ -1640,7 +1661,8 @@ export default function App() {
         stats: s.stats, 
         colors: s.colors, 
         deck_owner: s.deckOwner || s.name, 
-        seat_position: s.order
+        seat_position: s.order,
+        art_url: s.artUrl || ''
       }))
     };
 
