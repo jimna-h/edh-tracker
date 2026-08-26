@@ -1933,12 +1933,7 @@ export default function App() {
 
               <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
                 <div style={{ width: '100%', maxWidth: 420 }}>
-                {/* Section: Game */}
-                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
-                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Game</span>
-                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                </div>
-                <div>
+                <div className="pt-6">
                   <SettingsRow
                     label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
                     value={(hasPending || pendingEdits.length > 0) ? String(pendingGames.length + pendingEdits.length) : null}
@@ -2004,12 +1999,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Section: Danger */}
-                <div className="px-6 pt-6 pb-2 flex items-center gap-3">
-                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Danger Zone</span>
-                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                </div>
-                <div className="pb-6">
+                <div className="pt-3 pb-6">
                   <SettingsRow
                     label="Reset Game"
                     destructive
@@ -2023,12 +2013,7 @@ export default function App() {
                   />
                 </div>
 
-                {/* Section: Stats */}
-                <div className="px-6 pt-2 pb-2 flex items-center gap-3">
-                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Stats</span>
-                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                </div>
-                <div className="pb-6">
+                <div className="pt-3 pb-6">
                   <SettingsRow
                     label="Table Stats"
                     onClick={() => window.open('/stats/index.html', '_blank', 'noopener,noreferrer')}
