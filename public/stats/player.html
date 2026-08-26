@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Table — Player Profile</title>
+<style>
+:root{
+  --bg:#000000;
+  --panel: rgba(255,255,255,0.045);
+  --panel-hover: rgba(255,255,255,0.07);
+  --line: rgba(255,255,255,0.1);
+  --line-soft: rgba(255,255,255,0.06);
+  --text:#ffffff;
+  --text-dim: rgba(255,255,255,0.6);
+  --text-faint: rgba(255,255,255,0.4);
+  --text-ghost: rgba(255,255,255,0.22);
+  --gold:#D4AF37;
+  --gold-bright:#e8cf7a;
+  --blue:#38bdf8;
+  --win:#3ecf8e;
+  --loss:#ef4444;
+  --ink:#0a0a0a;
+  --w:#F4EFDD; --u:#3E7FC1; --b:#4A4750; --r:#B8402F; --g:#3C7A4C; --c:#9A958A;
+  --radius:20px;
+  --radius-sm:14px;
+  --shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height:1.5;
+  min-height:100vh;
+}
+
+::selection{ background:var(--gold); color:var(--ink); }
+
+a{ color:inherit; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+
+h1,h2,h3{ font-family:inherit; font-weight:900; margin:0; letter-spacing:-0.01em; }
+
+/* ---------- Nav ---------- */
+.nav{
+  position:sticky; top:0; z-index:50;
+  background:rgba(0,0,0,0.9);
+  backdrop-filter: blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.nav-inner{
+  max-width:1180px; margin:0 auto; padding:14px 24px;
+  display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+}
+.nav-mark{
+  font-weight:900; font-size:14px; text-transform:uppercase; letter-spacing:.16em; color:var(--text);
+  display:flex; align-items:center; gap:9px; white-space:nowrap;
+}
+.nav-mark .dot{ width:7px;height:7px;border-radius:50%;background:var(--gold); box-shadow:0 0 10px var(--gold);}
+.nav-links{ display:flex; gap:4px; flex-wrap:wrap; margin-left:auto; }
+.nav-links a{
+  font-size:11px; text-decoration:none; color:var(--text-dim);
+  padding:8px 14px; border-radius:999px; transition:all .18s ease;
+  font-weight:900; letter-spacing:.08em; text-transform:uppercase;
+  background:var(--panel); border:1px solid transparent;
+}
+.nav-links a:hover, .nav-links a:focus-visible{ background:var(--panel-hover); color:var(--text); border-color:var(--line); outline:none; }
+
+/* ---------- Hero ---------- */
+.hero{
+  padding:72px 24px 56px; position:relative; overflow:hidden;
+}
+.hero-pips{ position:absolute; inset:0; pointer-events:none; opacity:0.4; }
+.floatpip{
+  position:absolute; border-radius:50%; opacity:0.12; filter:blur(1px);
+  animation: drift 14s ease-in-out infinite;
+}
+@keyframes drift{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-18px) } }
+@media (prefers-reduced-motion: reduce){ .floatpip{ animation:none; } html{scroll-behavior:auto;} }
+
+.hero-inner{ max-width:1180px; margin:0 auto; position:relative; }
+.eyebrow{
+  font-size:11px; letter-spacing:.3em; text-transform:uppercase; font-weight:900;
+  color:var(--text-faint); margin-bottom:18px; display:flex; align-items:center; gap:10px;
+}
+.eyebrow .line{ width:28px; height:1px; background:var(--gold); opacity:.7; }
+.hero h1{
+  font-size:clamp(34px, 5.6vw, 58px); line-height:1.05; color:var(--text);
+  max-width:820px; font-weight:900;
+}
+.hero h1 em{ font-style:normal; color:var(--gold-bright); }
+.hero p.sub{
+  margin-top:18px; max-width:560px; font-size:15.5px; color:var(--text-dim);
+}
+.hero-stats{
+  margin-top:44px; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px; max-width:920px;
+}
+.hero-stat{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm); padding:18px 20px; }
+.hero-stat .num{ font-size:28px; font-weight:900; color:var(--text); text-shadow:0 2px 16px rgba(0,0,0,0.6); }
+.hero-stat .lbl{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.14em; margin-top:5px; font-weight:900; }
+
+/* ---------- Sections ---------- */
+section{ padding:64px 0; border-top:1px solid var(--line-soft); }
+.section-head{ display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:32px; }
+.section-head h2{ font-size:24px; color:var(--text); font-weight:900; }
+.section-head .idx{ color:var(--gold); font-size:11px; letter-spacing:.18em; font-weight:900; text-transform:uppercase; }
+.section-desc{ color:var(--text-dim); font-size:14px; max-width:560px; margin-top:6px; }
+
+/* ---------- Cards / panels ---------- */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  backdrop-filter: blur(16px);
+  position:relative;
+}
+.grid{ display:grid; gap:14px; }
+.grid-2{ grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+.grid-3{ grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+
+/* Leaderboard */
+.leader-card{ padding:20px; display:flex; gap:16px; align-items:center; }
+.life-badge{
+  flex:none; width:62px; height:62px; border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  border:2px solid var(--gold);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  box-shadow: inset 0 0 14px rgba(0,0,0,0.5);
+  overflow:hidden;
+}
+.life-badge .n{ font-weight:900; font-size:24px; color:var(--text); line-height:1; text-shadow:0 1px 10px rgba(0,0,0,0.6); }
+.leader-info{ flex:1; min-width:0; }
+.leader-name{ font-weight:900; font-size:16px; color:var(--text); }
+.leader-pct{ font-weight:900; font-size:28px; color:var(--text); line-height:1.1; margin-top:6px; text-shadow:0 2px 14px rgba(0,0,0,0.5); }
+.leader-sub{ font-size:12px; color:var(--text-dim); margin-top:4px; }
+.rank-tag{
+  font-size:10px; color:var(--ink); background:var(--gold);
+  border-radius:999px; padding:2px 8px; font-weight:900; margin-right:8px; letter-spacing:.04em;
+}
+.bar-track{ height:6px; border-radius:999px; background:rgba(255,255,255,0.08); margin-top:10px; overflow:hidden; }
+.bar-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--blue), var(--gold)); }
+.rowlist .r .bar-track{ grid-column: 1 / -1; margin-top:8px; }
+
+/* Deck art tiles */
+.deck-tile{
+  position:relative; overflow:hidden; border-radius:var(--radius);
+  aspect-ratio: 4/3; background:var(--panel); border:1px solid var(--line);
+  background-size:cover; background-position:center;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.deck-tile::after{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.9) 100%);
+  pointer-events:none;
+}
+.deck-tile.no-art::after{ background:none; }
+.deck-tile .tile-top{ position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; padding:10px; }
+.deck-tile .tile-bottom{ position:relative; z-index:1; padding:10px 14px 14px; }
+.deck-tile .tile-pos{
+  font-size:11px; font-weight:900; color:var(--gold); background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(6px); border-radius:999px; padding:3px 9px; letter-spacing:.03em;
+}
+.deck-tile .tile-pct{
+  font-size:14px; font-weight:900; color:var(--text); background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(6px); border-radius:999px; padding:3px 10px;
+}
+.deck-tile .tile-name{ font-weight:900; font-size:15px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,0.9); }
+.deck-tile .tile-meta{ font-size:10.5px; color:rgba(255,255,255,0.78); margin-top:3px; text-shadow:0 1px 6px rgba(0,0,0,0.9); }
+
+/* Mana pips */
+.pips{ display:inline-flex; gap:3px; vertical-align:middle; }
+.pip{
+  width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:900; color:var(--ink);
+  border:1px solid rgba(0,0,0,0.35); flex:none;
+}
+
+/* Table-ish list rows */
+.rowlist{ display:flex; flex-direction:column; }
+.rowlist .r{
+  display:grid; grid-template-columns: 28px 1fr auto; gap:12px; align-items:center;
+  padding:13px 20px; border-top:1px solid var(--line-soft);
+}
+.rowlist .r:first-child{ border-top:none; }
+.rowlist .r .pos{ color:var(--gold); font-size:12px; font-weight:900; }
+.rowlist .r .main{ min-width:0; }
+.rowlist .r .name{ font-weight:900; font-size:15px; color:var(--text); }
+.rowlist .r .meta{ font-size:11.5px; color:var(--text-dim); margin-top:3px; }
+.rowlist .r .stat{ text-align:right; }
+.rowlist .r .stat .big{ font-size:16px; color:var(--text); font-weight:900; }
+.rowlist .r .stat .small{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; font-weight:900; }
+.rowlist.with-thumbs .r{ grid-template-columns: 24px 42px 1fr auto; }
+.deck-thumb{ width:42px; height:42px; border-radius:8px; object-fit:cover; background:rgba(255,255,255,0.05); flex:none; display:block; }
+
+/* Seat / mulligan bars */
+.hbar-row{ display:flex; align-items:center; gap:14px; padding:10px 0; }
+.hbar-label{ width:120px; flex:none; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; font-weight:900; }
+.hbar-track{ flex:1; height:20px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; position:relative; }
+.hbar-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--blue), var(--gold)); display:flex; align-items:center; }
+.hbar-val{ width:56px; flex:none; text-align:right; font-size:13px; color:var(--text); font-weight:900; }
+
+/* Awards */
+.award-card{ padding:22px; }
+.award-card .k{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.14em; font-weight:900; }
+.award-card .v{ font-size:22px; color:var(--text); margin-top:9px; font-weight:900; text-shadow:0 2px 16px rgba(0,0,0,0.6); }
+.award-card .d{ font-size:12px; color:var(--text-dim); margin-top:6px; }
+
+/* trend */
+.trend-wrap{ padding:24px 20px 16px; }
+.trend-bars{ display:flex; align-items:flex-end; gap:6px; height:140px; }
+.tbar{ flex:1; background:linear-gradient(180deg, var(--gold-bright), var(--blue)); border-radius:4px 4px 0 0; position:relative; min-width:8px; }
+.tbar .tt{
+  position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:6px;
+  font-size:10px; font-weight:900; color:var(--text); white-space:nowrap; opacity:0; transition:opacity .15s;
+  background:rgba(0,0,0,0.9); padding:3px 7px; border-radius:999px; border:1px solid var(--line);
+}
+.tbar:hover .tt, .tbar:focus-visible .tt, .tbar.tt-open .tt{ opacity:1; }
+.trend-axis{ display:flex; gap:6px; margin-top:8px; }
+.trend-axis span{ flex:1; text-align:center; font-size:9.5px; color:var(--text-faint); min-width:8px; font-weight:700; }
+
+/* rivalry */
+.rivalry-card{ padding:20px; }
+.rivalry-names{ display:flex; align-items:center; justify-content:space-between; font-weight:900; font-size:15px; }
+.rivalry-vs{ font-size:10px; color:var(--text-faint); font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+.rivalry-track{ display:flex; height:10px; border-radius:999px; overflow:hidden; margin-top:12px; background:rgba(255,255,255,0.06); }
+.rivalry-a{ background:var(--gold); }
+.rivalry-b{ background:var(--blue); }
+.rivalry-meta{ display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text-dim); font-weight:700; }
+
+/* toggle */
+.toggle{ display:inline-flex; background:var(--panel); border-radius:999px; padding:3px; border:1px solid var(--line); }
+.toggle button{
+  border:none; background:transparent; color:var(--text-dim);
+  font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.06em;
+  padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .15s;
+}
+.toggle button.active{ background:var(--gold); color:var(--ink); }
+.toggle button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+
+/* state screens */
+.state-screen{ min-height:70vh; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:40px 24px; text-align:center; }
+.spinner{
+  width:32px; height:32px; border-radius:50%; border:2px solid rgba(255,255,255,0.12); border-top-color:var(--gold);
+  animation:spin 0.9s linear infinite; margin-bottom:20px;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.state-screen h2{ font-size:18px; color:var(--text); font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+.state-screen p{ color:var(--text-dim); max-width:460px; margin-top:10px; font-size:13.5px; }
+.retry-btn{
+  margin-top:20px; background:var(--gold); color:var(--ink); border:none; padding:11px 22px;
+  border-radius:999px; font-weight:900; cursor:pointer; font-family:inherit; font-size:12px;
+  text-transform:uppercase; letter-spacing:.08em;
+}
+.retry-btn:hover{ background:var(--gold-bright); }
+code.inline{ background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:6px; font-size:12px; color:var(--gold-bright); }
+
+footer{ padding:40px 24px 60px; text-align:center; color:var(--text-faint); font-size:12px; }
+footer .refresh-btn{
+  background:var(--panel); border:1px solid var(--line); color:var(--text);
+  padding:9px 18px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em;
+  cursor:pointer; margin-top:14px;
+}
+footer .refresh-btn:hover{ background:var(--panel-hover); }
+
+@media (max-width:640px){
+  .nav-links{ display:none; }
+  .rowlist .r{ grid-template-columns: 20px 1fr auto; padding:12px 16px; }
+  .rowlist.with-thumbs .r{ grid-template-columns: 18px 36px 1fr auto; }
+  .hbar-label{ width:88px; font-size:10.5px; }
+  .profile-header{ flex-direction:column; align-items:flex-start; }
+  .profile-record{ margin-left:0; text-align:left; width:100%; }
+}
+
+/* ---------- Profile page (player.html / deck.html) ---------- */
+.profile-header{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; padding:56px 24px 36px; max-width:1180px; margin:0 auto; }
+.profile-avatar{
+  width:96px; height:96px; border-radius:50%; flex:none; overflow:hidden;
+  border:3px solid var(--gold); background:rgba(255,255,255,0.06);
+  background-size:cover; background-position:center;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.5);
+}
+.profile-avatar.deck-avatar{ border-radius:var(--radius-sm); }
+.profile-avatar .n{ font-weight:900; font-size:34px; color:var(--text); }
+.profile-title{ flex:1; min-width:200px; }
+.profile-title h1{ font-size:clamp(26px,4vw,38px); font-weight:900; color:var(--text); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.profile-title .sub{ color:var(--text-dim); font-size:13px; margin-top:6px; }
+.profile-title .sub a{ color:var(--gold-bright); text-decoration:none; }
+.profile-record{ margin-left:auto; text-align:right; flex:none; }
+.profile-record .pct{ font-size:34px; font-weight:900; color:var(--text); line-height:1; }
+.profile-record .lbl{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.1em; margin-top:4px; font-weight:900; }
+
+.game-log .row{
+  display:grid; grid-template-columns: 84px 1fr auto; gap:12px; align-items:center;
+  padding:12px 20px; border-top:1px solid var(--line-soft); font-size:12.5px;
+}
+.game-log .row:first-child{ border-top:none; }
+.game-log .row .date{ color:var(--text-faint); font-size:11px; }
+.game-log .row .info{ color:var(--text-dim); }
+.game-log .row .info b{ color:var(--text); font-weight:900; }
+.game-log .row .info a{ color:inherit; text-decoration:underline; text-decoration-color:var(--line); }
+.game-log .row .result{ text-align:right; font-weight:900; font-size:12px; white-space:nowrap; }
+.game-log .row .result.win{ color:var(--win); }
+.game-log .row .result.loss{ color:var(--loss); }
+
+.empty-note{ padding:20px 24px; color:var(--text-dim); font-size:13px; }
+
+/* ---------- Active/inactive deck toggle ---------- */
+[data-inactive]{ display:none; }
+/* These hide-rules need to out-specificity the unconditional layout rules
+   (.rowlist .r{display:grid}, .deck-tile{display:flex}) or those always win
+   and inactive rows never actually hide, regardless of this rule's order. */
+.rowlist .r[data-inactive]{ display:none; }
+.deck-tile[data-inactive]{ display:none; }
+.rowlist.show-inactive .r[data-inactive]{ display:grid; }
+.show-inactive .deck-tile[data-inactive]{ display:flex; }
+.inactive-toggle{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--panel); border:1px solid var(--line); color:var(--text-dim);
+  padding:7px 14px; border-radius:999px; font-size:11px; font-weight:900;
+  text-transform:uppercase; letter-spacing:.06em; cursor:pointer; font-family:inherit;
+  margin-bottom:14px;
+}
+.inactive-toggle:hover{ background:var(--panel-hover); color:var(--text); }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="state-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <h2>Pulling up the profile…</h2>
+    <p>Pulling live results from the scorekeeping sheet.</p>
+  </div>
+</div>
+
+<template id="errorTemplate">
+  <div class="state-screen">
+    <h2>Couldn't reach the sheet</h2>
+    <p>
+      This page reads live from your Google Sheet, which needs to be shared as
+      <strong>"Anyone with the link — Viewer."</strong>
+      In the sheet, click <em>Share</em>, set general access to "Anyone with the link," then reload this page.
+    </p>
+    <p style="margin-top:14px;">Sheet ID in use: <code class="inline">__SHEET_ID__</code></p>
+    <button class="retry-btn" onclick="location.reload()">Try again</button>
+  </div>
+</template>
+
+<script>
+const SHEET_ID = '18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I';
+const GAME_TAB = 'Game_Summary';
+const PLAYER_TAB = 'Player_Performance';
+
+// Separate spreadsheet, one tab per player, each tab a deck list for that
+// player. A row with Deck Name "PFP" (Exclude checked, so it never shows up
+// as an actual deck) holds that player's profile picture in Art_URL.
+const PFP_SHEET_ID = '1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g';
+
+const MANA_COLORS = { W:'#F4EFDD', U:'#3E7FC1', B:'#4A4750', R:'#B8402F', G:'#3C7A4C', C:'#9A958A' };
+const COLOR_NAMES = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
+
+function gvizUrl(sheetName, sheetId){
+  return `https://docs.google.com/spreadsheets/d/${sheetId || SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+}
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ','){ row.push(field); field=''; }
+      else if (c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if (c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r.length===1 && r[0] !== ''));
+}
+
+// Normalize a header/candidate name for tolerant matching: lowercase,
+// strip everything but letters+digits. This absorbs the exact kind of
+// sheet drift we've hit before (typos like "Muilligan_Type", inconsistent
+// truncation like "Opening_Lan", stray spaces, underscore-vs-space, casing)
+// without needing to hardcode every specific variant by hand.
+function normKey(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+function rowsToObjects(rows){
+  const headers = rows[0].map(h => h.trim());
+  const headerByNorm = {};
+  headers.forEach(h => { if (!(normKey(h) in headerByNorm)) headerByNorm[normKey(h)] = h; });
+  const objs = rows.slice(1).map(r => {
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (r[i] !== undefined ? r[i].trim() : ''));
+    return obj;
+  });
+  return { rows: objs, headerByNorm };
+}
+
+// Tolerant field getter: tries each candidate name against the actual sheet
+// headers (case/spacing/typo-insensitive) and returns the first that exists,
+// rather than requiring an exact string match. Use this for any column whose
+// real header spelling in the live sheet might drift from what we expect.
+function field(row, headerByNorm, ...candidates){
+  for (const c of candidates){
+    const h = headerByNorm[normKey(c)];
+    if (h !== undefined && row[h] !== undefined) return row[h];
+  }
+  return undefined;
+}
+
+async function fetchSheet(name, sheetId){
+  const res = await fetch(gvizUrl(name, sheetId));
+  if (!res.ok) throw new Error('fetch-failed');
+  const text = await res.text();
+  if (text.trim().startsWith('<')) throw new Error('not-public');
+  return rowsToObjects(parseCSV(text));
+}
+
+// Fetches each player's own tab from the PFP spreadsheet (tab name === player
+// name). Two things come out of each tab:
+//  - the Art_URL off the row whose Deck Name is "PFP" (that player's avatar)
+//  - the set of that player's currently-ACTIVE decks: every other row whose
+//    Exclude checkbox isn't checked. This tab is the source of truth for
+//    "is this deck still part of the group" — decks that show up in game
+//    history but aren't (uncrossed-out) in their owner's tab are retired.
+// Any individual player's fetch is allowed to fail silently (no tab, no PFP
+// row, network hiccup) — that player just falls back to an initial-letter
+// avatar, and their decks are treated as active-by-default (fail open,
+// rather than mass-hiding decks because a fetch hiccuped).
+async function fetchPlayerPfps(playerNames){
+  const map = {};
+  const activeDecksByOwner = {};
+  const ownedDecksByOwner = {};
+  const deckColorFromSheet = {};
+  const debug = [];
+  await Promise.all(playerNames.map(async name => {
+    const url = gvizUrl(name, PFP_SHEET_ID);
+    const rec = { name, url };
+    try{
+      const res = await fetch(url);
+      rec.httpStatus = res.status;
+      if (!res.ok){ rec.result = 'fetch-not-ok'; debug.push(rec); return; }
+      const text = await res.text();
+      rec.textPreview = text.slice(0, 120);
+      if (text.trim().startsWith('<')){ rec.result = 'not-public-or-tab-missing (got HTML not CSV)'; debug.push(rec); return; }
+      const { rows, headerByNorm } = rowsToObjects(parseCSV(text));
+      rec.headersSeen = Object.values(headerByNorm);
+      rec.rowCount = rows.length;
+      const pfpRow = rows.find(r => {
+        const dn = field(r, headerByNorm, 'Deck Name', 'DeckName', 'Deck');
+        return (dn || '').trim().toLowerCase() === 'pfp';
+      });
+      if (pfpRow){
+        const pfpUrl = field(pfpRow, headerByNorm, 'Art_URL', 'ArtURL');
+        if (pfpUrl && pfpUrl.trim()) map[name] = pfpUrl.trim();
+      }
+      const activeSet = new Set();
+      const ownedList = [];
+      rows.forEach(r => {
+        const dn = field(r, headerByNorm, 'Deck Name', 'DeckName', 'Deck');
+        if (!dn || dn.trim().toLowerCase() === 'pfp') return;
+        const excludeRaw = field(r, headerByNorm, 'Exclude');
+        const excluded = (excludeRaw || '').trim().toUpperCase() === 'TRUE';
+        const colorId = field(r, headerByNorm, 'Color_ID', 'Colors', 'ColorID', 'Color') || '';
+        if (!excluded){
+          activeSet.add(normKey(dn));
+          // Full record (original name + color), independent of whether this
+          // player has ever actually logged a game with it — "decks owned"
+          // must reflect the sheet itself, not just decks with game history.
+          ownedList.push({ name: dn.trim(), colorId: colorId.trim() });
+        }
+        // This player-owned tab is the authoritative deck registry — its
+        // Color_ID should win over whatever got typed into Player_Performance
+        // on any given game log row (which is re-entered by hand every game
+        // and prone to drift/typos for the same deck over time).
+        if (dn && colorId.trim()) deckColorFromSheet[normKey(dn)] = colorId.trim();
+      });
+      activeDecksByOwner[name] = activeSet;
+      ownedDecksByOwner[name] = ownedList;
+      rec.result = 'OK';
+      debug.push(rec);
+    } catch(e){
+      rec.result = 'threw: ' + (e && e.message);
+      debug.push(rec);
+    }
+  }));
+  return { map, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, debug };
+}
+
+// A deck instance is "active" if its owner's tab lists it (un-excluded).
+// If we have no data at all for that owner (fetch failed, no tab), we fail
+// open and treat it as active rather than silently hiding decks because of
+// a data hiccup.
+function isDeckActive(activeDecksByOwner, owner, deckName){
+  const set = activeDecksByOwner[owner];
+  if (!set) return true;
+  return set.has(normKey(deckName));
+}
+
+// Toggles a "show inactive" class on the given container and updates the
+// triggering button's label. Called from inline onclick handlers.
+function toggleInactive(containerId, btn, hiddenCount, showLabel, hideLabel){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const showing = el.classList.toggle('show-inactive');
+  btn.textContent = showing
+    ? (hideLabel || 'Hide inactive decks')
+    : (showLabel || ('Show inactive decks (' + hiddenCount + ')'));
+}
+
+// Re-sorts a rowlist by swapping which precomputed order/rank each row uses
+// (set via data-order-<mode>/data-rank-<mode> attributes) — reorders visually
+// through CSS flex `order`, no re-render needed.
+function setDeckSort(containerId, mode, groupEl){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const cap = mode.charAt(0).toUpperCase() + mode.slice(1);
+  [...el.children].forEach(row => {
+    const order = row.dataset['order' + cap];
+    const rank = row.dataset['rank' + cap];
+    if (order !== undefined) row.style.order = order;
+    const posEl = row.querySelector('.pos');
+    if (posEl && rank !== undefined) posEl.textContent = rank;
+  });
+  groupEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function fmt1(n){ return n === null || n === undefined || isNaN(n) ? '—' : n.toFixed(1); }
+function pct(n){ return n === null || isNaN(n) ? '—' : Math.round(n*100) + '%'; }
+
+function pipsHTML(colorId){
+  if (!colorId) return `<span class="pips"><span class="pip" style="background:${MANA_COLORS.C}">C</span></span>`;
+  const chars = colorId.replace(/[^WUBRG]/gi,'').toUpperCase().split('');
+  const uniq = [...new Set(chars)];
+  if (!uniq.length) return `<span class="pips"><span class="pip" style="background:${MANA_COLORS.C}">C</span></span>`;
+  return `<span class="pips">` + uniq.map(c => `<span class="pip" style="background:${MANA_COLORS[c]}">${c}</span>`).join('') + `</span>`;
+}
+
+// Minimal escape for a URL dropped into a double-quoted HTML attribute.
+// Escape both quote styles for a URL dropped into an HTML attribute value:
+// the attribute itself is double-quoted, but the value also gets wrapped in
+// CSS url('...') using single quotes, so either character breaking loose
+// would truncate the attribute early.
+function escUrl(u){ return String(u || '').replace(/"/g, '%22').replace(/'/g, '%27'); }
+
+// Dense competition ranking: items tied on the given key all share the same
+// rank number, and the next distinct value gets the very next integer
+// (1,1,1,1,1,2 — not 1,1,1,1,1,6). Returns an array of rank numbers aligned
+// to `items`, which must already be sorted so ties are adjacent.
+function rankItems(items, keyFn){
+  let rank = 0;
+  let prevKey = null;
+  return items.map((item, i) => {
+    const key = keyFn(item);
+    if (i === 0 || key !== prevKey) rank++;
+    prevKey = key;
+    return rank;
+  });
+}
+
+// Ascending comparator for "average win turn" tie-breaking where fewer turns
+// is better. null (nobody's won yet) sorts last, as if it were +Infinity.
+function turnCompareAsc(a, b){
+  const av = (a === null || a === undefined) ? Infinity : a;
+  const bv = (b === null || b === undefined) ? Infinity : b;
+  return av - bv;
+}
+
+// Links to the per-entity profile pages.
+function playerUrl(name){ return `player.html?name=${encodeURIComponent(name)}`; }
+function deckUrl(name){ return `deck.html?name=${encodeURIComponent(name)}`; }
+
+function monthLabel(ts){
+  const d = new Date(ts.replace(' ','T'));
+  if (isNaN(d)) return null;
+  return d.toLocaleString('en-US', { month:'short', year:'2-digit' });
+}
+
+async function init(){
+  let gamesData, perfData;
+  try{
+    [gamesData, perfData] = await Promise.all([fetchSheet(GAME_TAB), fetchSheet(PLAYER_TAB)]);
+    if (!gamesData.rows.length || !perfData.rows.length) throw new Error('empty');
+  } catch(e){
+    const tpl = document.getElementById('errorTemplate').innerHTML.replace('__SHEET_ID__', SHEET_ID);
+    document.getElementById('app').innerHTML = tpl;
+    return;
+  }
+  await render(gamesData, perfData);
+}
+
+function render(gamesData, perfData){ return renderAsync(gamesData, perfData); }
+async function renderAsync(gamesData, perfData){
+  const gH = gamesData.headerByNorm, pH = perfData.headerByNorm;
+  let games = gamesData.rows, perf = perfData.rows;
+
+  // ---------- normalize ----------
+  games = games.filter(g => g.GameID);
+  perf = perf.filter(p => p.GameID && p.Player);
+  games.forEach(g => { g.End_Turn = parseFloat(g.End_Turn) || null; });
+  const gamesById = {};
+  games.forEach(g => { gamesById[g.GameID] = g; });
+
+  // Winner detection is NOT derived from Player_Performance's Turn_Died text.
+  // That field turns out to be inconsistently written across the sheet's
+  // history — sometimes literally "win", sometimes just left blank for the
+  // winner — so no single string match reliably identifies a winning row.
+  // Game_Summary's GameID -> Winner_Player pairing has proven reliable
+  // throughout (it's what powers Awards/Reigning Champion correctly), so we
+  // cross-reference against that instead: a Player_Performance row is a win
+  // iff its (GameID, Player) matches a (GameID, Winner_Player) in Game_Summary.
+  // GameID/Player are matched case- and whitespace-insensitively so a stray
+  // space or casing difference between the two tabs can't silently break the
+  // join the way the Turn_Died text match did.
+  const pairKey = (gameId, player) => normKey(gameId) + '|||' + normKey(player);
+  const winnerPairs = new Set(
+    games.filter(g => g.Winner_Player).map(g => pairKey(g.GameID, g.Winner_Player))
+  );
+
+  perf.forEach(p => {
+    p.Opening_Lands = parseFloat(field(p, pH, 'Opening_Lands', 'Opening_Lan')) || null;
+    p.End_Lands = parseFloat(p.End_Lands) || null;
+    p.End_Rocks = p.End_Rocks === '' ? null : parseFloat(p.End_Rocks);
+    p.End_Dorks = p.End_Dorks === '' ? null : parseFloat(p.End_Dorks);
+    const turnDiedRaw = field(p, pH, 'Turn_Died');
+    p.isWin = winnerPairs.has(pairKey(p.GameID, p.Player));
+    p.turnDiedNum = p.isWin ? null : (parseFloat(turnDiedRaw) || null);
+    p.SeatNum = parseFloat(field(p, pH, 'Seat_Position')) || null;
+    p.ArtURL = field(p, pH, 'Art_URL', 'ArtURL') || '';
+    p.gameEndTurn = gamesById[p.GameID]?.End_Turn ?? null;
+    // Owner/Color_ID had been read via direct property access elsewhere
+    // (rows.find(r=>r.Owner), p.Color_ID) instead of the tolerant field()
+    // lookup everything else here uses — normalizing them once, here, means
+    // every downstream direct access benefits without hunting down each site.
+    p.Owner = field(p, pH, 'Owner', 'Deck_Owner', 'DeckOwner') || p.Owner || '';
+    p.Color_ID = field(p, pH, 'Color_ID', 'Colors', 'ColorID', 'Color') || p.Color_ID || '';
+  });
+
+  // Guest players don't count toward any stats: excluding their rows here
+  // cascades cleanly into every derived stat below (leaderboard, decks,
+  // colors, seats, rivalries) since they all build from this `perf` array.
+  const isGuest = name => (name || '').trim().toLowerCase() === 'guest';
+  perf = perf.filter(p => !isGuest(p.Player));
+
+  // Games a guest won are excluded specifically from person-attributed
+  // awards (fastest win / longest grind / reigning champion) — crediting
+  // "Guest" as a standing record doesn't mean anything. Table-wide facts
+  // (total games, avg turn, seat rates, mulligan habits, monthly trend)
+  // still include every logged game regardless of who won it.
+  const gamesNonGuestWin = games.filter(g => !isGuest(g.Winner_Player));
+
+  const totalGames = games.length;
+  const players = [...new Set(perf.map(p => p.Player))].filter(Boolean);
+  const decks = [...new Set(perf.map(p => p.Deck))].filter(Boolean);
+  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet } = await fetchPlayerPfps(players);
+  // Prefer the Players sheet's Color_ID (the authoritative deck registry)
+  // over whatever Player_Performance's own Color_ID column has for that
+  // deck — the sheet is edited once per deck, not re-typed every game.
+  perf.forEach(p => {
+    const sheetColor = deckColorFromSheet[normKey(p.Deck)];
+    if (sheetColor) p.Color_ID = sheetColor;
+  });
+  const avgTurn = mean(games.map(g=>g.End_Turn).filter(x=>x));
+  // Null (not undefined-from-empty-reduce) when every logged game so far was
+  // won by Guest — the template below must check for this rather than assume
+  // longest/shortest are always real game objects, or it throws on .End_Turn
+  // and blanks the whole page.
+  const longest = gamesNonGuestWin.length ? gamesNonGuestWin.reduce((a,b)=> (b.End_Turn||0) > (a.End_Turn||0) ? b : a) : null;
+  const shortest = gamesNonGuestWin.length ? gamesNonGuestWin.reduce((a,b)=> (b.End_Turn||999) < (a.End_Turn||999) ? b : a) : null;
+  const dateSorted = [...games].filter(g=>g.Timestamp).sort((a,b)=> new Date(a.Timestamp) - new Date(b.Timestamp));
+  const dateSortedNonGuestWin = dateSorted.filter(g => !isGuest(g.Winner_Player));
+  const mostRecent = dateSortedNonGuestWin[dateSortedNonGuestWin.length-1];
+
+  // ---------- players ----------
+  const playerStats = players.map(name => {
+    const rows = perf.filter(p => p.Player === name);
+    const wins = rows.filter(p => p.isWin).length;
+    const gamesPlayed = rows.length;
+    const survivalTurns = rows.map(p=>p.turnDiedNum).filter(x=>x);
+    const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
+    const deckSet = new Set(rows.map(r=>r.Deck).filter(Boolean));
+    return {
+      name, gamesPlayed, wins,
+      winRate: gamesPlayed ? wins/gamesPlayed : 0,
+      avgSurvival: mean(survivalTurns),
+      avgWinTurn: mean(winTurns),
+      deckCount: deckSet.size
+    };
+  }).filter(p => p.gamesPlayed > 0)
+    // Tie-break priority: win % → wins → avg win turn (fewer is better) → name.
+    .sort((a,b) => b.winRate - a.winRate || b.wins - a.wins || turnCompareAsc(a.avgWinTurn, b.avgWinTurn) || a.name.localeCompare(b.name));
+
+  // ---------- seats ----------
+  const seatTotals = {1:0,2:0,3:0,4:0};
+  perf.forEach(p => { if (seatTotals[p.SeatNum] !== undefined) seatTotals[p.SeatNum]++; });
+  const seatWins = {1:0,2:0,3:0,4:0};
+  gamesNonGuestWin.forEach(g => { const s = parseFloat(g.Winner_Seat); if (seatWins[s] !== undefined) seatWins[s]++; }); // numerator must match seatTotals' guest-filtered denominator (perf), or a Guest win inflates that seat's rate
+
+  // ---------- decks ----------
+  const deckStats = decks.map(name => {
+    const rows = perf.filter(p => p.Deck === name);
+    const wins = rows.filter(p=>p.isWin).length;
+    const gamesPlayed = rows.length;
+    const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
+    const colorId = rows.find(r=>r.Color_ID)?.Color_ID || '';
+    const owner = rows.find(r=>r.Owner)?.Owner || rows[0]?.Player || '';
+    const artUrl = rows.find(r=>r.ArtURL)?.ArtURL || '';
+    return {
+      name, owner, gamesPlayed, wins,
+      winRate: gamesPlayed ? wins/gamesPlayed : 0,
+      avgWinTurn: mean(winTurns),
+      colorId, artUrl
+    };
+  }).filter(d => d.gamesPlayed > 0)
+    .sort((a,b) => b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed);
+
+  // deckStats (from the normalize block above) already carries colorId per deck.
+  const deckColorById = Object.fromEntries(deckStats.map(d => [d.name, d.colorId]));
+
+  // pfpMap already fetched in the normalize block above.
+
+  // ---------- resolve which player this page is for ----------
+  const nameParam = new URLSearchParams(location.search).get('name');
+  const targetName = nameParam ? players.find(n => n.toLowerCase() === nameParam.trim().toLowerCase()) : null;
+
+  let bodyHtml;
+
+  if (!targetName){
+    // ---------- directory mode: no name given, or name not recognized ----------
+    bodyHtml = `
+      <header class="hero" style="padding:56px 24px 24px;">
+        <div class="hero-inner">
+          <div class="eyebrow"><span class="line"></span>Player directory</div>
+          <h1 style="font-size:clamp(28px,4.4vw,44px);">${nameParam ? `No player named "${nameParam}"` : 'Choose a player'}</h1>
+          <p class="sub">${nameParam ? "That name doesn't match anyone in the sheet. Pick from the list below." : 'Every player who has logged a game — tap one to see their full profile.'} <a href="index.html" style="color:var(--gold-bright);">← Back to overview</a></p>
+        </div>
+      </header>
+      <section>
+        <div class="wrap">
+          <div class="grid" style="grid-template-columns:1fr;">
+            ${(() => { const ranks = rankItems(playerStats, p => [Math.round(p.winRate*10000), p.wins, p.avgWinTurn==null?'null':Math.round(p.avgWinTurn*100)].join('_')); return playerStats.map((p,i) => {
+              const pfpUrl = pfpMap[p.name];
+              const initial = (p.name || '?').trim().charAt(0).toUpperCase();
+              const avatarStyle = pfpUrl ? `background-image:url('${escUrl(pfpUrl)}');background-size:cover;background-position:center;` : '';
+              return `
+              <a href="${playerUrl(p.name)}" class="panel leader-card" style="text-decoration:none;">
+                <div class="life-badge" style="${avatarStyle}">${pfpUrl ? '' : `<div class="n">${initial}</div>`}</div>
+                <div class="leader-info">
+                  <div class="leader-name"><span class="rank-tag">#${ranks[i]}</span>${p.name}</div>
+                  <div class="leader-pct">${pct(p.winRate)}</div>
+                  <div class="leader-sub">${p.wins}/${p.gamesPlayed} games</div>
+                  <div class="bar-track"><div class="bar-fill" style="width:${p.winRate*100}%"></div></div>
+                </div>
+              </a>`;
+            }).join(''); })()}
+          </div>
+        </div>
+      </section>
+    `;
+  } else {
+    // ---------- single player profile ----------
+    const rows = perf.filter(p => p.Player === targetName);
+    const wins = rows.filter(r=>r.isWin).length;
+    const gamesPlayed = rows.length;
+    const winRate = gamesPlayed ? wins/gamesPlayed : 0;
+
+    const allEndTurns = rows.map(r=>r.gameEndTurn).filter(x=>x!=null);
+    const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
+    const lossTurns = rows.filter(r=>!r.isWin).map(r=>r.turnDiedNum).filter(x=>x!=null);
+    const avgGameLen = mean(allEndTurns), avgWinTurn = mean(winTurns), avgLossTurn = mean(lossTurns);
+
+    const seatBreakdown = [1,2,3,4].map(s => {
+      const seatRows = rows.filter(r=>r.SeatNum===s);
+      const w = seatRows.filter(r=>r.isWin).length;
+      return { seat:s, games:seatRows.length, winRate: seatRows.length ? w/seatRows.length : null };
+    });
+
+    function turnLenBucket(t){
+      if (t==null) return null;
+      if (t<=5) return '≤5'; if (t<=8) return '6-8'; if (t<=11) return '9-11'; return '12+';
+    }
+    const turnLenOrder = ['≤5','6-8','9-11','12+'];
+    const lengthBreakdown = turnLenOrder.map(b => {
+      const bRows = rows.filter(r => turnLenBucket(r.gameEndTurn) === b);
+      const w = bRows.filter(r=>r.isWin).length;
+      return { label:b, games:bRows.length, winRate: bRows.length ? w/bRows.length : null };
+    });
+
+    const manaRows = rows.map(r => {
+      const turnsAlive = r.isWin ? r.gameEndTurn : r.turnDiedNum;
+      const manaTotal = (r.End_Lands!=null || r.End_Rocks!=null || r.End_Dorks!=null) ? (r.End_Lands||0)+(r.End_Rocks||0)+(r.End_Dorks||0) : null;
+      return (manaTotal!=null && turnsAlive) ? manaTotal/turnsAlive : null;
+    }).filter(x=>x!=null);
+    const avgManaPerTurn = mean(manaRows);
+
+    // Playing as [color]: this player's own win rate broken out by which
+    // colors THEIR deck ran that game (a WU deck's game counts toward both).
+    const colorPlayedAs = ['W','U','B','R','G'].map(c => {
+      const cRows = rows.filter(r => (r.Color_ID||'').toUpperCase().includes(c));
+      const w = cRows.filter(r=>r.isWin).length;
+      return { color:c, games:cRows.length, winRate: cRows.length ? w/cRows.length : null };
+    }).filter(x => x.games > 0);
+
+    // Facing [color]: this player's win rate in games where at least one
+    // OPPONENT's deck ran that color (their own deck's color doesn't count).
+    const oppColorMap = {};
+    rows.forEach(r => {
+      const oppColors = new Set();
+      perf.filter(p => p.GameID === r.GameID && p.Player !== targetName).forEach(o => {
+        (o.Color_ID||'').toUpperCase().split('').forEach(ch => { if ('WUBRG'.includes(ch)) oppColors.add(ch); });
+      });
+      oppColors.forEach(c => {
+        if (!oppColorMap[c]) oppColorMap[c] = { games:0, wins:0 };
+        oppColorMap[c].games++;
+        if (r.isWin) oppColorMap[c].wins++;
+      });
+    });
+    const colorAgainst = ['W','U','B','R','G'].map(c => {
+      const v = oppColorMap[c];
+      return v ? { color:c, games:v.games, winRate: v.wins/v.games } : null;
+    }).filter(Boolean);
+
+    // decks piloted (this player's own record with each deck)
+    const deckNames = [...new Set(rows.map(r=>r.Deck).filter(Boolean))];
+    const decksPiloted = deckNames.map(dn => {
+      const dRows = rows.filter(r=>r.Deck===dn);
+      const w = dRows.filter(r=>r.isWin).length;
+      const artUrl = dRows.find(r=>r.ArtURL)?.ArtURL || '';
+      const owner = dRows.find(r=>r.Owner)?.Owner || targetName;
+      const borrowed = normKey(owner) !== normKey(targetName);
+      const inactive = !isDeckActive(activeDecksByOwner, owner, dn);
+      return {
+        name:dn, games:dRows.length, wins:w, winRate: dRows.length ? w/dRows.length : 0,
+        artUrl, owner, borrowed,
+        hide: borrowed || inactive
+      };
+    }).sort((a,b)=> b.games - a.games);
+    const hiddenDeckCount = decksPiloted.filter(d => d.hide).length;
+
+    // Three sort orders for the Decks Piloted list, applied client-side via
+    // CSS flex `order` (no DOM duplication) — each deck carries its rank
+    // under all three modes, and the sort toggle just swaps which one drives
+    // both the visual order and the displayed rank number.
+    function sortRanked(arr, keyFn){
+      const sorted = [...arr].sort((a,b) => keyFn(b) - keyFn(a) || a.name.localeCompare(b.name));
+      const ranks = rankItems(sorted, keyFn);
+      const info = {};
+      sorted.forEach((d,i) => { info[d.name] = { order: i+1, rank: ranks[i] }; });
+      return info;
+    }
+    const sortByGames = sortRanked(decksPiloted, d=>d.games);
+    const sortByWins = sortRanked(decksPiloted, d=>d.wins);
+    const sortByWinRate = sortRanked(decksPiloted, d=>Math.round(d.winRate*10000));
+
+    // Decks owned: pulled straight from the Players sheet's list for this
+    // player (via ownedDecksByOwner), independent of whether they've actually
+    // logged a game with each one yet — "owned" is a sheet fact, not derived
+    // from Player_Performance the way "decks piloted" below is.
+    const ownedActiveDecks = ownedDecksByOwner[targetName] || [];
+    const colorFrequency = ['W','U','B','R','G'].map(c => {
+      const withColor = ownedActiveDecks.filter(d => (d.colorId||'').toUpperCase().includes(c)).length;
+      return { color:c, count: withColor, total: ownedActiveDecks.length, frac: ownedActiveDecks.length ? withColor/ownedActiveDecks.length : 0 };
+    }).sort((a,b) => b.frac - a.frac || a.color.localeCompare(b.color));
+
+    // By color count: how many of this player's decks are mono, 2-color,
+    // 3-color, etc. — same bucketing as the overview's Color identity section,
+    // just counted over decks instead of games.
+    const colorCountBuckets = {};
+    ownedActiveDecks.forEach(d => {
+      const id = (d.colorId || '').toUpperCase();
+      const n = new Set(id.replace(/[^WUBRG]/g,'').split('')).size;
+      const key = n === 0 ? 'Colorless' : n===1 ? 'Mono' : n===2 ? '2-Color' : n===3 ? '3-Color' : n===4 ? '4-Color' : '5-Color';
+      colorCountBuckets[key] = (colorCountBuckets[key]||0) + 1;
+    });
+    const colorCountOrder = ['Colorless','Mono','2-Color','3-Color','4-Color','5-Color'];
+    const deckColorCountStats = colorCountOrder.filter(k=>colorCountBuckets[k]).map(k => ({
+      label: k, count: colorCountBuckets[k], total: ownedActiveDecks.length,
+      frac: ownedActiveDecks.length ? colorCountBuckets[k]/ownedActiveDecks.length : 0
+    }));
+
+    // Decks PLAYED (as opposed to owned): game-weighted, from Player_Performance
+    // rather than the Players sheet. A deck you own but rarely pick up barely
+    // shows here; one you keep bringing to the table dominates — different
+    // question from "what's in your collection."
+    const playedColorFrequency = ['W','U','B','R','G'].map(c => {
+      const withColor = rows.filter(r => (r.Color_ID||'').toUpperCase().includes(c)).length;
+      return { color:c, count: withColor, total: rows.length, frac: rows.length ? withColor/rows.length : 0 };
+    }).sort((a,b) => b.frac - a.frac || a.color.localeCompare(b.color));
+
+    const playedColorCountBuckets = {};
+    rows.forEach(r => {
+      const id = (r.Color_ID || '').toUpperCase();
+      const n = new Set(id.replace(/[^WUBRG]/g,'').split('')).size;
+      const key = n === 0 ? 'Colorless' : n===1 ? 'Mono' : n===2 ? '2-Color' : n===3 ? '3-Color' : n===4 ? '4-Color' : '5-Color';
+      playedColorCountBuckets[key] = (playedColorCountBuckets[key]||0) + 1;
+    });
+    const playedColorCountStats = colorCountOrder.filter(k=>playedColorCountBuckets[k]).map(k => ({
+      label: k, count: playedColorCountBuckets[k], total: rows.length,
+      frac: rows.length ? playedColorCountBuckets[k]/rows.length : 0
+    }));
+
+    // head-to-head vs every opponent shared
+    const byGame = {};
+    rows.forEach(r => { byGame[r.GameID] = true; });
+    const oppMap = {};
+    perf.forEach(p => {
+      if (!byGame[p.GameID] || p.Player === targetName) return;
+      if (!oppMap[p.Player]) oppMap[p.Player] = { name:p.Player, games:0, myWins:0, theirWins:0 };
+      oppMap[p.Player].games++;
+    });
+    // decisive wins per shared game
+    Object.keys(byGame).forEach(gid => {
+      const w = gamesById[gid]?.Winner_Player;
+      const oppsInGame = perf.filter(p => p.GameID === gid && p.Player !== targetName).map(p=>p.Player);
+      oppsInGame.forEach(opp => {
+        if (!oppMap[opp]) return;
+        if (w === targetName) oppMap[opp].myWins++;
+        else if (w === opp) oppMap[opp].theirWins++;
+      });
+    });
+    const headToHead = Object.values(oppMap).sort((a,b)=> b.games - a.games);
+
+    // recent games (most recent first)
+    const recentGames = rows.map(r => {
+      const g = gamesById[r.GameID];
+      const opponents = perf.filter(p => p.GameID === r.GameID && p.Player !== targetName).map(p=>p.Player);
+      return {
+        gameId: r.GameID,
+        timestamp: g?.Timestamp || '',
+        deck: r.Deck,
+        seat: r.SeatNum,
+        isWin: r.isWin,
+        turnDied: r.turnDiedNum,
+        endTurn: g?.End_Turn,
+        opponents
+      };
+    }).filter(g => g.timestamp).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 15);
+
+    const pfpUrl = pfpMap[targetName];
+    const initial = targetName.trim().charAt(0).toUpperCase();
+    const avatarStyle = pfpUrl ? `background-image:url('${escUrl(pfpUrl)}');` : '';
+
+    bodyHtml = `
+      <div class="profile-header">
+        <div class="profile-avatar" style="${avatarStyle}">${pfpUrl ? '' : `<div class="n">${initial}</div>`}</div>
+        <div class="profile-title">
+          <h1>${targetName}</h1>
+          <div class="sub">${gamesPlayed} games logged · <a href="index.html">← Back to overview</a></div>
+        </div>
+        <div class="profile-record">
+          <div class="pct">${pct(winRate)}</div>
+          <div class="lbl">${wins}W / ${gamesPlayed - wins}L</div>
+        </div>
+      </div>
+
+      <section id="turns" style="padding-top:0;">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Turn averages</h2><div class="section-desc">How long games run when ${targetName} plays.</div></div>
+            <div class="idx">01 / TURNS</div>
+          </div>
+          <div class="grid grid-3">
+            <div class="hero-stat"><div class="num">${fmt1(avgGameLen)}</div><div class="lbl">Avg game length</div></div>
+            <div class="hero-stat"><div class="num" style="color:var(--win);">${fmt1(avgWinTurn)}</div><div class="lbl">Avg win turn</div></div>
+            <div class="hero-stat"><div class="num" style="color:var(--loss);">${fmt1(avgLossTurn)}</div><div class="lbl">Avg loss turn</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="seat">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Seat &amp; game length</h2><div class="section-desc">Win rate by seat position and by how long the game ran.</div></div>
+            <div class="idx">02 / SEAT &amp; LENGTH</div>
+          </div>
+          <div class="grid grid-2">
+            <div class="panel" style="padding:20px 20px 8px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:14px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By seat</h3>
+              ${seatBreakdown.map(s => `<div class="hbar-row">
+                <div class="hbar-label">Seat ${s.seat}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${s.winRate!=null ? s.winRate*100 : 0}%"></div></div>
+                <div class="hbar-val">${s.winRate!=null ? pct(s.winRate) : '—'}</div>
+              </div>`).join('')}
+            </div>
+            <div class="panel" style="padding:20px 20px 8px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:14px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By game length</h3>
+              ${lengthBreakdown.map(b => `<div class="hbar-row">
+                <div class="hbar-label">${b.label} turns</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${b.winRate!=null ? b.winRate*100 : 0}%"></div></div>
+                <div class="hbar-val">${b.winRate!=null ? pct(b.winRate) : '—'}</div>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="colormatch">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Color matchups</h2><div class="section-desc">${targetName}'s win rate playing each color, and facing each color.</div></div>
+            <div class="idx">03 / COLORS</div>
+          </div>
+          <div class="grid grid-2">
+            <div class="panel" style="padding:20px 20px 8px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:14px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">Playing as</h3>
+              ${colorPlayedAs.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${pipsHTML(c.color)} &nbsp;${COLOR_NAMES[c.color]}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.winRate!=null ? c.winRate*100 : 0}%"></div></div>
+                <div class="hbar-val">${c.winRate!=null ? pct(c.winRate) : '—'}</div>
+              </div>`).join('') || '<div class="empty-note">No color data yet.</div>'}
+            </div>
+            <div class="panel" style="padding:20px 20px 8px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:14px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">Facing</h3>
+              ${colorAgainst.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${pipsHTML(c.color)} &nbsp;${COLOR_NAMES[c.color]}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.winRate*100}%"></div></div>
+                <div class="hbar-val">${pct(c.winRate)}</div>
+              </div>`).join('') || '<div class="empty-note">No opponent color data yet.</div>'}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="mana">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Mana development</h2><div class="section-desc">Total mana sources (lands + rocks + dorks) per turn survived.</div></div>
+            <div class="idx">04 / MANA</div>
+          </div>
+          <div class="grid grid-3">
+            <div class="hero-stat"><div class="num">${fmt1(avgManaPerTurn)}</div><div class="lbl">Mana / turn</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="decks">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Decks piloted</h2><div class="section-desc">${targetName}'s own record with each active, owned deck.</div></div>
+            <div class="idx">05 / DECKS</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <div class="toggle" id="decksSortToggle">
+              <button class="active" data-mode="games" onclick="setDeckSort('decksPilotedList','games', this.parentElement)">Games</button>
+              <button data-mode="wins" onclick="setDeckSort('decksPilotedList','wins', this.parentElement)">Wins</button>
+              <button data-mode="winrate" onclick="setDeckSort('decksPilotedList','winrate', this.parentElement)">Win %</button>
+            </div>
+            ${hiddenDeckCount ? `<button class="inactive-toggle" style="margin-bottom:0;" onclick="toggleInactive('decksPilotedList', this, ${hiddenDeckCount}, 'Show inactive/unowned decks (${hiddenDeckCount})', 'Hide inactive/unowned decks')">Show inactive/unowned decks (${hiddenDeckCount})</button>` : ''}
+          </div>
+          <div class="panel rowlist with-thumbs" id="decksPilotedList">
+            ${decksPiloted.map(d => `
+              <a href="${deckUrl(d.name)}" class="r" style="order:${sortByGames[d.name].order};text-decoration:none;color:inherit;"${d.hide ? ' data-inactive="1"' : ''}
+                 data-order-games="${sortByGames[d.name].order}" data-rank-games="${sortByGames[d.name].rank}"
+                 data-order-wins="${sortByWins[d.name].order}" data-rank-wins="${sortByWins[d.name].rank}"
+                 data-order-winrate="${sortByWinRate[d.name].order}" data-rank-winrate="${sortByWinRate[d.name].rank}">
+                <div class="pos">${sortByGames[d.name].rank}</div>
+                ${d.artUrl ? `<img class="deck-thumb" src="${escUrl(d.artUrl)}" alt="" style="width:42px;height:42px;min-width:42px;max-width:42px;object-fit:cover;border-radius:8px;">` : `<div class="deck-thumb" style="width:42px;height:42px;min-width:42px;"></div>`}
+                <div class="main">
+                  <div class="name">${pipsHTML(deckColorById[d.name])} &nbsp;${d.name}</div>
+                  <div class="meta">${d.games} game${d.games===1?'':'s'}${d.borrowed ? ' · not owned' : ''}</div>
+                </div>
+                <div class="stat"><div class="big">${pct(d.winRate)}</div><div class="small">${d.wins}W</div></div>
+                <div class="bar-track"><div class="bar-fill" style="width:${d.winRate*100}%"></div></div>
+              </a>
+            `).join('') || '<div class="empty-note">No decks logged yet.</div>'}
+          </div>
+        </div>
+      </section>
+
+      <section id="colorsowned">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Colors: Decks owned</h2><div class="section-desc">How many colors each deck runs, and how many run each individual color.</div></div>
+            <div class="idx">06 / DECKS OWNED</div>
+          </div>
+          <div class="grid grid-2">
+            <div class="panel" style="padding:22px 24px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By color count</h3>
+              ${deckColorCountStats.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${c.label}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.frac*100}%"></div></div>
+                <div class="hbar-val">${c.count}/${c.total}</div>
+              </div>`).join('') || '<div class="empty-note">No decks logged yet.</div>'}
+            </div>
+            <div class="panel" style="padding:22px 24px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By individual color</h3>
+              ${colorFrequency.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${pipsHTML(c.color)} &nbsp;${COLOR_NAMES[c.color]}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.frac*100}%"></div></div>
+                <div class="hbar-val">${c.count}/${c.total}</div>
+              </div>`).join('') || '<div class="empty-note">No decks logged yet.</div>'}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="colorsplayed">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Colors: Games played</h2><div class="section-desc">How many colors each deck runs, and how many run each individual color.</div></div>
+            <div class="idx">07 / DECKS PLAYED</div>
+          </div>
+          <div class="grid grid-2">
+            <div class="panel" style="padding:22px 24px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By color count</h3>
+              ${playedColorCountStats.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${c.label}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.frac*100}%"></div></div>
+                <div class="hbar-val">${c.count}/${c.total}</div>
+              </div>`).join('') || '<div class="empty-note">No games logged yet.</div>'}
+            </div>
+            <div class="panel" style="padding:22px 24px;">
+              <h3 style="font-size:11px;color:var(--text-faint);margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;">By individual color</h3>
+              ${playedColorFrequency.map(c => `<div class="hbar-row">
+                <div class="hbar-label">${pipsHTML(c.color)} &nbsp;${COLOR_NAMES[c.color]}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:${c.frac*100}%"></div></div>
+                <div class="hbar-val">${c.count}/${c.total}</div>
+              </div>`).join('') || '<div class="empty-note">No games logged yet.</div>'}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="h2h">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Head-to-head</h2><div class="section-desc">Decisive record against every opponent ${targetName} has shared a table with. 50% is an even split.</div></div>
+            <div class="idx">08 / HEAD-TO-HEAD</div>
+          </div>
+          <div class="panel rowlist">
+            ${(() => { const ranks = rankItems(headToHead, o => o.games); return headToHead.map((o,i) => {
+              const decisive = o.myWins + o.theirWins;
+              const myRate = decisive ? o.myWins/decisive : null;
+              return `
+              <a href="${playerUrl(o.name)}" class="r" style="text-decoration:none;color:inherit;">
+                <div class="pos">${ranks[i]}</div>
+                <div class="main">
+                  <div class="name">${o.name}</div>
+                  <div class="meta">${o.games} shared game${o.games===1?'':'s'} · ${decisive} decisive</div>
+                </div>
+                <div class="stat"><div class="big">${myRate!=null ? pct(myRate) : '—'}</div><div class="small">${o.myWins}-${o.theirWins}</div></div>
+                ${myRate!=null ? `<div class="bar-track"><div class="bar-fill" style="width:${myRate*100}%"></div></div>` : ''}
+              </a>`;
+            }).join('') || '<div class="empty-note">No shared games yet.</div>'; })()}
+          </div>
+        </div>
+      </section>
+
+      <section id="recent">
+        <div class="wrap">
+          <div class="section-head">
+            <div><h2>Recent games</h2><div class="section-desc">Most recent games first.</div></div>
+            <div class="idx">09 / RECENT</div>
+          </div>
+          <div class="panel game-log">
+            ${recentGames.map(g => {
+              const d = new Date(g.timestamp.replace(' ','T'));
+              const dateLabel = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+              const oppLinks = g.opponents.map(o => `<a href="${playerUrl(o)}">${o}</a>`).join(', ');
+              return `<div class="row">
+                <div class="date">${dateLabel}</div>
+                <div class="info"><b>${g.deck}</b> · seat ${g.seat ?? '—'} vs ${oppLinks || '—'}</div>
+                <div class="result ${g.isWin ? 'win' : 'loss'}">${g.isWin ? 'WIN' : 'T' + (g.turnDied ?? '—')}</div>
+              </div>`;
+            }).join('') || '<div class="empty-note">No dated games yet.</div>'}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  const html = `
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-mark" style="text-decoration:none;"><span class="dot"></span>The Table</a>
+      <div class="nav-links">
+        <a href="index.html">Overview</a>
+        <a href="player.html">Players</a>
+        <a href="deck.html">Decks</a>
+      </div>
+    </div>
+  </nav>
+  ${bodyHtml}
+  <footer>
+    Reads live from the Game_Summary and Player_Performance tabs · reload the page any time to pull the latest games.
+    <br><button class="refresh-btn" onclick="location.reload()">Refresh data</button>
+  </footer>
+  `;
+
+  document.getElementById('app').innerHTML = html;
+}
+
+init();
+</script>
+</body>
+</html>
