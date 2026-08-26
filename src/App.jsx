@@ -1638,7 +1638,12 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(g) 
         });
-        if (r.ok) {
+        let body = null;
+        try { body = await r.json(); } catch (e) { body = null; }
+        // Trust the response body, not just r.ok - a 2xx status alone doesn't prove this
+        // reached our Flask app (e.g. Render's cold-start loading page, or a flaky network
+        // intermediary, can return 2xx without the game ever being written to the sheet).
+        if (r.ok && body && body.status === 'success' && body.game_id) {
           remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
           setPendingGames([...remaining]);
           localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
@@ -2012,6 +2017,24 @@ export default function App() {
                     icon={
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+                      </svg>
+                    }
+                    last
+                  />
+                </div>
+
+                {/* Section: Stats */}
+                <div className="px-6 pt-2 pb-2 flex items-center gap-3">
+                  <span className="text-white/35 font-black text-[11px] uppercase tracking-[0.25em] whitespace-nowrap">Stats</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <div className="pb-6">
+                  <SettingsRow
+                    label="Table Stats"
+                    onClick={() => window.open('/stats/index.html', '_blank', 'noopener,noreferrer')}
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
                       </svg>
                     }
                     last
