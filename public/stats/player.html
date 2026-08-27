@@ -1057,12 +1057,15 @@ async function renderAsync(gamesData, perfData){
             <div class="idx">05 / DECKS</div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-            <div class="toggle" id="decksSortToggle">
-              <button class="active" data-mode="games" onclick="setDeckSort('decksPilotedList','games', this.parentElement)">Games</button>
-              <button data-mode="wins" onclick="setDeckSort('decksPilotedList','wins', this.parentElement)">Wins</button>
-              <button data-mode="winrate" onclick="setDeckSort('decksPilotedList','winrate', this.parentElement)">Win %</button>
-            </div>
             ${hiddenDeckCount ? `<button class="inactive-toggle" style="margin-bottom:0;" onclick="toggleInactive('decksPilotedList', this, ${hiddenDeckCount}, 'Show inactive/unowned decks (${hiddenDeckCount})', 'Hide inactive/unowned decks')">Show inactive/unowned decks (${hiddenDeckCount})</button>` : ''}
+            <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+              <span style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;font-weight:900;">Sort by</span>
+              <div class="toggle" id="decksSortToggle">
+                <button class="active" data-mode="games" onclick="setDeckSort('decksPilotedList','games', this.parentElement)">Games</button>
+                <button data-mode="wins" onclick="setDeckSort('decksPilotedList','wins', this.parentElement)">Wins</button>
+                <button data-mode="winrate" onclick="setDeckSort('decksPilotedList','winrate', this.parentElement)">Win %</button>
+              </div>
+            </div>
           </div>
           <div class="panel rowlist with-thumbs" id="decksPilotedList">
             ${decksPiloted.map(d => `
