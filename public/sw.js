@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtg-tracker-v3';
+const CACHE_NAME = 'mtg-tracker-v4';
 const IMAGE_CACHE = 'mtg-images-v1';
 
 self.addEventListener('install', (event) => {
@@ -7,6 +7,9 @@ self.addEventListener('install', (event) => {
       '/',
       '/index.html',
       '/manifest.json',
+      '/stats/index.html',
+      '/stats/player.html',
+      '/stats/deck.html',
     ]))
   );
   self.skipWaiting();
@@ -65,6 +68,9 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.open(CACHE_NAME).then((cache) =>
+          // ignoreSearch only strips the query string, not the path - so this correctly
+          // matches this exact page first (e.g. /stats/player.html), and only falls back
+          // to the main app shell ('/') if this specific page was never cached at all.
           cache.match(request, { ignoreSearch: true }).then((match) => match || cache.match('/'))
         ))
     );
