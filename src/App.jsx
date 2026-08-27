@@ -5,6 +5,23 @@ const textShadowStyle = {
   textShadow: '0px 2px 10px rgba(0,0,0,0.9), 0px 0px 20px rgba(0,0,0,0.5)' 
 };
 
+// --- LIVE GAME PERSISTENCE ---
+// Caches the in-progress game (seats, turn, life totals, commander damage, setup-wizard
+// progress, etc.) so it survives navigating away (e.g. to the stats pages) or closing and
+// reopening the app - none of this lives anywhere except React state otherwise, so a full
+// page reload would silently wipe it.
+const LIVE_GAME_KEY = 'mtg_live_game';
+const loadCachedGame = () => {
+  try {
+    const raw = localStorage.getItem(LIVE_GAME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 // --- RESPONSIVE HELPER ---
 // Matches Tailwind's `md:` breakpoint (768px) so "large screen" here means the same
 // thing it means everywhere else in the app's className strings.
@@ -1248,17 +1265,25 @@ const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last 
 );
 
 export default function App() {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [turn, setTurn] = useState(1);
+  // Read the cached live game once, synchronously, before the useState calls below use it -
+  // a ref (not state) so this only ever reads localStorage once, not on every render.
+  const cachedGameRef = useRef(null);
+  if (cachedGameRef.current === null) {
+    cachedGameRef.current = loadCachedGame() || {};
+  }
+  const cachedGame = cachedGameRef.current;
+
+  const [gameStarted, setGameStarted] = useState(() => cachedGame.gameStarted ?? false);
+  const [turn, setTurn] = useState(() => cachedGame.turn ?? 1);
   const [playerDataMap, setPlayerDataMap] = useState([]);
   const [pendingGames, setPendingGames] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_games') || '[]'));
   const [pendingEdits, setPendingEdits] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_edits') || '[]'));
   const [isSyncingEdits, setIsSyncingEdits] = useState(false);
   const syncPendingRef = useRef(() => {});
   const syncPendingEditsRef = useRef(() => {});
-  const [firstSeatIndex, setFirstSeatIndex] = useState(null);
+  const [firstSeatIndex, setFirstSeatIndex] = useState(() => cachedGame.firstSeatIndex ?? null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [mulliganType, setMulliganType] = useState('');
+  const [mulliganType, setMulliganType] = useState(() => cachedGame.mulliganType ?? '');
   
   const clockwiseOrder = [0, 1, 3, 2];
 
@@ -1266,8 +1291,17 @@ export default function App() {
     id: i, name: '', deck: '', artUrl: '', artUrlPartner: '', colors: '', deckOwner: '', status: 'active', step: 0, order: '',
     stats: { startLands: 3, lands: 0, rocks: 0, dorks: 0, turnDied: 0, life: 40, cmdDamage: {} } 
   }));
-  const [seats, setSeats] = useState(initialSeats);
+  const [seats, setSeats] = useState(() => cachedGame.seats ?? initialSeats);
   const timerRef = useRef(null);
+
+  // Persist the live game on every change, so navigating away or closing/reopening the app
+  // doesn't lose it. Cheap enough at this data size to just write on every change (same
+  // pattern already used for pendingGames/pendingEdits elsewhere in this file).
+  useEffect(() => {
+    try {
+      localStorage.setItem(LIVE_GAME_KEY, JSON.stringify({ gameStarted, turn, firstSeatIndex, mulliganType, seats }));
+    } catch (e) { /* storage full/unavailable - not critical, the game just won't be cached this time */ }
+  }, [gameStarted, turn, firstSeatIndex, mulliganType, seats]);
 
   useEffect(() => {
     const CACHE_VERSION = 'v2_artUrlPartner';
