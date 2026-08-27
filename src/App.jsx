@@ -1999,7 +1999,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="pt-3 pb-6">
+                <div>
                   <SettingsRow
                     label="Reset Game"
                     destructive
@@ -2013,7 +2013,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="pt-3 pb-6">
+                <div className="pb-6">
                   <SettingsRow
                     label="Table Stats"
                     onClick={() => window.open('/stats/index.html', '_blank', 'noopener,noreferrer')}
