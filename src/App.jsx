@@ -1994,7 +1994,6 @@ export default function App() {
                           <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
                         </svg>
                       }
-                      last
                     />
                   )}
                 </div>
@@ -2009,7 +2008,6 @@ export default function App() {
                         <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
                       </svg>
                     }
-                    last
                   />
                 </div>
 
