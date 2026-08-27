@@ -1729,8 +1729,8 @@ export default function App() {
     <div className="min-h-screen w-screen bg-black overflow-hidden">
       <div
         style={{
-          width: '100vh',
-          height: '100vw',
+          width: '100svh',
+          height: '100svw',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
