@@ -2048,7 +2048,7 @@ export default function App() {
                 <div className="pb-6">
                   <SettingsRow
                     label="Table Stats"
-                    onClick={() => window.open('/stats/index.html', '_blank', 'noopener,noreferrer')}
+                    onClick={() => { window.location.href = '/stats/index.html'; }}
                     icon={
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
@@ -2378,4 +2378,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+                }
