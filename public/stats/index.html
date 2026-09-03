@@ -617,7 +617,7 @@ async function renderAsync(gamesData, perfData){
   const totalGames = games.length;
   const players = [...new Set(perf.map(p => p.Player))].filter(Boolean);
   const decks = [...new Set(perf.map(p => p.Deck))].filter(Boolean);
-  const { map: pfpMap, activeDecksByOwner, deckColorFromSheet } = await fetchPlayerPfps(players);
+  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet } = await fetchPlayerPfps(players);
   // Prefer the Players sheet's Color_ID (the authoritative deck registry)
   // over whatever Player_Performance's own Color_ID column has for that
   // deck — the sheet is edited once per deck, not re-typed every game.
@@ -644,21 +644,22 @@ async function renderAsync(gamesData, perfData){
     const survivalTurns = rows.map(p=>p.turnDiedNum).filter(x=>x);
     const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
     const allTurns = rows.map(r=>r.gameEndTurn).filter(x=>x!=null);
-    const deckSet = new Set(rows.map(r=>r.Deck).filter(Boolean));
     const openingLands = rows.map(r=>r.Opening_Lands).filter(x=>x!=null);
     const manaRows = rows.map(r => {
       const turnsAlive = r.isWin ? r.gameEndTurn : r.turnDiedNum;
       const manaTotal = (r.End_Lands!=null || r.End_Rocks!=null || r.End_Dorks!=null) ? (r.End_Lands||0)+(r.End_Rocks||0)+(r.End_Dorks||0) : null;
       return (manaTotal!=null && turnsAlive) ? manaTotal/turnsAlive : null;
     }).filter(x=>x!=null);
-    // Color devotion: of this player's distinct decks, what fraction include
-    // each color in their identity — feeds the Highest/Lowest Devotion awards.
-    const deckColorList = [...deckSet].map(dn => rows.find(r=>r.Deck===dn)?.Color_ID || '');
+    // Color devotion: of this player's ACTIVE, OWNED decks (per their own
+    // sheet tab, i.e. exactly what the Decks section's isActive check uses)
+    // - not decks they've merely piloted, which could include borrowed or
+    // retired decks and would misrepresent "their" color identity.
+    const ownedActiveDecks = ownedDecksByOwner[name] || [];
     const devotion = {};
-    if (deckSet.size){
+    if (ownedActiveDecks.length){
       ['W','U','B','R','G'].forEach(c => {
-        const withColor = deckColorList.filter(id => id.toUpperCase().includes(c)).length;
-        devotion[c] = withColor / deckSet.size;
+        const withColor = ownedActiveDecks.filter(d => (d.colorId||'').toUpperCase().includes(c)).length;
+        devotion[c] = withColor / ownedActiveDecks.length;
       });
     }
     return {
@@ -669,7 +670,7 @@ async function renderAsync(gamesData, perfData){
       avgGameLen: mean(allTurns),
       avgOpeningLands: mean(openingLands),
       avgManaPerTurn: mean(manaRows),
-      deckCount: deckSet.size,
+      deckCount: ownedActiveDecks.length,
       devotion
     };
   }).filter(p => p.gamesPlayed > 0)
