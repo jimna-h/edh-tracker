@@ -22,6 +22,34 @@ const loadCachedGame = () => {
   }
 };
 
+// Safely reads a JSON array out of localStorage. Used for pendingGames/pendingEdits, which
+// were previously read with a bare JSON.parse(localStorage.getItem(...) || '[]') - if that
+// value is ever malformed for any reason (a previous crash mid-write, storage corruption,
+// anything), that throws during the very first render and the entire app fails to load,
+// which is a far worse failure mode than losing track of one pending item.
+const loadJSONArray = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Safe localStorage write: if this throws (quota exceeded, private-browsing restrictions,
+// etc.) it fails silently rather than propagating out of a React state updater, which - with
+// no error boundary in this app - would otherwise blank the entire screen over a storage
+// write failing, even though the in-memory state update itself would have been fine.
+const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.error('localStorage write failed:', key, e);
+  }
+};
+
 // --- RESPONSIVE HELPER ---
 // Matches Tailwind's `md:` breakpoint (768px) so "large screen" here means the same
 // thing it means everywhere else in the app's className strings.
@@ -1276,13 +1304,18 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(() => cachedGame.gameStarted ?? false);
   const [turn, setTurn] = useState(() => cachedGame.turn ?? 1);
   const [playerDataMap, setPlayerDataMap] = useState([]);
-  const [pendingGames, setPendingGames] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_games') || '[]'));
-  const [pendingEdits, setPendingEdits] = useState(() => JSON.parse(localStorage.getItem('pending_mtg_edits') || '[]'));
+  const [pendingGames, setPendingGames] = useState(() => loadJSONArray('pending_mtg_games'));
+  const [pendingEdits, setPendingEdits] = useState(() => loadJSONArray('pending_mtg_edits'));
   const [isSyncingEdits, setIsSyncingEdits] = useState(false);
   const syncPendingRef = useRef(() => {});
   const syncPendingEditsRef = useRef(() => {});
   const [firstSeatIndex, setFirstSeatIndex] = useState(() => cachedGame.firstSeatIndex ?? null);
   const [isSyncing, setIsSyncing] = useState(false);
+  // Synchronous guard against concurrent syncPending runs - isSyncing (state) is read from
+  // whichever closure happens to call it, which can go stale the same way pendingGames did;
+  // this ref is a single shared value every invocation checks/sets regardless of which
+  // closure/trigger (manual tap, online event, post-submit timeout) is calling it.
+  const syncInProgressRef = useRef(false);
   const [mulliganType, setMulliganType] = useState(() => cachedGame.mulliganType ?? '');
   
   const clockwiseOrder = [0, 1, 3, 2];
@@ -1293,14 +1326,16 @@ export default function App() {
   }));
   const [seats, setSeats] = useState(() => cachedGame.seats ?? initialSeats);
   const timerRef = useRef(null);
+  // Guards against submitGame firing twice for the same finished game (a fast double-tap, or
+  // the Submit button still being on-screen for a moment before its render-condition catches
+  // up with gameStarted flipping to false). Reset only when a new game actually starts.
+  const submittingRef = useRef(false);
 
   // Persist the live game on every change, so navigating away or closing/reopening the app
   // doesn't lose it. Cheap enough at this data size to just write on every change (same
   // pattern already used for pendingGames/pendingEdits elsewhere in this file).
   useEffect(() => {
-    try {
-      localStorage.setItem(LIVE_GAME_KEY, JSON.stringify({ gameStarted, turn, firstSeatIndex, mulliganType, seats }));
-    } catch (e) { /* storage full/unavailable - not critical, the game just won't be cached this time */ }
+    safeSetItem(LIVE_GAME_KEY, JSON.stringify({ gameStarted, turn, firstSeatIndex, mulliganType, seats }));
   }, [gameStarted, turn, firstSeatIndex, mulliganType, seats]);
 
   useEffect(() => {
@@ -1331,7 +1366,7 @@ export default function App() {
       })
       .catch(() => console.log("Offline: Using cached player data"));
 
-    if (pendingGames.length > 0) syncPending();
+    if (pendingGames.some(g => !g.synced)) syncPending();
     if (pendingEdits.length > 0) syncPendingEdits();
 
     const handleOnline = () => { syncPendingRef.current(); syncPendingEditsRef.current(); };
@@ -1458,6 +1493,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [tableLayout, setTableLayout] = useState(() => localStorage.getItem('mtg_table_layout') || 'grid');
   const [showPlayerEditor, setShowPlayerEditor] = useState(false);
+  const [showGameLog, setShowGameLog] = useState(false);
   const [expandedPlayer, setExpandedPlayer] = useState(null);
   const [editingDeck, setEditingDeck] = useState(null); // { isNew, originalDeck, deck, artUrl, artUrlPartner, hasPartner, colors[] }
   const [editorBusy, setEditorBusy] = useState(false);
@@ -1532,7 +1568,7 @@ export default function App() {
       // retry automatically once we're back online, same pattern as game submission.
       setPendingEdits(prev => {
         const next = [...prev, { id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, path, body }];
-        localStorage.setItem('pending_mtg_edits', JSON.stringify(next));
+        safeSetItem('pending_mtg_edits', JSON.stringify(next));
         return next;
       });
     } finally {
@@ -1553,7 +1589,7 @@ export default function App() {
         if (r.ok) {
           remaining = remaining.filter(e => e.id !== edit.id);
           setPendingEdits([...remaining]);
-          localStorage.setItem('pending_mtg_edits', JSON.stringify(remaining));
+          safeSetItem('pending_mtg_edits', JSON.stringify(remaining));
         } else { break; }
       } catch (e) { break; }
     }
@@ -1605,7 +1641,7 @@ export default function App() {
     if (timerRef.current) { 
       clearTimeout(timerRef.current); 
       if (gameStarted) setTurn(prev => prev + 1); 
-      else if (allFilled) setGameStarted(true);
+      else if (allFilled) { setGameStarted(true); submittingRef.current = false; }
       timerRef.current = null; 
     }
   };
@@ -1661,11 +1697,11 @@ export default function App() {
   };
 
   const syncPending = async () => {
-    if (isSyncing || pendingGames.length === 0) return;
+    const unsynced = pendingGames.filter(g => !g.synced);
+    if (syncInProgressRef.current || unsynced.length === 0) return;
+    syncInProgressRef.current = true;
     setIsSyncing(true);
-    const games = [...pendingGames];
-    let remaining = [...pendingGames];
-    for (const g of games) {
+    for (const g of unsynced) {
       try {
         const r = await fetch(submitUrl, { 
           method: 'POST', 
@@ -1678,21 +1714,40 @@ export default function App() {
         // reached our Flask app (e.g. Render's cold-start loading page, or a flaky network
         // intermediary, can return 2xx without the game ever being written to the sheet).
         if (r.ok && body && body.status === 'success' && body.game_id) {
-          remaining = remaining.filter(pg => pg.timestamp !== g.timestamp);
-          setPendingGames([...remaining]);
-          localStorage.setItem('pending_mtg_games', JSON.stringify(remaining));
+          // Mark synced in place rather than removing it - kept locally as a record until
+          // manually cleared (see Settings), instead of auto-deleting on success.
+          setPendingGames(prev => {
+            const updated = prev.map(pg => pg.timestamp === g.timestamp ? { ...pg, synced: true } : pg);
+            safeSetItem('pending_mtg_games', JSON.stringify(updated));
+            return updated;
+          });
         } else { break; }
       } catch (e) { break; }
     }
+    syncInProgressRef.current = false;
     setIsSyncing(false);
   };
   syncPendingRef.current = syncPending;
 
+  // Manually clears already-synced games from the local record. Nothing does this
+  // automatically anymore (see syncPending) - this is the deliberate cleanup path instead.
+  const clearSyncedGames = () => {
+    setPendingGames(prev => {
+      const updated = prev.filter(g => !g.synced);
+      safeSetItem('pending_mtg_games', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const submitGame = () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     const gameData = {
       timestamp: new Date().toISOString(),
       turn,
       mulligan_type: mulliganType,
+      synced: false,
       players: seats.map(s => ({ 
         player: s.name, 
         deck: s.deck, 
@@ -1705,10 +1760,14 @@ export default function App() {
       }))
     };
 
-    // Always save locally first
-    const updated = [...pendingGames, gameData];
-    setPendingGames(updated);
-    localStorage.setItem('pending_mtg_games', JSON.stringify(updated));
+    // Always save locally first. Functional update - not `setPendingGames([...pendingGames, gameData])`
+    // reading the closure's possibly-stale pendingGames - so this can't silently overwrite another
+    // near-simultaneous addition; localStorage is then written from the same resolved value.
+    setPendingGames(prev => {
+      const updated = [...prev, gameData];
+      safeSetItem('pending_mtg_games', JSON.stringify(updated));
+      return updated;
+    });
 
     // Move on immediately - no waiting
     setGameStarted(false); 
@@ -1717,13 +1776,17 @@ export default function App() {
     setFirstSeatIndex(null); 
     setMulliganType('');
 
-    // Try to sync in the background
-    setTimeout(() => syncPending(), 500);
+    // Try to sync in the background. Uses the ref, not the local `syncPending` closure directly -
+    // that closure is bound to this render's pendingGames, captured BEFORE the setPendingGames call
+    // above takes effect, so calling it directly here would silently miss the game just added.
+    setTimeout(() => syncPendingRef.current(), 500);
   };
   
   const allFilled = seats.every(s => s.name !== '' && s.deck !== '') && mulliganType !== '';
   const allFinished = seats.every(s => s.status === 'done');
-  const hasPending = pendingGames.length > 0;
+  const unsyncedGames = pendingGames.filter(g => !g.synced);
+  const syncedGames = pendingGames.filter(g => g.synced);
+  const hasPending = unsyncedGames.length > 0;
 
   return (
     <div className="min-h-screen w-screen bg-black overflow-hidden">
@@ -1908,18 +1971,18 @@ export default function App() {
             definitively topmost regardless of any nested stacking-context ambiguity. Only active
             (and only visible as a dim/blur backdrop) while a modal is open. The modals themselves
             are rendered right after it so they draw on top and remain fully interactive. */}
-        {(showSettings || showPlayerEditor || showResetConfirm) && (
+        {(showSettings || showPlayerEditor || showResetConfirm || showGameLog) && (
           <div
             style={{ position: 'absolute', inset: 0, zIndex: 600000, pointerEvents: 'auto' }}
             onPointerDown={(e) => {
               if (showResetConfirm) { setShowResetConfirm(false); return; }
-              if (showSettings || showPlayerEditor) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); }
+              if (showSettings || showPlayerEditor || showGameLog) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); setShowGameLog(false); }
             }}
           >
             {showResetConfirm && (
               <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }} />
             )}
-            {(showSettings || showPlayerEditor) && !showResetConfirm && (
+            {(showSettings || showPlayerEditor || showGameLog) && !showResetConfirm && (
               <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} />
             )}
           </div>
@@ -1944,7 +2007,7 @@ export default function App() {
           )}
 
           {/* Settings modal - large, Lifetap-style panel, always upright regardless of table layout */}
-          {showSettings && !showResetConfirm && !showPlayerEditor && (
+          {showSettings && !showResetConfirm && !showPlayerEditor && !showGameLog && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
               style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
@@ -1970,7 +2033,7 @@ export default function App() {
                 <div className="pt-6">
                   <SettingsRow
                     label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
-                    value={(hasPending || pendingEdits.length > 0) ? String(pendingGames.length + pendingEdits.length) : null}
+                    value={(hasPending || pendingEdits.length > 0) ? String(unsyncedGames.length + pendingEdits.length) : null}
                     disabled={(!hasPending && pendingEdits.length === 0) || isSyncing || isSyncingEdits}
                     onClick={() => { syncPending(); syncPendingEdits(); }}
                     icon={
@@ -1979,6 +2042,17 @@ export default function App() {
                       </svg>
                     }
                   />
+                  {pendingGames.length > 0 && (
+                    <SettingsRow
+                      label={`Local Games (${pendingGames.length})`}
+                      onClick={() => setShowGameLog(true)}
+                      icon={
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+                        </svg>
+                      }
+                    />
+                  )}
                   <div className="w-full flex items-center gap-4 px-5 py-5 mb-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18 }}>
                     <span style={{ width: 26, height: 26, flexShrink: 0, color: 'rgba(255,255,255,0.65)' }}>
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2375,7 +2449,94 @@ export default function App() {
             );
           })()}
 
+          {showGameLog && (() => {
+            const sorted = [...pendingGames].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const fmtWhen = (iso) => {
+              try {
+                return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              } catch (e) { return iso; }
+            };
+            return (
+              <div
+                className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
+                style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    onClick={() => setShowGameLog(false)}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                  <span className="text-white font-black text-base uppercase tracking-[0.15em]">Local Games</span>
+                  <button
+                    onClick={() => { setShowGameLog(false); setShowSettings(false); }}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 34, height: 34, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
+                  <div className="px-6 py-6 flex flex-col" style={{ width: '100%', maxWidth: 420, gap: 10 }}>
+                    {sorted.length === 0 && (
+                      <span className="text-white/40 text-[13px] font-bold text-center py-8">No games logged from this device yet.</span>
+                    )}
+                    {sorted.map((g) => {
+                      const winner = (g.players || []).find(p => p.turn_died === 'win');
+                      return (
+                        <div key={g.timestamp} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 14 }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white/50 font-bold text-[12px]">{fmtWhen(g.timestamp)}</span>
+                            <span
+                              className="font-black text-[10px] uppercase tracking-wide px-2 py-1 rounded-full"
+                              style={{
+                                color: g.synced ? '#86efac' : '#fde68a',
+                                backgroundColor: g.synced ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)',
+                              }}
+                            >
+                              {g.synced ? 'Synced' : 'Pending'}
+                            </span>
+                          </div>
+                          {winner && (
+                            <div className="text-white font-black text-[14px] mb-2">🏆 {winner.player} — {winner.deck}</div>
+                          )}
+                          <div className="flex flex-col" style={{ gap: 3 }}>
+                            {(g.players || []).map((p, i) => (
+                              <div key={i} className="text-white/55 text-[11.5px] font-bold flex justify-between">
+                                <span>{p.player} · {p.deck}</span>
+                                <span>{p.turn_died === 'win' ? 'Win' : p.turn_died ? `Out T${p.turn_died}` : '—'}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="text-white/30 text-[10px] font-bold mt-2 uppercase tracking-wide">
+                            Turn {g.turn}{g.mulligan_type ? ` · ${g.mulligan_type}` : ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {syncedGames.length > 0 && (
+                      <button
+                        onClick={() => { if (confirm(`Remove ${syncedGames.length} already-synced game${syncedGames.length === 1 ? '' : 's'} from this device's local record? This only clears the local copy - they stay on the sheet.`)) clearSyncedGames(); }}
+                        className="text-[13px] font-black uppercase text-red-400 px-6 py-3 rounded-full bg-red-500/10 self-center mt-3"
+                      >
+                        Clear Synced Games ({syncedGames.length})
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+
       </div>
     </div>
   );
-                }
+}
