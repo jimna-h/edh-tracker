@@ -1266,10 +1266,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 };
 
 // --- MAIN APP ---
-const IS_REAL = new URLSearchParams(window.location.search).get('key') === 'toski';
-const submitUrl = IS_REAL 
-  ? 'https://edh-backend.onrender.com/submit'
-  : 'https://edh-backend.onrender.com/submit-demo';
+const SUBMIT_URL = 'https://edh-backend.onrender.com/submit';
 
 // --- SETTINGS ROW ---
 const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last }) => (
@@ -1703,7 +1700,7 @@ export default function App() {
     setIsSyncing(true);
     for (const g of unsynced) {
       try {
-        const r = await fetch(submitUrl, { 
+        const r = await fetch(SUBMIT_URL, { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(g) 
