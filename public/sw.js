@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtg-tracker-v4';
+const CACHE_NAME = 'mtg-tracker-v5';
 const IMAGE_CACHE = 'mtg-images-v1';
 
 self.addEventListener('install', (event) => {
@@ -10,6 +10,7 @@ self.addEventListener('install', (event) => {
       '/stats/index.html',
       '/stats/player.html',
       '/stats/deck.html',
+      '/stats/stats-shared.js',
     ]))
   );
   self.skipWaiting();

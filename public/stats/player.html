@@ -342,192 +342,23 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
   <div class="state-screen" id="loadingScreen">
     <div class="spinner"></div>
     <h2>Pulling up the profile…</h2>
-    <p>Pulling live results from the scorekeeping sheet.</p>
+    <p>Pulling live results from the tracker's database.</p>
   </div>
 </div>
 
 <template id="errorTemplate">
   <div class="state-screen">
-    <h2>Couldn't reach the sheet</h2>
+    <h2>Couldn't reach the server</h2>
     <p>
-      This page reads live from your Google Sheet, which needs to be shared as
-      <strong>"Anyone with the link — Viewer."</strong>
-      In the sheet, click <em>Share</em>, set general access to "Anyone with the link," then reload this page.
+      This page reads live from the tracker's backend. If it just went idle,
+      it can take up to a minute to wake back up — try again in a bit.
     </p>
-    <p style="margin-top:14px;">Sheet ID in use: <code class="inline">__SHEET_ID__</code></p>
     <button class="retry-btn" onclick="location.reload()">Try again</button>
   </div>
 </template>
 
+<script src="stats-shared.js"></script>
 <script>
-const SHEET_ID = '18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I';
-const GAME_TAB = 'Game_Summary';
-const PLAYER_TAB = 'Player_Performance';
-
-// Separate spreadsheet, one tab per player, each tab a deck list for that
-// player. A row with Deck Name "PFP" (Exclude checked, so it never shows up
-// as an actual deck) holds that player's profile picture in Art_URL.
-const PFP_SHEET_ID = '1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g';
-
-const MANA_COLORS = { W:'#F4EFDD', U:'#3E7FC1', B:'#4A4750', R:'#B8402F', G:'#3C7A4C', C:'#9A958A' };
-const COLOR_NAMES = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
-
-function gvizUrl(sheetName, sheetId){
-  return `https://docs.google.com/spreadsheets/d/${sheetId || SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-}
-
-function parseCSV(text){
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++){
-    const c = text[i];
-    if (inQuotes){
-      if (c === '"'){
-        if (text[i+1] === '"'){ field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else {
-      if (c === '"') inQuotes = true;
-      else if (c === ','){ row.push(field); field=''; }
-      else if (c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else if (c === '\r'){ /* skip */ }
-      else field += c;
-    }
-  }
-  if (field.length || row.length){ row.push(field); rows.push(row); }
-  return rows.filter(r => r.length > 1 || (r.length===1 && r[0] !== ''));
-}
-
-// Normalize a header/candidate name for tolerant matching: lowercase,
-// strip everything but letters+digits. This absorbs the exact kind of
-// sheet drift we've hit before (typos like "Muilligan_Type", inconsistent
-// truncation like "Opening_Lan", stray spaces, underscore-vs-space, casing)
-// without needing to hardcode every specific variant by hand.
-function normKey(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-
-function rowsToObjects(rows){
-  const headers = rows[0].map(h => h.trim());
-  const headerByNorm = {};
-  headers.forEach(h => { if (!(normKey(h) in headerByNorm)) headerByNorm[normKey(h)] = h; });
-  const objs = rows.slice(1).map(r => {
-    const obj = {};
-    headers.forEach((h,i) => obj[h] = (r[i] !== undefined ? r[i].trim() : ''));
-    return obj;
-  });
-  return { rows: objs, headerByNorm };
-}
-
-// Tolerant field getter: tries each candidate name against the actual sheet
-// headers (case/spacing/typo-insensitive) and returns the first that exists,
-// rather than requiring an exact string match. Use this for any column whose
-// real header spelling in the live sheet might drift from what we expect.
-function field(row, headerByNorm, ...candidates){
-  for (const c of candidates){
-    const h = headerByNorm[normKey(c)];
-    if (h !== undefined && row[h] !== undefined) return row[h];
-  }
-  return undefined;
-}
-
-async function fetchSheet(name, sheetId){
-  const res = await fetch(gvizUrl(name, sheetId));
-  if (!res.ok) throw new Error('fetch-failed');
-  const text = await res.text();
-  if (text.trim().startsWith('<')) throw new Error('not-public');
-  return rowsToObjects(parseCSV(text));
-}
-
-// Fetches each player's own tab from the PFP spreadsheet (tab name === player
-// name). Two things come out of each tab:
-//  - the Art_URL off the row whose Deck Name is "PFP" (that player's avatar)
-//  - the set of that player's currently-ACTIVE decks: every other row whose
-//    Exclude checkbox isn't checked. This tab is the source of truth for
-//    "is this deck still part of the group" — decks that show up in game
-//    history but aren't (uncrossed-out) in their owner's tab are retired.
-// Any individual player's fetch is allowed to fail silently (no tab, no PFP
-// row, network hiccup) — that player just falls back to an initial-letter
-// avatar, and their decks are treated as active-by-default (fail open,
-// rather than mass-hiding decks because a fetch hiccuped).
-async function fetchPlayerPfps(playerNames){
-  const map = {};
-  const activeDecksByOwner = {};
-  const ownedDecksByOwner = {};
-  const deckColorFromSheet = {};
-  const debug = [];
-  await Promise.all(playerNames.map(async name => {
-    const url = gvizUrl(name, PFP_SHEET_ID);
-    const rec = { name, url };
-    try{
-      const res = await fetch(url);
-      rec.httpStatus = res.status;
-      if (!res.ok){ rec.result = 'fetch-not-ok'; debug.push(rec); return; }
-      const text = await res.text();
-      rec.textPreview = text.slice(0, 120);
-      if (text.trim().startsWith('<')){ rec.result = 'not-public-or-tab-missing (got HTML not CSV)'; debug.push(rec); return; }
-      const { rows, headerByNorm } = rowsToObjects(parseCSV(text));
-      rec.headersSeen = Object.values(headerByNorm);
-      rec.rowCount = rows.length;
-      const pfpRow = rows.find(r => {
-        const dn = field(r, headerByNorm, 'Deck Name', 'DeckName', 'Deck');
-        return (dn || '').trim().toLowerCase() === 'pfp';
-      });
-      if (pfpRow){
-        const pfpUrl = field(pfpRow, headerByNorm, 'Art_URL', 'ArtURL');
-        if (pfpUrl && pfpUrl.trim()) map[name] = pfpUrl.trim();
-      }
-      const activeSet = new Set();
-      const ownedList = [];
-      rows.forEach(r => {
-        const dn = field(r, headerByNorm, 'Deck Name', 'DeckName', 'Deck');
-        if (!dn || dn.trim().toLowerCase() === 'pfp') return;
-        const excludeRaw = field(r, headerByNorm, 'Exclude');
-        const excluded = (excludeRaw || '').trim().toUpperCase() === 'TRUE';
-        const colorId = field(r, headerByNorm, 'Color_ID', 'Colors', 'ColorID', 'Color') || '';
-        if (!excluded){
-          activeSet.add(normKey(dn));
-          // Full record (original name + color), independent of whether this
-          // player has ever actually logged a game with it — "decks owned"
-          // must reflect the sheet itself, not just decks with game history.
-          ownedList.push({ name: dn.trim(), colorId: colorId.trim() });
-        }
-        // This player-owned tab is the authoritative deck registry — its
-        // Color_ID should win over whatever got typed into Player_Performance
-        // on any given game log row (which is re-entered by hand every game
-        // and prone to drift/typos for the same deck over time).
-        if (dn && colorId.trim()) deckColorFromSheet[normKey(dn)] = colorId.trim();
-      });
-      activeDecksByOwner[name] = activeSet;
-      ownedDecksByOwner[name] = ownedList;
-      rec.result = 'OK';
-      debug.push(rec);
-    } catch(e){
-      rec.result = 'threw: ' + (e && e.message);
-      debug.push(rec);
-    }
-  }));
-  return { map, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, debug };
-}
-
-// A deck instance is "active" if its owner's tab lists it (un-excluded).
-// If we have no data at all for that owner (fetch failed, no tab), we fail
-// open and treat it as active rather than silently hiding decks because of
-// a data hiccup.
-function isDeckActive(activeDecksByOwner, owner, deckName){
-  const set = activeDecksByOwner[owner];
-  if (!set) return true;
-  return set.has(normKey(deckName));
-}
-
-// Toggles a "show inactive" class on the given container and updates the
-// triggering button's label. Called from inline onclick handlers.
-function toggleInactive(containerId, btn, hiddenCount, showLabel, hideLabel){
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  const showing = el.classList.toggle('show-inactive');
-  btn.textContent = showing
-    ? (hideLabel || 'Hide inactive decks')
-    : (showLabel || ('Show inactive decks (' + hiddenCount + ')'));
-}
 
 // Re-sorts a rowlist by swapping which precomputed order/rank each row uses
 // (set via data-order-<mode>/data-rank-<mode> attributes) — reorders visually
@@ -546,164 +377,15 @@ function setDeckSort(containerId, mode, groupEl){
   groupEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
 }
 
-function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
-function fmt1(n){ return n === null || n === undefined || isNaN(n) ? '—' : n.toFixed(1); }
-function pct(n){ return n === null || isNaN(n) ? '—' : Math.round(n*100) + '%'; }
-// Picks the ArtURL from the most recently-played game among these rows, not
-// just the first one found - a deck's art can change (new crop chosen), and
-// old logged games keep whatever art was current when they were submitted.
-function mostRecentArt(rows, gamesById){
-  const withArt = rows.filter(r=>r.ArtURL);
-  if (!withArt.length) return '';
-  return withArt.reduce((best, r) => {
-    const t = new Date(gamesById[r.GameID]?.Timestamp || 0).getTime();
-    const bt = new Date(gamesById[best.GameID]?.Timestamp || 0).getTime();
-    return t > bt ? r : best;
-  }).ArtURL;
-}
+async function init(){ await initStatsPage(renderAsync); }
 
-function pipsHTML(colorId){
-  if (!colorId) return `<span class="pips"><span class="pip" style="background:${MANA_COLORS.C}">C</span></span>`;
-  const chars = colorId.replace(/[^WUBRG]/gi,'').toUpperCase().split('');
-  const uniq = [...new Set(chars)];
-  if (!uniq.length) return `<span class="pips"><span class="pip" style="background:${MANA_COLORS.C}">C</span></span>`;
-  return `<span class="pips">` + uniq.map(c => `<span class="pip" style="background:${MANA_COLORS[c]}">${c}</span>`).join('') + `</span>`;
-}
-
-// Minimal escape for a URL dropped into a double-quoted HTML attribute.
-// Escape both quote styles for a URL dropped into an HTML attribute value:
-// the attribute itself is double-quoted, but the value also gets wrapped in
-// CSS url('...') using single quotes, so either character breaking loose
-// would truncate the attribute early.
-function escUrl(u){ return String(u || '').replace(/"/g, '%22').replace(/'/g, '%27'); }
-
-// Dense competition ranking: items tied on the given key all share the same
-// rank number, and the next distinct value gets the very next integer
-// (1,1,1,1,1,2 — not 1,1,1,1,1,6). Returns an array of rank numbers aligned
-// to `items`, which must already be sorted so ties are adjacent.
-function rankItems(items, keyFn){
-  let rank = 0;
-  let prevKey = null;
-  return items.map((item, i) => {
-    const key = keyFn(item);
-    if (i === 0 || key !== prevKey) rank++;
-    prevKey = key;
-    return rank;
-  });
-}
-
-// Ascending comparator for "average win turn" tie-breaking where fewer turns
-// is better. null (nobody's won yet) sorts last, as if it were +Infinity.
-function turnCompareAsc(a, b){
-  const av = (a === null || a === undefined) ? Infinity : a;
-  const bv = (b === null || b === undefined) ? Infinity : b;
-  return av - bv;
-}
-
-// Links to the per-entity profile pages.
-function playerUrl(name){ return `player.html?name=${encodeURIComponent(name)}`; }
-function deckUrl(name){ return `deck.html?name=${encodeURIComponent(name)}`; }
-
-function monthLabel(ts){
-  const d = new Date(ts.replace(' ','T'));
-  if (isNaN(d)) return null;
-  return d.toLocaleString('en-US', { month:'short', year:'2-digit' });
-}
-
-async function init(){
-  let gamesData, perfData;
-  try{
-    [gamesData, perfData] = await Promise.all([fetchSheet(GAME_TAB), fetchSheet(PLAYER_TAB)]);
-    if (!gamesData.rows.length || !perfData.rows.length) throw new Error('empty');
-  } catch(e){
-    const tpl = document.getElementById('errorTemplate').innerHTML.replace('__SHEET_ID__', SHEET_ID);
-    document.getElementById('app').innerHTML = tpl;
-    return;
-  }
-  await render(gamesData, perfData);
-}
-
-function render(gamesData, perfData){ return renderAsync(gamesData, perfData); }
-async function renderAsync(gamesData, perfData){
-  const gH = gamesData.headerByNorm, pH = perfData.headerByNorm;
-  let games = gamesData.rows, perf = perfData.rows;
-
-  // ---------- normalize ----------
-  games = games.filter(g => g.GameID);
-  perf = perf.filter(p => p.GameID && p.Player);
-  games.forEach(g => { g.End_Turn = parseFloat(g.End_Turn) || null; });
-  const gamesById = {};
-  games.forEach(g => { gamesById[g.GameID] = g; });
-
-  // Winner detection is NOT derived from Player_Performance's Turn_Died text.
-  // That field turns out to be inconsistently written across the sheet's
-  // history — sometimes literally "win", sometimes just left blank for the
-  // winner — so no single string match reliably identifies a winning row.
-  // Game_Summary's GameID -> Winner_Player pairing has proven reliable
-  // throughout (it's what powers Awards/Reigning Champion correctly), so we
-  // cross-reference against that instead: a Player_Performance row is a win
-  // iff its (GameID, Player) matches a (GameID, Winner_Player) in Game_Summary.
-  // GameID/Player are matched case- and whitespace-insensitively so a stray
-  // space or casing difference between the two tabs can't silently break the
-  // join the way the Turn_Died text match did.
-  const pairKey = (gameId, player) => normKey(gameId) + '|||' + normKey(player);
-  const winnerPairs = new Set(
-    games.filter(g => g.Winner_Player).map(g => pairKey(g.GameID, g.Winner_Player))
-  );
-
-  perf.forEach(p => {
-    p.Opening_Lands = parseFloat(field(p, pH, 'Opening_Lands', 'Opening_Lan')) || null;
-    p.End_Lands = parseFloat(p.End_Lands) || null;
-    p.End_Rocks = p.End_Rocks === '' ? null : parseFloat(p.End_Rocks);
-    p.End_Dorks = p.End_Dorks === '' ? null : parseFloat(p.End_Dorks);
-    const turnDiedRaw = field(p, pH, 'Turn_Died');
-    p.isWin = winnerPairs.has(pairKey(p.GameID, p.Player));
-    p.turnDiedNum = p.isWin ? null : (parseFloat(turnDiedRaw) || null);
-    p.SeatNum = parseFloat(field(p, pH, 'Seat_Position')) || null;
-    p.ArtURL = field(p, pH, 'Art_URL', 'ArtURL') || '';
-    p.gameEndTurn = gamesById[p.GameID]?.End_Turn ?? null;
-    // Owner/Color_ID had been read via direct property access elsewhere
-    // (rows.find(r=>r.Owner), p.Color_ID) instead of the tolerant field()
-    // lookup everything else here uses — normalizing them once, here, means
-    // every downstream direct access benefits without hunting down each site.
-    p.Owner = field(p, pH, 'Owner', 'Deck_Owner', 'DeckOwner') || p.Owner || '';
-    p.Color_ID = field(p, pH, 'Color_ID', 'Colors', 'ColorID', 'Color') || p.Color_ID || '';
-  });
-
-  // Guest players don't count toward any stats: excluding their rows here
-  // cascades cleanly into every derived stat below (leaderboard, decks,
-  // colors, seats, rivalries) since they all build from this `perf` array.
-  const isGuest = name => (name || '').trim().toLowerCase() === 'guest';
-  perf = perf.filter(p => !isGuest(p.Player));
-
-  // Games a guest won are excluded specifically from person-attributed
-  // awards (fastest win / longest grind / reigning champion) — crediting
-  // "Guest" as a standing record doesn't mean anything. Table-wide facts
-  // (total games, avg turn, seat rates, mulligan habits, monthly trend)
-  // still include every logged game regardless of who won it.
-  const gamesNonGuestWin = games.filter(g => !isGuest(g.Winner_Player));
-
-  const totalGames = games.length;
-  const players = [...new Set(perf.map(p => p.Player))].filter(Boolean);
-  const decks = [...new Set(perf.map(p => p.Deck))].filter(Boolean);
-  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet } = await fetchPlayerPfps(players);
-  // Prefer the Players sheet's Color_ID (the authoritative deck registry)
-  // over whatever Player_Performance's own Color_ID column has for that
-  // deck — the sheet is edited once per deck, not re-typed every game.
-  perf.forEach(p => {
-    const sheetColor = deckColorFromSheet[normKey(p.Deck)];
-    if (sheetColor) p.Color_ID = sheetColor;
-  });
-  const avgTurn = mean(games.map(g=>g.End_Turn).filter(x=>x));
-  // Null (not undefined-from-empty-reduce) when every logged game so far was
-  // won by Guest — the template below must check for this rather than assume
-  // longest/shortest are always real game objects, or it throws on .End_Turn
-  // and blanks the whole page.
-  const longest = gamesNonGuestWin.length ? gamesNonGuestWin.reduce((a,b)=> (b.End_Turn||0) > (a.End_Turn||0) ? b : a) : null;
-  const shortest = gamesNonGuestWin.length ? gamesNonGuestWin.reduce((a,b)=> (b.End_Turn||999) < (a.End_Turn||999) ? b : a) : null;
-  const dateSorted = [...games].filter(g=>g.Timestamp).sort((a,b)=> new Date(a.Timestamp) - new Date(b.Timestamp));
-  const dateSortedNonGuestWin = dateSorted.filter(g => !isGuest(g.Winner_Player));
-  const mostRecent = dateSortedNonGuestWin[dateSortedNonGuestWin.length-1];
+async function renderAsync(data){
+  const {
+    games, perf, gamesById, totalGames, players, decks,
+    pfpMap, activeDecksByOwner, ownedDecksByOwner,
+    avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
+    gamesNonGuestWin,
+  } = data;
 
   // ---------- players ----------
   const playerStats = players.map(name => {
@@ -1219,7 +901,7 @@ async function renderAsync(gamesData, perfData){
   </nav>
   ${bodyHtml}
   <footer>
-    Reads live from the Game_Summary and Player_Performance tabs · reload the page any time to pull the latest games.
+    Reads live from the tracker's database · reload the page any time to pull the latest games.
     <br><button class="refresh-btn" onclick="location.reload()">Refresh data</button>
   </footer>
   `;
