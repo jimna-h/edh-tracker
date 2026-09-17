@@ -1,6 +1,7 @@
 {
-  "short_name": "EDH Tracker",
-  "name": "EDH Tracker",
+  "short_name": "Sylvan Library",
+  "name": "Sylvan Library",
+  "description": "Pay Life. Draw Data.",
   "icons": [
     {
       "src": "icon.png",
