@@ -55,6 +55,53 @@ def get_players():
         print(f"Error fetching players: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/stats/data', methods=['GET'])
+def get_stats_data():
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, mulligan_type, winner_seat_position, winner_player, winner_deck, turn_count, played_at
+                    FROM games
+                """)
+                games = cur.fetchall()
+
+                cur.execute("""
+                    SELECT game_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url
+                    FROM game_performance
+                """)
+                performance = cur.fetchall()
+
+        games_out = [{
+            "GameID": g['id'],
+            "Mulligan_Type": g['mulligan_type'],
+            "Winner_Seat": g['winner_seat_position'],
+            "Winner_Player": g['winner_player'],
+            "Winner_Deck": g['winner_deck'],
+            "Timestamp": g['played_at'].isoformat() if g['played_at'] else '',
+            "End_Turn": g['turn_count'],
+        } for g in games]
+
+        performance_out = [{
+            "GameID": p['game_id'],
+            "Player": p['player'],
+            "Deck": p['deck'],
+            "Owner": p['deck_owner'],
+            "Opening_Lands": p['start_lands'],
+            "End_Lands": p['lands'],
+            "End_Rocks": p['rocks'],
+            "End_Dorks": p['dorks'],
+            "Turn_Died": p['turn_died'],
+            "SeatNum": p['seat_position'],
+            "Color_ID": p['colors'],
+            "ArtURL": p['art_url'],
+        } for p in performance]
+
+        return jsonify({"games": games_out, "performance": performance_out})
+    except Exception as e:
+        print(f"Error fetching stats data: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/submit', methods=['POST'])
 def submit_stats():
     try:
