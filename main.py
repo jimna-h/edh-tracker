@@ -27,7 +27,7 @@ def get_players():
                 players = cur.fetchall()
 
                 cur.execute("""
-                    SELECT owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archidekt
+                    SELECT id, owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archidekt
                     FROM decks
                     ORDER BY owner_id, row_order
                 """)
@@ -36,6 +36,7 @@ def get_players():
         decks_by_owner = {}
         for d in decks:
             decks_by_owner.setdefault(d['owner_id'], []).append({
+                "id": d['id'],
                 "deck": d['deck_name'],
                 "artUrl": d['art_url'],
                 "artUrlPartner": d['art_url_partner'],
@@ -67,7 +68,7 @@ def get_stats_data():
                 games = cur.fetchall()
 
                 cur.execute("""
-                    SELECT game_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url
+                    SELECT game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url
                     FROM game_performance
                 """)
                 performance = cur.fetchall()
@@ -84,6 +85,7 @@ def get_stats_data():
 
         performance_out = [{
             "GameID": p['game_id'],
+            "DeckId": p['deck_id'],
             "Player": p['player'],
             "Deck": p['deck'],
             "Owner": p['deck_owner'],

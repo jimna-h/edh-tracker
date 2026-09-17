@@ -381,7 +381,7 @@ async function init(){ await initStatsPage(renderAsync); }
 
 async function renderAsync(data){
   const {
-    games, perf, gamesById, totalGames, players, decks,
+    games, perf, perfForDecks, gamesById, totalGames, players, decks,
     pfpMap, activeDecksByOwner, ownedDecksByOwner,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
@@ -414,7 +414,7 @@ async function renderAsync(data){
 
   // ---------- decks ----------
   const deckStats = decks.map(name => {
-    const rows = perf.filter(p => p.Deck === name);
+    const rows = perfForDecks.filter(p => p.Deck === name);
     const wins = rows.filter(p=>p.isWin).length;
     const gamesPlayed = rows.length;
     const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);

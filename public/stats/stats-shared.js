@@ -36,18 +36,24 @@ async function fetchStatsJSON(){
   return { statsData, playersData };
 }
 
-// Builds the pfp/active-deck/owned-deck/deck-color maps directly from the
-// GET /players response (the same one the live Tracker app itself uses) -
-// this replaces fetching each player's own Sheet tab individually. A deck
-// instance is "active" if its owner's decks list doesn't have it excluded;
-// "owned" mirrors that same not-excluded set. The Players table (via
-// GET /players) is the authoritative deck registry, so its Color_ID should
-// win over whatever Player_Performance's own Color_ID has for that deck.
+// Builds the pfp/active-deck/owned-deck/deck-color/canonical-name maps
+// directly from the GET /players response (the same one the live Tracker app
+// itself uses) - this replaces fetching each player's own Sheet tab
+// individually. A deck instance is "active" if its owner's decks list
+// doesn't have it excluded; "owned" mirrors that same not-excluded set. The
+// Players table (via GET /players) is the authoritative deck registry, so
+// its Color_ID should win over whatever Player_Performance's own Color_ID
+// has for that deck, and its deck_name is the canonical display name for a
+// given deck_id (see normalizeStatsData's DeckId override - a deck logged
+// once as "Jodah" and once as "Jodah " with a trailing space would otherwise
+// show up as two separate deck entries despite deck_id already correctly
+// linking them to the same real deck).
 function buildPlayerDeckMaps(playersData){
   const map = {};
   const activeDecksByOwner = {};
   const ownedDecksByOwner = {};
   const deckColorFromSheet = {};
+  const deckNameById = {};
   playersData.forEach(p => {
     const name = p.player_name;
     if (p.pfp && p.pfp.trim()) map[name] = p.pfp.trim();
@@ -62,11 +68,12 @@ function buildPlayerDeckMaps(playersData){
         ownedList.push({ name: dn.trim(), colorId: colorId.trim() });
       }
       if (colorId.trim()) deckColorFromSheet[normKey(dn)] = colorId.trim();
+      if (d.id != null) deckNameById[d.id] = dn.trim();
     });
     activeDecksByOwner[name] = activeSet;
     ownedDecksByOwner[name] = ownedList;
   });
-  return { map, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet };
+  return { map, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById };
 }
 
 // A deck instance is "active" if its owner's deck list includes it
@@ -179,6 +186,11 @@ function normalizeStatsData(statsData, playersData){
     games.filter(g => g.Winner_Player).map(g => pairKey(g.GameID, g.Winner_Player))
   );
 
+  // Needed before the per-row loop below so the DeckId -> canonical-name and
+  // Color_ID overrides can happen in one pass over every row (guest-piloted
+  // rows included), not just the guest-filtered subset.
+  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById } = buildPlayerDeckMaps(playersData);
+
   perf.forEach(p => {
     p.Opening_Lands = parseFloat(p.Opening_Lands) || null;
     p.End_Lands = parseFloat(p.End_Lands) || null;
@@ -192,12 +204,34 @@ function normalizeStatsData(statsData, playersData){
     p.gameEndTurn = gamesById[p.GameID]?.End_Turn ?? null;
     p.Owner = p.Owner || '';
     p.Color_ID = p.Color_ID || '';
+    // A deck's own text can drift game to game (a stray trailing space, a
+    // casing difference) even though deck_id already links every row to the
+    // same real deck - without this, two rows that are really the same deck
+    // show up as two separate entries in every deck.map(name => ...)
+    // aggregation below, since those all group by exact Deck text. Stays as
+    // the raw typed text for ad hoc "Other" decks, which have no DeckId.
+    if (p.DeckId != null && deckNameById[p.DeckId]) p.Deck = deckNameById[p.DeckId];
+    // Prefer the Players table's Color_ID (the authoritative deck registry)
+    // over whatever Player_Performance's own Color_ID column has for that
+    // deck - the registry is edited once per deck, not re-entered every game.
+    const sheetColor = deckColorFromSheet[normKey(p.Deck)];
+    if (sheetColor) p.Color_ID = sheetColor;
   });
 
-  // Guest players don't count toward any stats: excluding their rows here
-  // cascades cleanly into every derived stat below (leaderboard, decks,
-  // colors, seats, rivalries) since they all build from this `perf` array.
   const isGuest = name => (name || '').trim().toLowerCase() === 'guest';
+
+  // Deck-level stats (a deck's own win rate/games-played/identity) are NOT
+  // person-attributed the way a player's award is, so a deck that's only
+  // ever been piloted by a guest still needs to show up with real numbers -
+  // perfForDecks keeps those rows; `perf` below still excludes them for
+  // every player/leaderboard/award/seat/color computation, which really are
+  // person-attributed.
+  const perfForDecks = perf;
+
+  // Guest players don't count toward any person-attributed stats: excluding
+  // their rows here cascades cleanly into every derived stat below
+  // (leaderboard, colors, seats, rivalries) since they all build from this
+  // `perf` array.
   perf = perf.filter(p => !isGuest(p.Player));
 
   // Games a guest won are excluded specifically from person-attributed
@@ -209,15 +243,10 @@ function normalizeStatsData(statsData, playersData){
 
   const totalGames = games.length;
   const players = [...new Set(perf.map(p => p.Player))].filter(Boolean);
-  const decks = [...new Set(perf.map(p => p.Deck))].filter(Boolean);
-  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet } = buildPlayerDeckMaps(playersData);
-  // Prefer the Players table's Color_ID (the authoritative deck registry)
-  // over whatever Player_Performance's own Color_ID column has for that
-  // deck - the registry is edited once per deck, not re-entered every game.
-  perf.forEach(p => {
-    const sheetColor = deckColorFromSheet[normKey(p.Deck)];
-    if (sheetColor) p.Color_ID = sheetColor;
-  });
+  // Deck identity/existence is unrelated to who piloted it, so this list (and
+  // anything built from perfForDecks) intentionally includes guest-piloted
+  // decks - see perfForDecks above.
+  const decks = [...new Set(perfForDecks.map(p => p.Deck))].filter(Boolean);
   const avgTurn = mean(games.map(g=>g.End_Turn).filter(x=>x));
   // Null (not undefined-from-empty-reduce) when every logged game so far was
   // won by Guest - callers must check for this rather than assume
@@ -229,7 +258,7 @@ function normalizeStatsData(statsData, playersData){
   const mostRecent = dateSortedNonGuestWin[dateSortedNonGuestWin.length-1];
 
   return {
-    games, perf, gamesById, totalGames, players, decks,
+    games, perf, perfForDecks, gamesById, totalGames, players, decks,
     pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,

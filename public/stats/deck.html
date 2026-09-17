@@ -367,7 +367,7 @@ async function init(){ await initStatsPage(renderAsync); }
 
 async function renderAsync(data){
   const {
-    games, perf, gamesById, totalGames, players, decks,
+    games, perf, perfForDecks, gamesById, totalGames, players, decks,
     pfpMap, activeDecksByOwner,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
@@ -397,7 +397,7 @@ async function renderAsync(data){
 
   // ---------- decks ----------
   const deckStats = decks.map(name => {
-    const rows = perf.filter(p => p.Deck === name);
+    const rows = perfForDecks.filter(p => p.Deck === name);
     const wins = rows.filter(p=>p.isWin).length;
     const gamesPlayed = rows.length;
     const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
@@ -462,7 +462,7 @@ async function renderAsync(data){
     `;
   } else {
     // ---------- single deck profile ----------
-    const rows = perf.filter(p => p.Deck === targetName);
+    const rows = perfForDecks.filter(p => p.Deck === targetName);
     const wins = rows.filter(r=>r.isWin).length;
     const gamesPlayed = rows.length;
     const winRate = gamesPlayed ? wins/gamesPlayed : 0;
@@ -504,7 +504,7 @@ async function renderAsync(data){
     const oppColorMap = {};
     rows.forEach(r => {
       const oppColors = new Set();
-      perf.filter(p => p.GameID === r.GameID && p.Deck !== targetName).forEach(o => {
+      perfForDecks.filter(p => p.GameID === r.GameID && p.Deck !== targetName).forEach(o => {
         (o.Color_ID||'').toUpperCase().split('').forEach(ch => { if ('WUBRG'.includes(ch)) oppColors.add(ch); });
       });
       oppColors.forEach(c => {
@@ -532,7 +532,7 @@ async function renderAsync(data){
     const oppMap = {};
     Object.keys(byGame).forEach(gid => {
       const w = gamesById[gid]?.Winner_Deck;
-      const oppsInGame = [...new Set(perf.filter(p => p.GameID === gid && p.Deck !== targetName).map(p=>p.Deck))];
+      const oppsInGame = [...new Set(perfForDecks.filter(p => p.GameID === gid && p.Deck !== targetName).map(p=>p.Deck))];
       oppsInGame.forEach(opp => {
         if (!oppMap[opp]) oppMap[opp] = { name:opp, games:0, myWins:0, theirWins:0 };
         oppMap[opp].games++;
@@ -548,7 +548,7 @@ async function renderAsync(data){
     // recent games
     const recentGames = rows.map(r => {
       const g = gamesById[r.GameID];
-      const opponents = [...new Set(perf.filter(p => p.GameID === r.GameID && p.Deck !== targetName).map(p=>p.Deck))];
+      const opponents = [...new Set(perfForDecks.filter(p => p.GameID === r.GameID && p.Deck !== targetName).map(p=>p.Deck))];
       return {
         timestamp: g?.Timestamp || '',
         pilot: r.Player,
