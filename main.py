@@ -1,77 +1,55 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import gspread
-from google.oauth2.service_account import Credentials # Stick to this one
-import uuid 
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.errors import RestrictViolation
+import uuid
 from datetime import datetime
 import os
-import json
 import pytz
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Google Sheets Config
-PLAYERS_ID = "1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g"
-STATS_ID = "18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I"
-
-def get_gspread_client():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    
-    # Check if we are on Render
-    google_json = os.environ.get("GOOGLE_JSON")
-    
-    if google_json:
-        # Parse the JSON string from the environment variable
-        creds_dict = json.loads(google_json)
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    else:
-        # Fallback for your local laptop
-        creds = Credentials.from_service_account_file("service_account.json", scopes=scopes)
-    
-    return gspread.authorize(creds)
-
-client = get_gspread_client()
+def get_db_connection():
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        # Fallback for local laptop dev
+        database_url = "postgresql://postgres:postgres@localhost:5432/edh_tracker"
+    return psycopg.connect(database_url, row_factory=dict_row)
 
 @app.route('/players', methods=['GET'])
 def get_players():
     try:
-        sh = client.open_by_key(PLAYERS_ID)
-        # Using a list instead of a dict to preserve tab order
-        ordered_data = [] 
-        
-        for ws in sh.worksheets():
-            rows = ws.get_all_values()
-            deck_list = []
-            pfp_url = ""
-            
-            for row in rows[1:]:
-                deck_name = row[0] if len(row) > 0 else ""
-                art_url = row[1] if len(row) > 1 else ""
-                art_url_partner = row[2] if len(row) > 2 else ""
-                color_id = row[3] if len(row) > 3 else ""
-                exclude = (row[4] if len(row) > 4 else "").strip().upper() == "TRUE"
-                archidekt = row[5] if len(row) > 5 else ""
-                
-                if deck_name.upper() == "PFP":
-                    pfp_url = art_url
-                elif deck_name:
-                    deck_list.append({
-                        "deck": deck_name,
-                        "artUrl": art_url,
-                        "artUrlPartner": art_url_partner,
-                        "colors": color_id,
-                        "exclude": exclude,
-                        "archidekt": archidekt,
-                    })
-            
-            # Add each player as an object to the list
-            ordered_data.append({
-                "player_name": ws.title,
-                "decks": deck_list,
-                "pfp": pfp_url
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name, pfp_url FROM players ORDER BY sort_order")
+                players = cur.fetchall()
+
+                cur.execute("""
+                    SELECT owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archidekt
+                    FROM decks
+                    ORDER BY owner_id, row_order
+                """)
+                decks = cur.fetchall()
+
+        decks_by_owner = {}
+        for d in decks:
+            decks_by_owner.setdefault(d['owner_id'], []).append({
+                "deck": d['deck_name'],
+                "artUrl": d['art_url'],
+                "artUrlPartner": d['art_url_partner'],
+                "colors": d['color_id'],
+                "exclude": d['exclude'],
+                "archidekt": d['archidekt'],
             })
-            
+
+        ordered_data = [{
+            "player_name": p['name'],
+            "decks": decks_by_owner.get(p['id'], []),
+            "pfp": p['pfp_url'],
+        } for p in players]
+
         return jsonify(ordered_data)
     except Exception as e:
         print(f"Error fetching players: {e}")
@@ -81,70 +59,77 @@ def get_players():
 def submit_stats():
     try:
         data = request.json
-        sh = client.open_by_key(STATS_ID)
-        
-        summary_ws = sh.worksheet("Game_Summary")
-        performance_ws = sh.worksheet("Player_Performance")
         game_id = f"G-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
-        
+
         raw_ts = data.get('timestamp', '')
         try:
             dt = datetime.fromisoformat(raw_ts.replace('Z', '+00:00'))
             local_tz = pytz.timezone('America/Denver')
-            timestamp = dt.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
+            played_at = dt.astimezone(local_tz)
         except:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+            played_at = datetime.now(pytz.timezone('America/Denver'))
+
         # Find the winner (turn_died == 'win')
         winner = next((p for p in data['players'] if p['turn_died'] == 'win'), data['players'][0])
-        # Log to Game_Summary
-        summary_row = [
-    game_id,
-    data.get('mulligan_type', ''),
-    winner.get('seat_position'),
-    winner.get('player', ''),
-    winner.get('deck', ''),
-    data.get('turn', 0),
-    timestamp
-]
-        summary_ws.append_row(summary_row)
 
-        # Log each player to Player_Performance
-        rows_to_insert = []
-        for p in data['players']:
-            # Mapping including the new seat_position (Column I)
-            perf_row = [
-    game_id,
-    p.get('player', ''),
-    p.get('deck', ''),
-    p.get('deck_owner', p.get('player', '')),  # deck owner, falls back to player
-    p.get('stats', {}).get('startLands'),
-    p.get('stats', {}).get('lands'),
-    p.get('stats', {}).get('rocks'),
-    p.get('stats', {}).get('dorks'),
-    p.get('turn_died'),
-    p.get('seat_position'),
-    p.get('colors', ''),
-    p.get('art_url', '')  # Column L
-]
-            rows_to_insert.append(perf_row)
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO games (id, mulligan_type, winner_seat_position, winner_player, winner_deck, turn_count, played_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    game_id,
+                    data.get('mulligan_type', ''),
+                    winner.get('seat_position'),
+                    winner.get('player', ''),
+                    winner.get('deck', ''),
+                    data.get('turn', 0),
+                    played_at,
+                ))
 
-        # Using append_rows for efficiency
-        performance_ws.append_rows(rows_to_insert)
+                for p in data['players']:
+                    stats = p.get('stats', {})
+                    deck_name = p.get('deck', '')
+                    deck_owner = p.get('deck_owner', p.get('player', ''))
+
+                    # Resolve deck_id when this row matches a real tracked deck.
+                    # Stays NULL for ad hoc "Other"/proxy decks, which never have
+                    # a decks row to match.
+                    cur.execute("""
+                        SELECT d.id FROM decks d
+                        JOIN players pl ON pl.id = d.owner_id
+                        WHERE pl.name = %s AND LOWER(TRIM(d.deck_name)) = LOWER(TRIM(%s))
+                    """, (deck_owner, deck_name))
+                    deck_row = cur.fetchone()
+                    deck_id = deck_row['id'] if deck_row else None
+
+                    cur.execute("""
+                        INSERT INTO game_performance
+                            (game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        game_id,
+                        deck_id,
+                        p.get('player', ''),
+                        deck_name,
+                        deck_owner,
+                        stats.get('startLands'),
+                        stats.get('lands'),
+                        stats.get('rocks'),
+                        stats.get('dorks'),
+                        p.get('turn_died'),
+                        p.get('seat_position'),
+                        p.get('colors', ''),
+                        p.get('art_url', ''),
+                    ))
+            conn.commit()
 
         print(f"Game {game_id} successfully logged with Seat Positions.")
         return jsonify({"status": "success", "game_id": game_id})
-    
+
     except Exception as e:
         print(f"Error submitting game: {e}")
         return jsonify({"error": str(e)}), 500
-
-def _find_deck_row(ws, deck_name):
-    values = ws.get_all_values()
-    for idx, row in enumerate(values):
-        if len(row) > 0 and row[0].strip().lower() == deck_name.strip().lower():
-            return idx + 1  # 1-indexed for gspread
-    return None
 
 @app.route('/players/add_player', methods=['POST'])
 def add_player():
@@ -153,11 +138,15 @@ def add_player():
         player_name = data.get('player_name', '').strip()
         if not player_name:
             return jsonify({"error": "player_name required"}), 400
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.add_worksheet(title=player_name, rows=50, cols=6)
-        ws.update('A1:F1', [["Deck Name", "Art_URL", "Art_URL_Partner", "Color_ID", "Exclude", "Archidekt"]])
-        ws.format('A1:F1', {'textFormat': {'bold': True}})
-        ws.update('A2', [["PFP"]])
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM players")
+                next_order = cur.fetchone()['next_order']
+                cur.execute(
+                    "INSERT INTO players (name, pfp_url, sort_order) VALUES (%s, '', %s)",
+                    (player_name, next_order),
+                )
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding player: {e}")
@@ -168,42 +157,49 @@ def delete_player():
     try:
         data = request.json
         player_name = data.get('player_name', '').strip()
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.worksheet(player_name)
-        sh.del_worksheet(ws)
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                try:
+                    cur.execute("DELETE FROM players WHERE name = %s", (player_name,))
+                except RestrictViolation:
+                    conn.rollback()
+                    return jsonify({"error": "This player has decks with logged games and can't be deleted."}), 409
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error deleting player: {e}")
         return jsonify({"error": str(e)}), 500
 
-def _find_next_blank_row(ws):
-    # Column A may have pre-loaded checkboxes sitting in column E on blank rows,
-    # so we write new decks into the next row where column A is empty rather
-    # than appending after the last row of ANY data (which could skip past
-    # those pre-loaded rows or land on the wrong one).
-    col_a = ws.col_values(1)
-    for idx, val in enumerate(col_a):
-        if idx == 0:
-            continue  # skip header row
-        if val.strip() == '':
-            return idx + 1  # 1-indexed row number
-    return len(col_a) + 1  # no blank row found, use the next row after the last
-
 @app.route('/players/add_deck', methods=['POST'])
 def add_deck():
     try:
         data = request.json
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.worksheet(data.get('player_name', ''))
-        row = _find_next_blank_row(ws)
-        ws.update(f"A{row}:F{row}", [[
-            data.get('deck', ''),
-            data.get('art_url', ''),
-            data.get('art_url_partner', ''),
-            data.get('colors', ''),
-            bool(data.get('exclude')),
-            data.get('archidekt', ''),
-        ]])
+        player_name = data.get('player_name', '')
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM players WHERE name = %s", (player_name,))
+                row = cur.fetchone()
+                if row is None:
+                    return jsonify({"error": "Player not found"}), 404
+                owner_id = row['id']
+
+                cur.execute("SELECT COALESCE(MAX(row_order), -1) + 1 AS next_order FROM decks WHERE owner_id = %s", (owner_id,))
+                next_order = cur.fetchone()['next_order']
+
+                cur.execute("""
+                    INSERT INTO decks (owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archidekt, row_order)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    owner_id,
+                    data.get('deck', ''),
+                    data.get('art_url', ''),
+                    data.get('art_url_partner', ''),
+                    data.get('colors', ''),
+                    bool(data.get('exclude')),
+                    data.get('archidekt', ''),
+                    next_order,
+                ))
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding deck: {e}")
@@ -213,19 +209,33 @@ def add_deck():
 def update_deck():
     try:
         data = request.json
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.worksheet(data.get('player_name', ''))
-        row = _find_deck_row(ws, data.get('original_deck', ''))
-        if row is None:
-            return jsonify({"error": "Deck not found"}), 404
-        ws.update(f"A{row}:F{row}", [[
-            data.get('deck', ''),
-            data.get('art_url', ''),
-            data.get('art_url_partner', ''),
-            data.get('colors', ''),
-            bool(data.get('exclude')),
-            data.get('archidekt', ''),
-        ]])
+        player_name = data.get('player_name', '')
+        original_deck = data.get('original_deck', '')
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE decks SET
+                        deck_name = %s,
+                        art_url = %s,
+                        art_url_partner = %s,
+                        color_id = %s,
+                        exclude = %s,
+                        archidekt = %s
+                    WHERE owner_id = (SELECT id FROM players WHERE name = %s)
+                      AND deck_name = %s
+                """, (
+                    data.get('deck', ''),
+                    data.get('art_url', ''),
+                    data.get('art_url_partner', ''),
+                    data.get('colors', ''),
+                    bool(data.get('exclude')),
+                    data.get('archidekt', ''),
+                    player_name,
+                    original_deck,
+                ))
+                if cur.rowcount == 0:
+                    return jsonify({"error": "Deck not found"}), 404
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error updating deck: {e}")
@@ -235,12 +245,22 @@ def update_deck():
 def delete_deck():
     try:
         data = request.json
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.worksheet(data.get('player_name', ''))
-        row = _find_deck_row(ws, data.get('deck', ''))
-        if row is None:
-            return jsonify({"error": "Deck not found"}), 404
-        ws.delete_rows(row)
+        player_name = data.get('player_name', '')
+        deck_name = data.get('deck', '')
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                try:
+                    cur.execute("""
+                        DELETE FROM decks
+                        WHERE owner_id = (SELECT id FROM players WHERE name = %s)
+                          AND deck_name = %s
+                    """, (player_name, deck_name))
+                except RestrictViolation:
+                    conn.rollback()
+                    return jsonify({"error": "This deck has logged games and can't be deleted. Use Exclude instead to retire it."}), 409
+                if cur.rowcount == 0:
+                    return jsonify({"error": "Deck not found"}), 404
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error deleting deck: {e}")
@@ -250,14 +270,14 @@ def delete_deck():
 def update_pfp():
     try:
         data = request.json
-        sh = client.open_by_key(PLAYERS_ID)
-        ws = sh.worksheet(data.get('player_name', ''))
-        row = _find_deck_row(ws, "PFP")
+        player_name = data.get('player_name', '')
         art_url = data.get('art_url', '')
-        if row is None:
-            ws.append_row(["PFP", art_url, "", ""])
-        else:
-            ws.update(f"A{row}:D{row}", [["PFP", art_url, "", ""]])
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE players SET pfp_url = %s WHERE name = %s", (art_url, player_name))
+                if cur.rowcount == 0:
+                    return jsonify({"error": "Player not found"}), 404
+            conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error updating pfp: {e}")

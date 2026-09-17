@@ -535,6 +535,18 @@ function toggleInactive(containerId, btn, hiddenCount, showLabel, hideLabel){
 function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
 function fmt1(n){ return n === null || n === undefined || isNaN(n) ? '—' : n.toFixed(1); }
 function pct(n){ return n === null || isNaN(n) ? '—' : Math.round(n*100) + '%'; }
+// Picks the ArtURL from the most recently-played game among these rows, not
+// just the first one found - a deck's art can change (new crop chosen), and
+// old logged games keep whatever art was current when they were submitted.
+function mostRecentArt(rows, gamesById){
+  const withArt = rows.filter(r=>r.ArtURL);
+  if (!withArt.length) return '';
+  return withArt.reduce((best, r) => {
+    const t = new Date(gamesById[r.GameID]?.Timestamp || 0).getTime();
+    const bt = new Date(gamesById[best.GameID]?.Timestamp || 0).getTime();
+    return t > bt ? r : best;
+  }).ArtURL;
+}
 
 function pipsHTML(colorId){
   if (!colorId) return `<span class="pips"><span class="pip" style="background:${MANA_COLORS.C}">C</span></span>`;
@@ -709,7 +721,7 @@ async function renderAsync(gamesData, perfData){
     const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
     const colorId = rows.find(r=>r.Color_ID)?.Color_ID || '';
     const owner = rows.find(r=>r.Owner)?.Owner || rows[0]?.Player || '';
-    const artUrl = rows.find(r=>r.ArtURL)?.ArtURL || '';
+    const artUrl = mostRecentArt(rows, gamesById);
     return {
       name, owner, gamesPlayed, wins,
       winRate: gamesPlayed ? wins/gamesPlayed : 0,
@@ -774,7 +786,7 @@ async function renderAsync(gamesData, perfData){
     const winRate = gamesPlayed ? wins/gamesPlayed : 0;
     const colorId = rows.find(r=>r.Color_ID)?.Color_ID || '';
     const owner = rows.find(r=>r.Owner)?.Owner || rows[0]?.Player || '';
-    const artUrl = rows.find(r=>r.ArtURL)?.ArtURL || '';
+    const artUrl = mostRecentArt(rows, gamesById);
 
     const allEndTurns = rows.map(r=>r.gameEndTurn).filter(x=>x!=null);
     const winTurns = rows.filter(r=>r.isWin).map(r=>r.gameEndTurn).filter(x=>x!=null);
