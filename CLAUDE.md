@@ -13,34 +13,54 @@ something was tried and reverted, do not re-try it without new evidence.
 
 A mobile-first MTG Commander (EDH) life/game tracker for 4 players, built for a
 specific friend group, deployed as an installable offline-capable PWA. React
-frontend on Vercel, Flask backend on Render, Google Sheets as the database via
-`gspread` (currently — a migration to Neon Postgres has been discussed and planned
-but **not started**; see "Planned: Postgres migration" near the end).
+frontend on Vercel, Flask backend on Render, **Neon Postgres as the database**
+(migrated off Google Sheets/`gspread` — see "Postgres migration — completed"
+near the end for the full story, schema, and what's still true vs. obsolete
+from the Sheets era).
+
+Google Sheets still physically exists and holds the full historical record up
+to the migration cutover, but **the live app no longer reads from or writes to
+it at all** — treat any mention of Sheets elsewhere in this document as
+historical context for *why* something is built the way it is, not as a
+description of where data lives today.
 
 There is a second, related but architecturally separate piece: a set of static
-stats/leaderboard HTML pages (no build step, no framework) that read the same
-Google Sheets data and now live inside the same deployment, reachable from the
-Tracker's own Settings menu. See "The stats pages" below.
+stats/leaderboard HTML pages (no build step, no framework) that now read from
+the app's own backend (`GET /stats/data` + `GET /players`) instead of Sheets,
+and live inside the same deployment, reachable from the Tracker's own Settings
+menu. See "The stats pages" below.
 
 ## Repo structure
 
 - `src/App.jsx`, `src/main.jsx`, `src/index.css` — the real, live frontend (Vite).
-- `main.py` — Flask backend, deployed on Render.
+- `main.py` — Flask backend, deployed on Render. Talks to Postgres via `psycopg`.
+- `schema.sql` — the Postgres schema (`players`, `decks`, `games`,
+  `game_performance`). Run once against a fresh Neon database.
+- `scripts/backfill_postgres.py` — one-time script that copied the live Sheets
+  data into Postgres during the migration. Not part of the deployed app; needs
+  `gspread`/`google-auth` installed separately (deliberately not in
+  `requirements.txt`, since `main.py` itself doesn't need them anymore).
+- `neon.ts` — Neon's own declarative project/branch config (provisioning-level:
+  which services are enabled, branch TTL policy), unrelated to the app's own
+  Postgres schema in `schema.sql`. Applied via `neon deploy`.
 - `index.html` (repo root) — the Vite entry HTML. Was recently simplified: it used
   to read a `?key=` URL param to dynamically build the PWA manifest's `start_url`;
   that logic is gone now (see "The `?key=toski` removal" below) and it just emits a
   static manifest.
 - `sw.js` (repo root, served from domain root) — service worker. Currently at
-  `CACHE_NAME = 'mtg-tracker-v4'`.
+  `CACHE_NAME = 'mtg-tracker-v5'`.
 - `public/stats/index.html`, `public/stats/player.html`, `public/stats/deck.html` —
-  the stats pages, now living inside this same repo/deployment (moved here
+  the stats pages, living inside this same repo/deployment (moved here
   specifically so the Tracker's service worker can cache them and so linking to
   them from Settings feels like staying in one product rather than leaving to a
   separate site).
+- `public/stats/stats-shared.js` — the fetch/normalize logic shared by all three
+  stats pages (see "The stats pages" below) — extracted into one file during the
+  Postgres migration instead of staying hand-duplicated three times.
 - The root also has stray, **dead/unused** `app.jsx`/`app.py` files left over from
   early repo setup. Ignore them; the real files are `src/App.jsx` and `main.py`.
-- `main` branch is the only branch that matters; an earlier note about a stale
-  `life-totals` branch may or may not still be accurate — verify before assuming.
+- **Confirmed this session**: `life-totals` is the actual default/main branch for
+  this repo (not `main`) — the earlier uncertainty about this is resolved.
 
 ## Deployment
 
@@ -50,11 +70,22 @@ Tracker's own Settings menu. See "The stats pages" below.
   Render's free tier also serves its own "spinning up" loading page to connecting
   browsers *before* the Flask app is even running — this matters a lot, see the
   "false-positive sync success" saga below.
-- **Database (current)**: Google Sheets via `gspread`, service account auth.
-  - Players sheet: `1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g` — one worksheet
-    tab per player, each tab a deck list for that player.
-  - Stats sheet (`STATS_ID` in `main.py`): `18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I`
-    — `Game_Summary` and `Player_Performance` tabs.
+- **Database (current)**: Neon Postgres, connected via `psycopg`. See "Postgres
+  migration — completed" near the end for the schema, connection setup, and the
+  full story of how this replaced Sheets.
+  - `DATABASE_URL` env var on Render — the **pooled** (`-pooler`) connection
+    string, for normal app traffic. Schema changes/backfills use the
+    **unpooled** string instead (`DATABASE_URL_UNPOOLED` locally via
+    `neon env pull` / `.env.local`) — session-level operations like `ALTER
+    TABLE` can misbehave over the pooled/PgBouncer connection.
+  - The Render service may still have a leftover `GOOGLE_JSON` env var from the
+    Sheets era — `main.py` no longer reads it (it doesn't import `gspread` at
+    all anymore), so it's harmless if still set, safe to remove whenever.
+  - Google Sheets (`1HfTUoLol3h1DmDeWTDsUqYTjq99SV9NGi-CmB3Wk89g` for
+    players/decks, `18_9UkJ3MAsNw4ByOGFDqOBE2u1gnpxQSR3tPi-_9i3I` for
+    `Game_Summary`/`Player_Performance`) still exist and hold the full history
+    up to the migration cutover, kept deliberately as an untouched fallback
+    reference — nothing reads from or writes to them anymore.
   - There used to be a second "demo" stats sheet and a `?key=toski` URL param that
     decided which one a submission went to. **This has been fully removed** — see
     below. Do not reintroduce a demo/practice mode without discussing it; it was
@@ -236,39 +267,64 @@ not by re-deriving the transform math a fourth time.
 
 ## Backend (`main.py`)
 
-### Schema
+### Schema (Postgres — see `schema.sql` for the literal DDL)
 
-Players sheet: one worksheet tab per player. Row 1 bold header, row 2 always a
-special `PFP` row (column B = profile picture URL, rest blank). Deck rows start at
-row 3+.
-
-| Column | Field | Notes |
-|---|---|---|
-| A | Deck Name | |
-| B | Art_URL | Scryfall "Download Art Crop" link recommended |
-| C | Art_URL_Partner | Real URL, or literal `'partner'` sentinel |
-| D | Color_ID | e.g. `"WUBRG"` |
-| E | Exclude | Real Sheets **checkbox** cell — writing must use Python booleans (`bool(...)`), not the strings `"TRUE"`/`"FALSE"`, or it overwrites the checkbox with plain text |
-| F | Archidekt | URL |
-
-`Player_Performance` columns, in order: `A` game_id, `B` player, `C` deck, `D`
-deck_owner, `E` startLands, `F` lands, `G` rocks, `H` dorks, `I` turn_died, `J`
-seat_position, `K` colors, `L` art_url. Column L (`art_url`) was added this
-conversation specifically so the stats pages could show deck art without a second
-lookup.
+- `players(id, name, pfp_url, sort_order)` — `sort_order` exists purely to
+  reproduce the old "tab order" behavior on `GET /players`.
+- `decks(id, owner_id -> players.id, deck_name, art_url, art_url_partner,
+  color_id, exclude, archidekt, row_order)`. `archidekt`/`art_url_partner`
+  keep the same semantics as the old Sheets columns (`art_url_partner` is a
+  real URL or the literal `'partner'` sentinel). The old checkbox-write gotcha
+  and blank-row-hunting logic (`_find_next_blank_row`) no longer exist — real
+  columns and real primary keys replace both workarounds.
+- `games(id, mulligan_type, winner_seat_position, winner_player, winner_deck,
+  turn_count, played_at)` — `id` keeps the old human-readable
+  `G-YYYYMMDD-xxxx` format. Being a real primary key means a duplicate
+  submission now fails cleanly with a `UniqueViolation` instead of silently
+  double-logging — this is the exact structural fix the Sheets era couldn't
+  have.
+- `game_performance(id, game_id -> games.id, deck_id -> decks.id [nullable],
+  player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died,
+  seat_position, colors, art_url)`.
+  - `deck`/`colors`/`art_url` are deliberately kept as point-in-time
+    **snapshots**, not a live join to `decks` — a deck's art/name can change
+    later, and old logged games should keep showing what was true when they
+    were played. `colors`/`art_url` existing here at all was questioned once
+    (looks like denormalization) but this is the intended pattern, same as an
+    order-line-item snapshotting price at purchase time.
+  - `deck_id` is a **separate, additional** stable reference (nullable — stays
+    `NULL` for ad hoc "Other"/proxy decks typed in at game time, which never
+    had a `decks` row to begin with). It's resolved at `/submit` time by
+    matching `(deck_owner, deck)` against `decks(owner_id, deck_name)`
+    case/whitespace-insensitively. Its `ON DELETE RESTRICT` (not `SET NULL` or
+    `CASCADE`) means **a deck that's ever been played can no longer be
+    hard-deleted** — `/players/delete_deck` (and `/players/delete_player`,
+    transitively) now returns a `409` with a message pointing at the existing
+    `Exclude` checkbox instead. This is what actually fixes the original
+    failure mode that prompted adding `deck_id`: delete a played "Deck A",
+    later create a new "Deck A" — under the old text-only identity, their
+    histories would silently merge; now the old deck can't be deleted at all
+    once played, so the collision can't happen.
+  - Renaming a deck (`update_deck`) doesn't fork its stats history, since
+    `deck_id` stays the same even though the `deck` text column on old rows
+    keeps the pre-rename name (confirmed via direct test during the
+    migration).
 
 ### Endpoints
 
 - `GET /players` — all players + all decks (including excluded ones), pfp.
+- `GET /stats/data` — `{games: [...], performance: [...]}`, field names chosen
+  to exactly match what the stats pages' fetch/normalize layer already
+  expects (see "The stats pages" below) — read by the stats pages, not by
+  `src/App.jsx`.
 - `POST /submit` — log a finished game. **This is now the only submission
   endpoint** — `/submit-demo` and the `STATS_ID_DEMO` sheet constant were both
   fully removed this conversation (see "The `?key=toski` removal" below).
 - `POST /players/add_player`, `/delete_player`, `/add_deck`, `/update_deck`,
-  `/delete_deck`, `/update_pfp` — same as before, unchanged mechanics.
-
-`add_deck`/`update_deck` write the full `A:F` range; new decks go to the next row
-where column A is blank (`_find_next_blank_row`), not a plain append, so pre-loaded
-checkbox rows in column E aren't skipped or misaligned.
+  `/delete_deck`, `/update_pfp` — same routes/request shapes as before the
+  Postgres migration; internals rewritten, external contract unchanged
+  (confirmed byte-for-byte against the live Sheets-backed backend before
+  cutover, so `src/App.jsx` needed zero changes).
 
 ### The `?key=toski` removal — full story, in case it's ever proposed again
 
@@ -536,40 +592,48 @@ overlay instead, with larger tap targets.
 `public/stats/index.html`, `player.html`, `deck.html` — three self-contained
 static HTML files (inline `<style>`/`<script>`, no build step, no framework),
 originally built in a separate conversation thread and periodically brought back
-into this one for review/integration. They read the same Google Sheets data the
-Tracker writes to, via Google's public `gviz` CSV export endpoint
-(`https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv&sheet=...`) —
-**unauthenticated, straight from the browser**, which means the Players sheet and
-the real Stats sheet both need "Anyone with the link — Viewer" sharing (not just
-the backend's service account) for these pages to work at all. The demo stats
-sheet never needed this and no longer exists.
+into this one for review/integration. **They now read from the app's own backend**
+— `GET /stats/data` (games + performance) and `GET /players` (pfp/active-deck/
+owned-deck data) — instead of Google Sheets' `gviz` CSV export. That old
+unauthenticated-CSV mechanism, and the "sheet must be shared as Anyone with the
+link — Viewer" requirement that came with it, no longer applies at all.
 
-### Architectural duplication — known, flagged, not yet addressed
+### Shared fetch/normalize logic — extracted, no longer hand-duplicated
 
-All three files independently contain the **entire** data-normalization pipeline:
-CSV parsing, tolerant header matching, winner cross-referencing, guest exclusion,
-player/deck/color/seat stat computation — verified byte-identical across all three
-via direct diff at one point. Every fix made to this logic during this
-conversation had to be (and was, correctly, each time) applied three times by
-hand. This has not yet caused a drift bug, but it's a standing risk; extracting a
-shared `stats-core.js` (still zero-build-step, just one copy instead of three) was
-recommended and left as an open, not-yet-done item.
+`public/stats/stats-shared.js` (loaded via a plain `<script src>` in all three
+pages, no build step, no `type="module"` — just as if it were pasted inline)
+holds the fetch layer (`fetchStatsJSON`, `buildPlayerDeckMaps`,
+`normalizeStatsData`, `initStatsPage`) plus the small utility functions
+(`mean`, `pct`, `mostRecentArt`, `pipsHTML`, `rankItems`, `turnCompareAsc`,
+`playerUrl`/`deckUrl`, `monthLabel`, `normKey`, `isDeckActive`,
+`toggleInactive`) that were confirmed byte-identical across all three files
+before extraction. **This used to be a known, flagged, not-yet-addressed
+duplication risk** — every fix to this logic had to be hand-applied three
+times — and was fixed as part of the Postgres migration, since all three
+files needed editing anyway to change the data source. Each page's own
+`renderAsync(data)` destructures what it needs from the object
+`initStatsPage` hands it (`games`, `perf`, `gamesById`, `totalGames`,
+`players`, `decks`, `pfpMap`, `activeDecksByOwner`, `ownedDecksByOwner`,
+`avgTurn`, `longest`, `shortest`, `dateSorted`, `dateSortedNonGuestWin`,
+`mostRecent`, `gamesNonGuestWin`) and its page-specific rendering (everything
+from `// ---------- players ----------` onward) is otherwise unchanged —
+confirmed via a real headless-browser pass (Playwright) against live
+production data during the migration, not just a syntax check.
+
+`player.html` additionally keeps its own page-specific `setDeckSort` helper
+(DOM-only, reorders a rendered rowlist by precomputed order — nothing to do
+with fetching) in its own inline script; it was never part of the shared
+byte-identical range and stays there.
+
+Tolerant Sheets-header matching (`field()`/a column-name-drift defense) is
+**gone entirely** — the backend guarantees canonical field names now, so the
+whole class of "sheet header got retyped/truncated by hand" bug this used to
+guard against structurally can't happen anymore. The bullets below describe
+logic that's still true and was ported verbatim into `stats-shared.js`'s
+`normalizeStatsData`, minus that now-unnecessary header-matching layer.
 
 ### Data-quality defenses, and why they exist
 
-- **Tolerant `field()`/`normKey()` header matching** — the live sheet's column
-  headers have drifted before in ways that broke naive exact-match code: a typo
-  (`Muilligan_Type` instead of `Mulligan_Type`), inconsistent truncation
-  (`Opening_Lan` instead of `Opening_Lands`). `field(row, headerByNorm, ...candidates)`
-  tries several candidate spellings, normalized (lowercase, non-alphanumeric
-  stripped), before giving up. **Not originally applied consistently** — `Owner`
-  and `Color_ID` were found being read via direct property access
-  (`rows.find(r=>r.Owner)?.Owner`) instead of through `field()`, which was
-  specifically risky because a wrong/missing `Owner` value would misattribute
-  which player actually owns a borrowed deck. Fixed by normalizing `p.Owner` and
-  `p.Color_ID` once during the shared normalize pass (`field(p, pH, 'Owner',
-  'Deck_Owner', 'DeckOwner')`, etc.) so all later direct-property reads become
-  safe automatically.
 - **Winner detection is NOT derived from `Player_Performance`'s `Turn_Died`
   text column.** That field turned out to be written inconsistently across the
   sheet's real history — sometimes literally `"win"`, sometimes blank for the
@@ -596,6 +660,15 @@ recommended and left as an open, not-yet-done item.
   **regression** introduced specifically by adding guest-exclusion (the original,
   pre-guest-filtering code used the always-non-empty `games` array here and
   couldn't hit this). Fixed with explicit length checks and `null`-safe rendering.
+- **A real, found-and-fixed bug**: a deck's displayed art (`mostRecentArt` in
+  `stats-shared.js`) used to be picked via `rows.find(r=>r.ArtURL)`, i.e. the
+  **first** non-blank `ArtURL` among that deck's logged games in row order —
+  meaning after switching a deck's art, the stats pages kept showing the *old*
+  art (from the oldest logged game) instead of the new one, for a long time.
+  Fixed to pick the art from the row with the latest `Timestamp` instead. Note
+  this only affects the *displayed thumbnail* — deck identity/aggregation is
+  keyed by name (or `deck_id`, see the schema section above), never by art, so
+  a deck's win rate/game count was never split or merged by this bug.
 
 ### "Devotion" — what it actually measures, and why it changed
 
@@ -635,10 +708,11 @@ otherwise have silently disagreed with what it was supposed to be guarding.
 
 ## Service worker (`sw.js`)
 
-Currently `CACHE_NAME = 'mtg-tracker-v4'` (bumped from `v3` specifically to force
-a clean cache wipe after the Settings/navigation changes, since a version bump is
-what actually triggers the install/activate cycle that deletes stale cache keys —
-just changing cached *content* without bumping the name doesn't reliably do that).
+Currently `CACHE_NAME = 'mtg-tracker-v5'` (bumped from `v4` when
+`stats-shared.js` was added to the precache list during the Postgres
+migration — a version bump is what actually triggers the install/activate
+cycle that deletes stale cache keys; just changing cached *content* without
+bumping the name doesn't reliably do that).
 
 - Cache-first for images (Scryfall art etc.), `IMAGE_CACHE = 'mtg-images-v1'`.
 - **Network-first for the app shell** (`request.mode === 'navigate'`, `/`, or
@@ -646,61 +720,80 @@ just changing cached *content* without bumping the name doesn't reliably do that
   bundle filenames from the current build, so it must always be fetched fresh
   when possible, or a deploy can take two reloads to actually show up. Falls back
   to cache (`ignoreSearch: true`, then `/`) only on network failure.
-- **Precache list now includes the three stats pages**
-  (`/stats/index.html`, `/stats/player.html`, `/stats/deck.html`), added
-  alongside `/`, `/index.html`, `/manifest.json` in the `install` handler — they
-  used to only get cached opportunistically the first time each was visited
-  online, meaning a first-ever attempt to open Stats while offline would silently
-  fall through to serving the *main Tracker app* instead of an error or the stats
-  page (the offline fallback's `ignoreSearch: true` only strips the query string,
-  not the path, so an uncached stats page path wouldn't match and would fall all
+- **Precache list includes the three stats pages plus `stats-shared.js`**
+  (`/stats/index.html`, `/stats/player.html`, `/stats/deck.html`,
+  `/stats/stats-shared.js`), added alongside `/`, `/index.html`,
+  `/manifest.json` in the `install` handler — they used to only get cached
+  opportunistically the first time each was visited online, meaning a
+  first-ever attempt to open Stats while offline would silently fall through
+  to serving the *main Tracker app* instead of an error or the stats page (the
+  offline fallback's `ignoreSearch: true` only strips the query string, not
+  the path, so an uncached stats page path wouldn't match and would fall all
   the way through to `cache.match('/')`).
-- Note: the stats pages' own *data* (the live Google Sheets fetch) is not, and
-  cannot meaningfully be, offline-first — only the page *shell* can be. Offline,
-  the stats pages will load instantly from cache but show their own "Couldn't
-  reach the sheet" state, which is correct, expected behavior, not a bug to fix.
+- Note: the stats pages' own *data* (`GET /stats/data` + `GET /players`, both
+  hosted on `edh-backend.onrender.com` — explicitly skipped by the fetch
+  handler's `if (url.hostname === 'edh-backend.onrender.com') return;` guard)
+  is not, and cannot meaningfully be, offline-first — only the page *shell*
+  can be. Offline, the stats pages will load instantly from cache but show
+  their own "Couldn't reach the server" state, which is correct, expected
+  behavior, not a bug to fix.
 
-## Planned, not yet started: Postgres migration
+## Postgres migration — completed
 
-Discussed at length but **no code has been written for this yet**. Summary of the
-plan as discussed:
+This was previously planned-but-not-started; **it is now done, deployed, and
+verified in production**, in two phases. Kept here mostly so a future session
+understands *why* the current schema/endpoints look the way they do, and so
+none of these deliberate decisions gets accidentally re-litigated or reverted.
 
-- **Why**: a meaningful fraction of the data-reliability problems fixed this
-  conversation exist specifically *because* Google Sheets is being used as an
+- **Why**: a meaningful fraction of the data-reliability problems fixed in the
+  Sheets era existed specifically *because* Google Sheets was being used as an
   application database rather than what it's built for — the tolerant
   header-matching defenses, the checkbox-write gotcha, the blank-row-hunting
-  logic, none of that would exist with a real schema and real constraints (e.g. a
-  unique constraint on `GameID` would make duplicate submissions structurally
-  impossible rather than something client-side guards have to defend against).
-- **Provider decision**: Neon, not Render's own free Postgres tier. Render's free
-  Postgres **expires and is deleted 30 days after creation** (14-day grace period
-  to upgrade before deletion), with no backups even while it's alive — confirmed
-  via current Render documentation, not assumed. Neon's free tier is genuinely
-  permanent (not a trial): 0.5GB storage, 100 compute-hours/month, no credit card,
-  no expiration clock, compute scales to zero after 5 minutes idle and wakes on
-  the next request. (Supabase's free tier was considered and set aside — it
-  *pauses* a project after 7 days of inactivity, requiring manual reactivation in
-  their dashboard, which is a real risk for an app that's only used on game
-  nights, not daily.)
-- **Scope**: normalize the current one-tab-per-player Sheets structure into
-  roughly `players`, `decks` (with an owner foreign key), `games`,
-  `game_performance`. Backend (`main.py`) swaps `gspread` calls for a Postgres
-  client. The stats pages need new JSON read endpoints on the Flask backend
-  (since a browser can't/shouldn't hit Postgres directly the way it hits a public
-  Sheets CSV export) — but the aggregation/stat-computation logic in the stats
-  pages themselves needs little to no change, since it already operates on plain
-  JS arrays of objects; only `fetchSheet()`'s CSV-parsing internals would be
-  replaced with a `fetch(...).json()` call. The tolerant-header-matching
-  machinery becomes unnecessary entirely once there's a real schema instead of a
-  spreadsheet header someone can retype by hand.
-- **Explicitly noted tradeoff, not yet resolved**: right now anyone can open the
-  Google Sheet and hand-fix a bad row directly, zero engineering required. Moving
-  to Postgres loses that unless some kind of admin view or DB GUI client is set
-  up as part of the migration. Worth deciding deliberately, not by accident.
-- **Recommended approach when this is picked up**: incremental, not a big-bang
-  cutover — get the backend + Postgres solid and verified first while the stats
-  pages keep reading Sheets, then migrate the stats pages once the new data
-  source is trusted.
+  logic. None of that exists anymore; a real schema with real constraints
+  replaced all of it (e.g. `games.id` as a primary key makes duplicate
+  submissions fail with a clean `UniqueViolation` instead of something
+  client-side guards have to defend against).
+- **Provider**: Neon, not Render's own free Postgres tier — Render's free
+  Postgres expires 30 days after creation (14-day grace period), with no
+  backups even while alive; Neon's free tier is genuinely permanent (0.5GB
+  storage, 100 compute-hours/month, no credit card, compute scales to zero
+  after 5 minutes idle). Provisioned via the Neon CLI (`neon link`, `neon
+  config`/`neon deploy` against `neon.ts`) rather than the dashboard.
+- **Admin/hand-fix access decision**: Neon's own web console (SQL editor /
+  table view) — no custom admin UI was built. This was the one explicitly
+  deferred tradeoff from the original plan (Sheets let anyone hand-fix a bad
+  row with zero engineering; Postgres needed *something* to replace that), and
+  it was deliberately resolved this way rather than left unresolved.
+- **Schema**: see "Schema (Postgres)" under `main.py` above for the literal
+  tables/columns, and particularly the `game_performance.deck_id` design
+  (nullable FK, `ON DELETE RESTRICT`) — that wasn't in the original plan, it
+  came out of a design discussion partway through about deck identity: the old
+  Sheets-era code (and the stats pages' own aggregation) identified a deck
+  purely by its display name, which meant renaming a deck forked its stats
+  history in two, and deleting-then-recreating a same-named deck silently
+  merged unrelated history. `deck_id` fixes both, structurally, at the DB
+  level, without changing the columns that already had a good reason to be
+  point-in-time snapshots (`deck`, `colors`, `art_url` on `game_performance`).
+- **Rollout order actually used, matching the original recommendation**:
+  Phase 1 — stand up Neon + schema, one-time backfill script
+  (`scripts/backfill_postgres.py`) from the then-live Sheets data, verify the
+  new `main.py` byte-for-byte against the old Sheets-backed backend (same
+  routes, same JSON shapes, tested with a disposable player/deck and a
+  synthetic game before touching anything real), then cut Render over. Sheets
+  was left untouched afterward, specifically as a fallback reference, and
+  confirmed to have logged zero games in the window between the backfill and
+  the cutover (so nothing from that gap was lost). Phase 2 — once the backend
+  cutover was verified live, migrated the stats pages too (see "The stats
+  pages" above), which the original plan explicitly deferred until "the new
+  data source is trusted."
+- **`requirements.txt` was pruned** post-migration: `gspread`, `google-auth`,
+  `pandas`, `streamlit` are no longer needed by `main.py` (the first two only
+  by the one-off backfill script now, the latter two were unused entirely,
+  apparently leftover from the dead `app.py` prototype).
+- **Not done, deliberately**: Google Sheets itself hasn't been decommissioned
+  or had its sharing/service-account access revoked — it's kept as a
+  read-only historical fallback until the Postgres-backed app has some real
+  usage behind it. Revisit this later, not as an accident of cleanup.
 
 ## House rules for working on this codebase
 
@@ -744,3 +837,17 @@ generic advice:
    proposed, discussed, and deliberately rejected in favor of trusting access
    control instead of building a routing mechanism to defend against a threat
    that isn't considered real for this use case.
+8. **An entity's "identity" for stats/history purposes should never be its
+   display name alone if that name can change or be reused.** The deck-art
+   staleness bug and the deck-identity design discussion (see "Postgres
+   migration — completed") were the same root shape: name-keyed aggregation
+   silently merges unrelated history (delete-then-recreate) or forks real
+   history in two (rename). A stable ID (`deck_id`) is the fix; a display-name
+   string is a snapshot value, not an identity.
+9. **On Neon, schema migrations and other session-level operations need the
+   direct/unpooled connection string, not the pooled one.** The pooled
+   (`-pooler`) connection routes through PgBouncer in transaction mode, which
+   doesn't support session state — followed proactively per Neon's own
+   documented guidance (not from a real incident this time). `DATABASE_URL`
+   (pooled) is for normal app traffic; `DATABASE_URL_UNPOOLED` is for
+   `schema.sql`/`scripts/backfill_postgres.py`.

@@ -6,6 +6,10 @@ Truncates and reloads on every run, so it's safe to re-run against an
 empty/staging DB while iterating, but must NOT be run against a DB that
 already has real production data you want to keep.
 
+gspread/google-auth aren't in requirements.txt (main.py itself no longer
+needs them, only this script does), so install them separately first:
+    pip install gspread google-auth
+
 Usage:
     DATABASE_URL=postgresql://... python scripts/backfill_postgres.py
 """
