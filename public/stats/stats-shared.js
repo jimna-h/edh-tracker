@@ -221,12 +221,15 @@ function normalizeStatsData(statsData, playersData){
   const isGuest = name => (name || '').trim().toLowerCase() === 'guest';
 
   // Deck-level stats (a deck's own win rate/games-played/identity) are NOT
-  // person-attributed the way a player's award is, so a deck that's only
-  // ever been piloted by a guest still needs to show up with real numbers -
-  // perfForDecks keeps those rows; `perf` below still excludes them for
-  // every player/leaderboard/award/seat/color computation, which really are
-  // person-attributed.
-  const perfForDecks = perf;
+  // person-attributed the way a player's award is, so a guest PILOTING a
+  // real person's deck still counts toward that deck's numbers - that's why
+  // this doesn't filter on p.Player. It does filter on p.Owner, though: an
+  // ad hoc "Other" deck that a guest both typed in and (by default) "owns"
+  // isn't a real tracked deck anyone in the group owns, so it shouldn't show
+  // up as one just because perf isn't filtered by pilot here. `perf` below
+  // still excludes all Guest-piloted rows for every player/leaderboard/
+  // award/seat/color computation, which really are person-attributed.
+  const perfForDecks = perf.filter(p => !isGuest(p.Owner));
 
   // Guest players don't count toward any person-attributed stats: excluding
   // their rows here cascades cleanly into every derived stat below
