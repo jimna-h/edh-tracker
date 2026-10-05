@@ -593,6 +593,29 @@ overlay instead, with larger tap targets.
 - See "The commander damage modal rotation saga" above for how its actual
   orientation math was debugged.
 
+## In-app dialogs (no native alert/confirm/prompt)
+
+Every popup goes through `AppDialog`: the App owns one dialog at a time (extras
+queue) and exposes `{ alert, confirm, prompt }` via `DialogContext` /
+`useDialog()`, each returning a Promise (`confirm` → bool, `prompt` → string or
+`null`). Deep components like `SetupQuadrantInner` use the hook. Dialogs are
+always upright for portrait, like Settings, deliberately: the on-screen keyboard
+is always portrait, so text entry must read that way. **Don't reintroduce
+`window.alert/confirm/prompt`** — they were replaced because they looked out of
+place, and the backdrop closes on `click`, never `pointerdown` (see the
+tap-through fix on the main modal backdrop).
+
+### Tailwind color classes don't work on `<button>` — on purpose
+
+`src/index.css` has a global, **unlayered** `button { color; background; border }`
+rule. In Tailwind v4 an unlayered rule beats every utility, so `bg-*`/`text-*`/
+`border-*` classes on a button silently do nothing. Moving that rule into
+`@layer base` was tried and **reverted**: the game surface's familiar look (grey
+"Goes First"/carousel buttons) depends on the override, and it turned them
+white-on-white. Buttons that need their own colors use the inline `BTN_PRIMARY` /
+`BTN_SECONDARY` / `BTN_DANGER` / `BTN_DANGER_SOFT` style objects in `App.jsx`
+(or other inline styles) instead.
+
 ## Settings menu
 
 - Section headers ("Game", "Danger Zone", "Stats") were removed per request —

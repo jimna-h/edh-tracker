@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 
 // --- STYLING CONSTANTS ---
 const textShadowStyle = { 
@@ -426,6 +426,7 @@ const GridPicker = ({ title, options, onSelect, onBack }) => {
 
 
 const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
+  const dialogs = useDialog();
   const [step, setStep] = useState(0); 
   const [tempColors, setTempColors] = useState([]);
   
@@ -494,9 +495,10 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
               isFlipped={isFlipped} 
               options={mulliganOptions} 
               onBack={onResetAll} 
-              onSelect={(val) => {
-                const finalVal = val === "Other" ? (prompt("Mulligan Type:") || "Other") : val;
-                onSetMulligan(finalVal);
+              onSelect={async (val) => {
+                if (val !== "Other") { onSetMulligan(val); return; }
+                const typed = await dialogs.prompt({ title: 'Mulligan Type', placeholder: 'Mulligan rule', confirmLabel: 'Save', autoCapitalize: 'words' });
+                onSetMulligan(typed?.trim() || "Other");
               }} 
             />
           ) : (
@@ -543,14 +545,14 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
                   className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
                   Borrowed
                 </button>
-                <button onClick={() => {
+                <button onClick={async () => {
                   if (seat.name === 'Guest') {
                     onUpdate(id, 'deck', '');
                     setStep(4);
                   } else {
-                    const deckName = prompt("Deck Name:");
+                    const deckName = await dialogs.prompt({ title: 'Other Deck', message: "A deck that isn't in your list.", placeholder: 'Deck name', confirmLabel: 'Next', autoCapitalize: 'words' });
                     if (deckName === null) return;
-                    onUpdate(id, 'deck', deckName || "Other"); setStep(4);
+                    onUpdate(id, 'deck', deckName.trim() || "Other"); setStep(4);
                   }
                 }}
                   className="px-6 md:px-8 py-1 md:py-2 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">
@@ -618,13 +620,13 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
             twoRows
             onBack={handleBack} 
             extraButton={
-              <button onClick={() => {
-                const strangerName = prompt("Borrowing from (name):");
+              <button onClick={async () => {
+                const strangerName = (await dialogs.prompt({ title: 'Borrowing From', message: "Someone who isn't a tracked player.", placeholder: 'Their name', confirmLabel: 'Next', autoCapitalize: 'words' }))?.trim();
                 if (!strangerName) return;
-                const deckName = prompt("Deck Name:");
+                const deckName = await dialogs.prompt({ title: 'Deck Name', message: `The deck you're borrowing from ${strangerName}.`, placeholder: 'Deck name', confirmLabel: 'Next', autoCapitalize: 'words' });
                 if (deckName === null) return;
                 onUpdate(id, 'deckOwner', strangerName);
-                onUpdate(id, 'deck', deckName || 'Borrowed Deck');
+                onUpdate(id, 'deck', deckName.trim() || 'Borrowed Deck');
                 onUpdate(id, 'artUrl', '');
                 onUpdate(id, 'artUrlPartner', '');
                 setStep(4);
@@ -1330,6 +1332,88 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 // --- MAIN APP ---
 const SUBMIT_URL = 'https://edh-backend.onrender.com/submit';
 
+// --- IN-APP DIALOGS ---
+// Styled replacements for window.alert/confirm/prompt, so every popup matches the app
+// instead of the browser's own chrome. The App owns one dialog at a time (others queue)
+// and hands this API down via context so deeply nested components (the setup wizard)
+// can use it too. Each call returns a Promise:
+//   alert   -> resolves when dismissed
+//   confirm -> true / false
+//   prompt  -> the entered string, or null if cancelled
+// Always upright for someone holding the phone in portrait (same as Settings) - the
+// on-screen keyboard always appears in portrait, so text entry has to read that way.
+// Inline (not Tailwind classes) on purpose: index.css's global, unlayered `button` rule
+// beats Tailwind's bg-/text-/border- utilities on every <button> - see the note there.
+const BTN_PRIMARY = { backgroundColor: '#ffffff', color: '#000000', border: 'none' };
+const BTN_SECONDARY = { backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)' };
+const BTN_DANGER = { backgroundColor: '#f87171', color: '#000000', border: 'none' };
+const BTN_DANGER_SOFT = { backgroundColor: 'rgba(239,68,68,0.1)', color: '#f87171', border: 'none' };
+
+const DialogContext = createContext(null);
+const useDialog = () => useContext(DialogContext);
+
+const AppDialog = ({ dialog, onClose }) => {
+  const isPrompt = dialog.kind === 'prompt';
+  const [text, setText] = useState(dialog.defaultValue || '');
+  const inputRef = useRef(null);
+  useEffect(() => {
+    if (!isPrompt) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [isPrompt]);
+
+  const accept = () => onClose(isPrompt ? text : dialog.kind === 'confirm' ? true : undefined);
+  const cancel = () => onClose(isPrompt ? null : dialog.kind === 'confirm' ? false : undefined);
+
+  return (
+    <>
+      {/* Closes on click (end of tap), never pointerdown - see the main backdrop's comment. */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 700000, backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }} onClick={cancel} />
+      <form
+        className="pointer-events-auto flex flex-col items-stretch"
+        style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '28px 24px 22px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 710000, width: 'min(86vw, 380px)', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onSubmit={(e) => { e.preventDefault(); accept(); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') cancel(); }}
+      >
+        {dialog.title && (
+          <span className="text-white font-black text-sm uppercase tracking-widest text-center">{dialog.title}</span>
+        )}
+        {dialog.message && (
+          <span className="text-white/60 font-bold text-[13px] text-center leading-snug mt-3" style={{ whiteSpace: 'pre-line' }}>{dialog.message}</span>
+        )}
+        {isPrompt && (
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={dialog.placeholder || ''}
+            type={dialog.inputType || 'text'}
+            autoComplete="off" autoCorrect="off" autoCapitalize={dialog.autoCapitalize || 'off'} spellCheck={false}
+            // 16px+ keeps iOS from auto-zooming the page when the input gets focus.
+            className="text-white font-bold mt-4 px-4 py-3 outline-none"
+            style={{ fontSize: 16, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 14 }}
+            onFocus={(e) => { e.target.style.borderColor = '#38bdf8'; }}
+            onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+          />
+        )}
+        <div className="flex gap-3 mt-5 justify-center">
+          {dialog.kind !== 'alert' && (
+            <button type="button" onClick={cancel}
+              className="flex-1 font-black uppercase text-xs px-5 py-3 rounded-full"
+              style={BTN_SECONDARY}
+            >{dialog.cancelLabel || 'Cancel'}</button>
+          )}
+          <button type="submit"
+            className="flex-1 font-black uppercase text-xs px-5 py-3 rounded-full"
+            style={{ ...(dialog.destructive ? BTN_DANGER : BTN_PRIMARY), maxWidth: dialog.kind === 'alert' ? 160 : undefined }}
+          >{dialog.confirmLabel || 'OK'}</button>
+        </div>
+      </form>
+    </>
+  );
+};
+
 // --- SETTINGS ROW ---
 // `warning` = amber attention state (e.g. sync blocked on a passcode) - distinct from
 // `destructive` red so "something needs you" never reads as "this deletes something".
@@ -1390,6 +1474,35 @@ export default function App() {
   // why - a one-time prompt/alert alone is easy to dismiss and then forget about.
   const [writeBlock, setWriteBlock] = useState(null);
   const serverBlockAlertedRef = useRef(false);
+
+  // In-app dialogs (see AppDialog). One shows at a time; extra requests queue up behind it.
+  // Refs, not state, track the active/queued dialogs so calls from deferred callbacks
+  // (sync loops, timeouts) always see the real current state - house rule 3.
+  const [dialog, setDialog] = useState(null);
+  const dialogActiveRef = useRef(null);
+  const dialogQueueRef = useRef([]);
+  const dialogIdRef = useRef(0);
+  // Built once (lazy useState initializer) so the context value never changes identity.
+  const [dialogs] = useState(() => {
+    const open = (opts) => new Promise((resolve) => {
+      const d = { ...opts, id: ++dialogIdRef.current, resolve };
+      if (dialogActiveRef.current) dialogQueueRef.current.push(d);
+      else { dialogActiveRef.current = d; setDialog(d); }
+    });
+    return {
+      alert: (opts) => open({ ...opts, kind: 'alert' }),
+      confirm: (opts) => open({ ...opts, kind: 'confirm' }),
+      prompt: (opts) => open({ ...opts, kind: 'prompt' }),
+    };
+  });
+  const closeDialog = (result) => {
+    const d = dialogActiveRef.current;
+    if (!d) return;
+    const next = dialogQueueRef.current.shift() || null;
+    dialogActiveRef.current = next;
+    setDialog(next);
+    d.resolve(result);
+  };
   const [mulliganType, setMulliganType] = useState(() => cachedGame.mulliganType ?? '');
   
   const clockwiseOrder = [0, 1, 3, 2];
@@ -1627,10 +1740,9 @@ export default function App() {
     });
   };
 
-  // Returns true if a passcode was saved. Native prompt() on purpose: like the existing
-  // confirm() dialogs, it renders outside the page, so the app's rotation can't affect it.
-  const promptForPasscode = (message) => {
-    const entered = window.prompt(message);
+  // Resolves true if a passcode was saved.
+  const promptForPasscode = async (message) => {
+    const entered = await dialogs.prompt({ title: 'Table Passcode', message, placeholder: 'Passcode', confirmLabel: 'Save' });
     if (entered === null || !entered.trim()) return false;
     safeSetItem(PASSCODE_KEY, entered.trim());
     setHasPasscode(true);
@@ -1650,9 +1762,10 @@ export default function App() {
     if (reason === 'passcode') handlePasscodeRejected();
     else if (reason === 'server' && !serverBlockAlertedRef.current) {
       serverBlockAlertedRef.current = true;
-      setTimeout(() => window.alert(
-        "Saving is paused: the server isn't set up to accept saves yet (no passcode configured).\n\nNothing is lost - everything stays saved on this device and will sync once that's fixed."
-      ), 0);
+      dialogs.alert({
+        title: 'Saving Paused',
+        message: "The server isn't set up to accept saves yet (no passcode configured).\n\nNothing is lost - everything stays saved on this device and will sync once that's fixed.",
+      });
     }
   };
 
@@ -1663,11 +1776,11 @@ export default function App() {
     passcodePromptedRef.current = true;
     const hadPasscode = !!loadPasscode();
     // Deferred so the prompt opens after the calling sync loop has released its guard.
-    setTimeout(() => {
+    setTimeout(async () => {
       const msg = hadPasscode
-        ? "That passcode wasn't accepted. Enter the table passcode to save games and edits:"
+        ? "That passcode wasn't accepted. Check it and try again."
         : "Enter the table passcode to save games and edits.\n\nNothing is lost - everything stays saved on this device until then.";
-      if (promptForPasscode(msg)) {
+      if (await promptForPasscode(msg)) {
         passcodePromptedRef.current = false;
         retrySyncSoon();
       }
@@ -1693,7 +1806,7 @@ export default function App() {
         // the optimistic change, and tell the person why.
         const msg = await readErrorMessage(r);
         refetchPlayers();
-        window.alert(msg || "That change couldn't be saved.");
+        dialogs.alert({ title: "Couldn't Save", message: msg || "That change couldn't be saved." });
         return;
       }
       if (!r.ok) throw new Error('Request failed');
@@ -1743,7 +1856,10 @@ export default function App() {
     setIsSyncingEdits(false);
     refetchPlayers(); // pick up the server's canonical state after syncing
     if (rejected.length > 0) {
-      window.alert(`${rejected.length === 1 ? 'A queued change' : `${rejected.length} queued changes`} couldn't be saved:\n\n${rejected.join('\n')}`);
+      dialogs.alert({
+        title: "Couldn't Save",
+        message: `${rejected.length === 1 ? 'A queued change' : `${rejected.length} queued changes`} couldn't be saved:\n\n${rejected.join('\n')}`,
+      });
     }
   };
   syncPendingEditsRef.current = syncPendingEdits;
@@ -1893,6 +2009,25 @@ export default function App() {
     });
   };
 
+  // Removes one game from the local record. For a synced game that's only the local copy;
+  // for a pending one it means the game is never submitted - hence the stronger confirm.
+  const deleteLocalGame = async (g) => {
+    if (!g.synced && syncInProgressRef.current) {
+      // It may be mid-upload right now - deleting it locally wouldn't stop that POST.
+      dialogs.alert({ title: 'Sync In Progress', message: 'Try again in a moment.' });
+      return;
+    }
+    const ok = await dialogs.confirm(g.synced
+      ? { title: 'Remove Local Copy?', message: "Removes this game from this device only. It stays in the shared stats.", confirmLabel: 'Remove', destructive: true }
+      : { title: 'Delete Game?', message: "This game hasn't synced yet, so it will never reach the shared stats. This can't be undone.", confirmLabel: 'Delete', destructive: true });
+    if (!ok) return;
+    setPendingGames(prev => {
+      const updated = prev.filter(pg => pg.timestamp !== g.timestamp);
+      safeSetItem('pending_mtg_games', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const submitGame = () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -1945,6 +2080,7 @@ export default function App() {
   const syncBlocked = !!writeBlock && (hasPending || pendingEdits.length > 0);
 
   return (
+    <DialogContext.Provider value={dialogs}>
     <div className="min-h-screen w-screen bg-black overflow-hidden">
       <div
         style={{
@@ -2159,11 +2295,13 @@ export default function App() {
               <div className="flex gap-3 mt-2">
                 <button
                   onClick={() => setShowResetConfirm(false)}
-                  className="font-black uppercase text-xs text-white/60 px-6 py-3 rounded-full border border-white/15 bg-white/5"
+                  className="font-black uppercase text-xs px-6 py-3 rounded-full"
+                  style={BTN_SECONDARY}
                 >Cancel</button>
                 <button
                   onClick={() => { setShowResetConfirm(false); setShowSettings(false); setGameStarted(false); setTurn(1); setSeats(initialSeats); setFirstSeatIndex(null); setMulliganType(''); }}
-                  className="font-black uppercase text-xs text-black px-6 py-3 rounded-full bg-white"
+                  className="font-black uppercase text-xs px-6 py-3 rounded-full"
+                  style={BTN_DANGER}
                 >Reset</button>
               </div>
             </div>
@@ -2223,10 +2361,10 @@ export default function App() {
                     value={(hasPending || pendingEdits.length > 0) ? String(unsyncedGames.length + pendingEdits.length) : null}
                     warning={syncBlocked && !isSyncing && !isSyncingEdits}
                     disabled={(!hasPending && pendingEdits.length === 0) || isSyncing || isSyncingEdits}
-                    onClick={() => {
+                    onClick={async () => {
                       // Blocked on this device's passcode: ask for it right here, then retry.
                       if (writeBlock === 'passcode') {
-                        if (promptForPasscode('Enter the table passcode to save games and edits:')) {
+                        if (await promptForPasscode('Enter the table passcode to save games and edits.')) {
                           passcodePromptedRef.current = false;
                           retrySyncSoon();
                         }
@@ -2306,8 +2444,8 @@ export default function App() {
                     label="Passcode"
                     value={writeBlock === 'passcode' ? (hasPasscode ? 'Rejected' : 'Needed') : hasPasscode ? 'Set' : 'Not set'}
                     warning={writeBlock === 'passcode'}
-                    onClick={() => {
-                      if (promptForPasscode(hasPasscode ? 'Enter a new table passcode:' : 'Enter the table passcode to save games and edits:')) {
+                    onClick={async () => {
+                      if (await promptForPasscode(hasPasscode ? 'Replace the passcode saved on this device.' : 'Enter the table passcode to save games and edits.')) {
                         passcodePromptedRef.current = false;
                         retrySyncSoon();
                       }
@@ -2499,8 +2637,8 @@ export default function App() {
                             }
                             setEditingDeck(null);
                           }}
-                          className="font-black uppercase text-sm text-black px-6 py-3.5 rounded-full bg-white self-center"
-                          style={{ opacity: (!editingDeck.deck.trim()) ? 0.4 : 1 }}
+                          className="font-black uppercase text-sm px-6 py-3.5 rounded-full self-center"
+                          style={{ ...BTN_PRIMARY, opacity: (!editingDeck.deck.trim()) ? 0.4 : 1 }}
                         >Save Deck</button>
                       </>
                     ) : !detailPlayer ? (
@@ -2508,12 +2646,13 @@ export default function App() {
                         {/* LIST VIEW */}
                         <button
                           disabled={editorBusy}
-                          onClick={() => {
-                            const name = prompt("New Player Name:");
+                          onClick={async () => {
+                            const name = (await dialogs.prompt({ title: 'Add Player', placeholder: 'Player name', confirmLabel: 'Add', autoCapitalize: 'words' }))?.trim();
                             if (!name) return;
                             editorCall('/players/add_player', { player_name: name });
                           }}
-                          className="font-black uppercase text-[13px] text-black px-6 py-3 rounded-full bg-white self-start mb-4"
+                          className="font-black uppercase text-[13px] px-6 py-3 rounded-full self-start mb-4"
+                          style={BTN_PRIMARY}
                         >+ Add Player</button>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
@@ -2543,10 +2682,13 @@ export default function App() {
                         {/* DETAIL VIEW */}
                         <button
                           disabled={editorBusy}
-                          onClick={() => {
-                            const url = prompt("Profile Picture URL (tip: use Scryfall's Download Art Crop link):", detailPlayer.pfp || '');
+                          onClick={async () => {
+                            const url = await dialogs.prompt({
+                              title: 'Profile Picture', message: 'Paste an image URL. Tip: Scryfall\'s "Download Art Crop" link works well.',
+                              placeholder: 'https://…', defaultValue: detailPlayer.pfp || '', inputType: 'url', confirmLabel: 'Save',
+                            });
                             if (url === null) return;
-                            editorCall('/players/update_pfp', { player_name: detailPlayer.player_name, art_url: url });
+                            editorCall('/players/update_pfp', { player_name: detailPlayer.player_name, art_url: url.trim() });
                           }}
                           className="flex flex-col items-center gap-2 self-center mb-6"
                           style={{ background: 'transparent', border: 'none' }}
@@ -2615,9 +2757,9 @@ export default function App() {
                                 >Edit</button>
                                 <button
                                   disabled={editorBusy}
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (!confirm(`Delete deck "${d.deck}"?`)) return;
+                                    if (!(await dialogs.confirm({ title: 'Delete Deck?', message: `"${d.deck}" will be removed. Decks with logged games can't be deleted - use Exclude to retire them instead.`, confirmLabel: 'Delete', destructive: true }))) return;
                                     editorCall('/players/delete_deck', { player_name: detailPlayer.player_name, deck: d.deck });
                                   }}
                                   style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
@@ -2635,12 +2777,13 @@ export default function App() {
 
                         <button
                           disabled={editorBusy}
-                          onClick={() => {
-                            if (!confirm(`Delete player "${detailPlayer.player_name}" and all their decks?`)) return;
+                          onClick={async () => {
+                            if (!(await dialogs.confirm({ title: 'Delete Player?', message: `${detailPlayer.player_name} and all their decks will be removed.`, confirmLabel: 'Delete', destructive: true }))) return;
                             editorCall('/players/delete_player', { player_name: detailPlayer.player_name });
                             setExpandedPlayer(null);
                           }}
-                          className="text-[13px] font-black uppercase text-red-400 px-6 py-3 rounded-full bg-red-500/10 self-center mt-3 mb-2"
+                          className="text-[13px] font-black uppercase px-6 py-3 rounded-full self-center mt-3 mb-2"
+                          style={BTN_DANGER_SOFT}
                         >Delete Player</button>
                       </>
                     )}
@@ -2716,8 +2859,17 @@ export default function App() {
                               </div>
                             ))}
                           </div>
-                          <div className="text-white/30 text-[10px] font-bold mt-2 uppercase tracking-wide">
-                            Turn {g.turn}{g.mulligan_type ? ` · ${g.mulligan_type}` : ''}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-white/30 text-[10px] font-bold uppercase tracking-wide">
+                              Turn {g.turn}{g.mulligan_type ? ` · ${g.mulligan_type}` : ''}
+                            </span>
+                            <button
+                              onClick={() => deleteLocalGame(g)}
+                              className="text-[10px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full"
+                              style={{ color: 'rgba(248,113,113,0.9)', backgroundColor: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}
+                            >
+                              Delete
+                            </button>
                           </div>
                         </div>
                       );
@@ -2725,8 +2877,16 @@ export default function App() {
 
                     {syncedGames.length > 0 && (
                       <button
-                        onClick={() => { if (confirm(`Remove ${syncedGames.length} already-synced game${syncedGames.length === 1 ? '' : 's'} from this device's local record? This only clears the local copy - they stay on the sheet.`)) clearSyncedGames(); }}
-                        className="text-[13px] font-black uppercase text-red-400 px-6 py-3 rounded-full bg-red-500/10 self-center mt-3"
+                        onClick={async () => {
+                          const ok = await dialogs.confirm({
+                            title: 'Clear Synced Games?',
+                            message: `Removes ${syncedGames.length} already-synced game${syncedGames.length === 1 ? '' : 's'} from this device only. They stay in the shared stats.`,
+                            confirmLabel: 'Clear', destructive: true,
+                          });
+                          if (ok) clearSyncedGames();
+                        }}
+                        className="text-[13px] font-black uppercase px-6 py-3 rounded-full self-center mt-3"
+                        style={BTN_DANGER_SOFT}
                       >
                         Clear Synced Games ({syncedGames.length})
                       </button>
@@ -2737,8 +2897,11 @@ export default function App() {
             );
           })()}
 
+          {/* In-app dialog - last, so it sits above every other panel (Settings, editors...) */}
+          {dialog && <AppDialog key={dialog.id} dialog={dialog} onClose={closeDialog} />}
 
       </div>
     </div>
+    </DialogContext.Provider>
   );
 }

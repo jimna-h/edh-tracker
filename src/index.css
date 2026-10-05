@@ -12,6 +12,11 @@ body {
   user-select: none;
   -webkit-touch-callout: none;
 }
+/* NOTE: this rule is unlayered, so in Tailwind v4 it beats every utility class -
+   bg-, text- and border- color classes on a <button> have NO effect. The game surface's look
+   depends on that (moving this into @layer base was tried and broke the start/setup
+   screens), so buttons that need their own colors set them via inline style instead
+   (see BTN_* in App.jsx). */
 button {
   -webkit-appearance: none;
   appearance: none;
