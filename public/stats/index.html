@@ -603,10 +603,10 @@ async function renderAsync(data){
       <div class="eyebrow"><span class="line"></span>Pay Life. Draw Data.</div>
       <h1>${totalGames} games on record.<br><em>${players.length} players</em>, ${decks.length} decks played.</h1>
       <div class="hero-stats">
-        <div class="hero-stat"><div class="num">${totalGames}</div><div class="lbl">Games logged</div><div class="sub2">every game, guests included</div></div>
-        <div class="hero-stat"><div class="num">${fmt1(avgTurn)}</div><div class="lbl">Avg. end turn</div><div class="sub2">the turn each game ended on</div></div>
+        <div class="hero-stat"><div class="num">${totalGames}</div><div class="lbl">Games logged</div></div>
+        <div class="hero-stat"><div class="num">${fmt1(avgTurn)}</div><div class="lbl">Avg. end turn</div></div>
         <div class="hero-stat"><div class="num">${decks.length}</div><div class="lbl">Decks played</div><div class="sub2">${activeDeckCount} active · ${inactiveDeckCount} retired</div></div>
-        <div class="hero-stat"><div class="num">${players.length}</div><div class="lbl">Players</div><div class="sub2">with a logged game · guests excluded</div></div>
+        <div class="hero-stat"><div class="num">${players.length}</div><div class="lbl">Players</div></div>
         <div class="hero-stat">
           <div class="num">${mostRecent ? mostRecent.Winner_Player : '—'}</div>
           <div class="lbl">Most recent winner${mostRecent ? ` · ${mostRecent.Winner_Deck}` : ''}</div>
@@ -616,13 +616,12 @@ async function renderAsync(data){
       <details class="panel howto">
         <summary>How these numbers work</summary>
         <ul>
-          <li><b>Win rate</b> = wins ÷ games played. ${EVEN_SHARE} Above that means winning more than your share.</li>
-          <li>The small <b>"3/12"</b> under a percentage is wins/games - a 100% from 1 game isn't a trend.</li>
-          <li><b>Guests:</b> games with a guest still count toward table-wide numbers (games logged, game length, activity, mulligans), but guest seats are left out of anything about a person (leaderboard, awards, rivalries, colors, seats). A real deck a guest borrowed still gets credit in its deck stats.</li>
-          <li><b>Active vs. retired decks:</b> active = still in its owner's deck list and not marked Exclude. Retired decks keep their full history; they're just hidden until you tap "Show retired decks".</li>
-          <li><b>Deck appearance:</b> one player's deck in one game - a 4-player game is 4 appearances. Color stats count appearances.</li>
-          <li><b>Decisive games</b> (rivalries, head-to-head): games one of the two won. Games someone else won don't count either way.</li>
-          <li><b>Infinite:</b> games where a deck went infinite on lands/rocks/dorks are left out of mana averages and counted separately.</li>
+          <li><b>Win rate</b> = wins ÷ games. 25% is an even share at a 4-player table.</li>
+          <li><b>3/12</b> under a % = wins/games.</li>
+          <li><b>Guests</b> count toward table totals, not personal stats.</li>
+          <li><b>Retired</b> decks (excluded or removed) are hidden until you show them.</li>
+          <li><b>Decisive</b> = games one of the two won.</li>
+          <li><b>Infinite</b> games are left out of mana averages.</li>
         </ul>
       </details>
     </div>
@@ -631,7 +630,7 @@ async function renderAsync(data){
   <section id="players">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Player leaderboard</h2><div class="section-desc">Each player's wins ÷ the games <i>they</i> played, best first (ties: more wins, then faster average win).</div>${basisHTML(`${EVEN_SHARE} Guest seats excluded.`)}</div>
+        <div><h2>Player leaderboard</h2><div class="section-desc">Wins ÷ games each player played.</div></div>
         <div class="idx">01 / PLAYERS</div>
       </div>
       <div class="grid" style="grid-template-columns:1fr;">
@@ -656,7 +655,7 @@ async function renderAsync(data){
   <section id="rivalries">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Recurring rivalries</h2><div class="section-desc">The ${rivalries.length} pairs of players who've played together most, and who's winning when they do.</div>${basisHTML('The bar splits <b>decisive</b> games - ones that one of the two won. Games someone else won count as shared but not decisive.')}</div>
+        <div><h2>Recurring rivalries</h2><div class="section-desc">Pairs who've played together most. The bar splits decisive games.</div></div>
         <div class="idx">02 / RIVALRIES</div>
       </div>
       <div class="grid grid-2">
@@ -675,7 +674,7 @@ async function renderAsync(data){
   <section id="awards">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Table awards</h2><div class="section-desc">The extremes, pulled straight from the log. Each card says exactly how it's decided.</div>${basisHTML('Guest seats and guest wins are excluded. Minimums keep one lucky game from taking an award.')}</div>
+        <div><h2>Table awards</h2><div class="section-desc">The extremes from the log.</div></div>
         <div class="idx">03 / AWARDS</div>
       </div>
       <div class="grid grid-3">
@@ -683,79 +682,78 @@ async function renderAsync(data){
           <div class="k">Fastest win</div>
           <div class="v">${shortest ? 'Turn ' + fmt1(shortest.End_Turn) : '—'}</div>
           <div class="d">${shortest ? shortest.Winner_Player + ' with ' + shortest.Winner_Deck : 'No non-guest wins logged yet'}</div>
-          <div class="rule">Lowest end turn of any game a (non-guest) player won.</div>
+          <div class="rule">Lowest end turn of a win.</div>
         </div>
         <div class="panel award-card">
           <div class="k">Longest grind</div>
           <div class="v">${longest ? 'Turn ' + fmt1(longest.End_Turn) : '—'}</div>
           <div class="d">${longest ? longest.Winner_Player + ' with ' + longest.Winner_Deck : 'No non-guest wins logged yet'}</div>
-          <div class="rule">Highest end turn of any game a (non-guest) player won.</div>
+          <div class="rule">Highest end turn of a win.</div>
         </div>
         ${biggestThreat ? `<div class="panel award-card">
           <div class="k">Biggest threat</div>
           <div class="v">${biggestThreat.name}</div>
           <div class="d">Out ${fmt1(biggestThreat.threatGap)} turns before their games typically end</div>
-          <div class="rule">Their average game length minus the average turn they're eliminated - the table keeps removing them early. Min. 2 games.</div>
+          <div class="rule">Avg game length − avg elimination turn · min. 2 games</div>
         </div>` : ''}
         ${noWinPlayers ? `<div class="panel award-card">
           <div class="k">Still chasing the first</div>
           <div class="v">${noWinPlayers.name}</div>
           <div class="d">${noWinPlayers.gamesPlayed} games, no wins yet</div>
-          <div class="rule">Most games played without a win. Min. 2 games.</div>
+          <div class="rule">Most games without a win</div>
         </div>` : ''}
         <div class="panel award-card">
           <div class="k">Average game length</div>
           <div class="v">${fmt1(avgTurn)} turns</div>
           <div class="d">across ${totalGames} logged games</div>
-          <div class="rule">Average end turn across every logged game, guests included.</div>
+          <div class="rule">All games</div>
         </div>
         <div class="panel award-card">
           <div class="k">Most active pilot</div>
           <div class="v">${playerStats.slice().sort((a,b)=>b.gamesPlayed-a.gamesPlayed)[0]?.name || '—'}</div>
           <div class="d">${playerStats.slice().sort((a,b)=>b.gamesPlayed-a.gamesPlayed)[0]?.gamesPlayed || 0} games played</div>
-          <div class="rule">Most games played.</div>
         </div>
         ${highestDevotion ? `<div class="panel award-card">
           <div class="k">Highest devotion</div>
           <div class="v">${pipsHTML(highestDevotion.color)} ${highestDevotion.name}</div>
           <div class="d">${pct(highestDevotion.frac)} of their decks run ${COLOR_NAMES[highestDevotion.color]}</div>
-          <div class="rule">Share of a player's <b>active decks they own</b> (not games played) that include one color - the highest share at the table. Needs 2+ active decks.</div>
+          <div class="rule">Share of owned decks · min. 2 decks</div>
         </div>` : ''}
         ${lowestDevotion ? `<div class="panel award-card">
           <div class="k">Lowest devotion</div>
           <div class="v">${pipsHTML(lowestDevotion.color)} ${lowestDevotion.name}</div>
           <div class="d">Just ${pct(lowestDevotion.frac)} of their decks run ${COLOR_NAMES[lowestDevotion.color]}</div>
-          <div class="rule">The lowest non-zero share of a player's active, owned decks running one color. Needs 2+ active decks.</div>
+          <div class="rule">Share of owned decks · min. 2 decks</div>
         </div>` : ''}
         ${speedrunner ? `<div class="panel award-card">
           <div class="k">Speedrunner</div>
           <div class="v">${speedrunner.name}</div>
           <div class="d">Averages a win by turn ${fmt1(speedrunner.avgWinTurn)}</div>
-          <div class="rule">Lowest average end turn across their wins. Min. 2 wins.</div>
+          <div class="rule">Fastest avg win · min. 2 wins</div>
         </div>` : ''}
         ${marathonner ? `<div class="panel award-card">
           <div class="k">Marathonner</div>
           <div class="v">${marathonner.name}</div>
           <div class="d">Averages a win on turn ${fmt1(marathonner.avgWinTurn)}</div>
-          <div class="rule">Highest average end turn across their wins. Min. 2 wins.</div>
+          <div class="rule">Slowest avg win · min. 2 wins</div>
         </div>` : ''}
         ${landBaron ? `<div class="panel award-card">
           <div class="k">Land baron</div>
           <div class="v">${landBaron.name}</div>
           <div class="d">Averages ${fmt1(landBaron.avgOpeningLands)} lands in the opening hand</div>
-          <div class="rule">Highest average lands in the opening hand (as entered at setup). Min. 2 games.</div>
+          <div class="rule">Most opening-hand lands · min. 2 games</div>
         </div>` : ''}
         ${riskiestKeeps ? `<div class="panel award-card">
           <div class="k">Riskiest keeps</div>
           <div class="v">${riskiestKeeps.name}</div>
           <div class="d">Averages just ${fmt1(riskiestKeeps.avgOpeningLands)} lands in the opening hand</div>
-          <div class="rule">Lowest average lands in the opening hand. Min. 2 games.</div>
+          <div class="rule">Fewest opening-hand lands · min. 2 games</div>
         </div>` : ''}
         ${greenPlayer ? `<div class="panel award-card">
           <div class="k">Green player</div>
           <div class="v">${greenPlayer.name}</div>
           <div class="d">Develops ${fmt1(greenPlayer.avgManaPerTurn)} mana sources per turn</div>
-          <div class="rule">Highest average of (lands + rocks + dorks at game end) ÷ turns survived. Min. 2 games; infinite games left out.</div>
+          <div class="rule">Mana sources per turn survived · min. 2 games</div>
         </div>` : ''}
       </div>
     </div>
@@ -763,7 +761,7 @@ async function renderAsync(data){
   <section id="trend">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Game frequency</h2><div class="section-desc">Games logged each month (every game, guests included). The number on each bar is that month's count; under the month is its average end turn.</div></div>
+        <div><h2>Game frequency</h2><div class="section-desc">Games per month, with average end turn.</div></div>
         <div class="idx">04 / ACTIVITY</div>
       </div>
       <div class="panel trend-wrap">
@@ -777,7 +775,7 @@ async function renderAsync(data){
   <section id="mulligans">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Mulligan habits</h2><div class="section-desc">Which mulligan rule the table chose, out of all ${totalGames} games.</div></div>
+        <div><h2>Mulligan habits</h2><div class="section-desc">Mulligan rule chosen, out of ${totalGames} games.</div></div>
         <div class="idx">05 / MULLIGANS</div>
       </div>
       <div class="panel" style="padding:24px 24px 10px;">
@@ -792,7 +790,7 @@ async function renderAsync(data){
   <section id="colors">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Color identity</h2><div class="section-desc">How decks of each color do, counted per <b>deck appearance</b> (one player's deck in one game) - ${colorAppearances} so far. A White-Blue deck counts toward both White and Blue.</div>${basisHTML(`Win rate = appearances that won ÷ appearances. ${EVEN_SHARE} Popularity = share of appearances, so individual colors add up past 100%. Guest seats excluded.`)}</div>
+        <div><h2>Color identity</h2><div class="section-desc">Per deck played in a game (${colorAppearances} total). Multicolor decks count toward each color.</div></div>
         <div class="idx">06 / COLORS</div>
       </div>
       <div style="margin-bottom:14px;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.14em;font-weight:900;">Win rate</div>
@@ -838,7 +836,7 @@ async function renderAsync(data){
   <section id="seats">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Seat order</h2><div class="section-desc">Win rate by turn order - seat 1 takes the first turn. Games won from a seat ÷ games played from it.</div>${basisHTML(`${EVEN_SHARE} Guest seats excluded.`)}</div>
+        <div><h2>Seat order</h2><div class="section-desc">Win rate by seat. Seat 1 goes first.</div></div>
         <div class="idx">07 / SEATS</div>
       </div>
       <div class="panel" style="padding:24px 24px 10px;">
@@ -856,7 +854,7 @@ async function renderAsync(data){
   <section id="decks">
     <div class="wrap">
       <div class="section-head">
-        <div><h2>Deck performance</h2><div class="section-desc">Showing the ${activeDeckCount} <b>active</b> decks that have been played, ranked by win rate (ties: more wins, then faster average win).</div>${basisHTML("Win rate counts every game the deck was played, by anyone - including guests borrowing it. Active = still in its owner's deck list and not excluded; retired decks are hidden below.")}</div>
+        <div><h2>Deck performance</h2><div class="section-desc">${activeDeckCount} active decks, by win rate.</div></div>
         <div class="idx">08 / DECKS</div>
       </div>
       ${inactiveDeckCount ? `<button class="inactive-toggle" onclick="toggleInactive('deckGrid', this, ${inactiveDeckCount}, 'Show retired decks (${inactiveDeckCount})', 'Hide retired decks')">Show retired decks (${inactiveDeckCount})</button>` : ''}

@@ -602,14 +602,13 @@ async function renderAsync(data){
         <div class="profile-record">
           <div class="pct">${pct(winRate)}</div>
           <div class="lbl">${wins}W / ${gamesPlayed - wins}L</div>
-          <div class="sub2" style="text-align:right;">win rate · even share is 25%</div>
         </div>
       </div>
 
       <section id="turns" style="padding-top:0;">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Turn averages</h2><div class="section-desc">Across the ${gamesPlayed} games ${targetName} was played in, by anyone.</div>${basisHTML('<b>Game length</b> = the turn the game ended. <b>Win turn</b> = end turn of the games it won. <b>Loss turn</b> = the turn its pilot was eliminated.')}</div>
+            <div><h2>Turn averages</h2><div class="section-desc">Loss turn = when its pilot was eliminated.</div></div>
             <div class="idx">01 / TURNS</div>
           </div>
           <div class="grid grid-3">
@@ -623,7 +622,7 @@ async function renderAsync(data){
       <section id="seat">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Seat &amp; game length</h2><div class="section-desc">${targetName}'s win rate from each seat (seat 1 takes the first turn), and by how long the game ran.</div>${basisHTML('Small samples swing a lot - wins/games is under each percentage.')}</div>
+            <div><h2>Seat &amp; game length</h2><div class="section-desc">Seat 1 goes first.</div></div>
             <div class="idx">02 / SEAT &amp; LENGTH</div>
           </div>
           <div class="grid grid-2">
@@ -650,7 +649,7 @@ async function renderAsync(data){
       <section id="colormatch">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Color matchups</h2><div class="section-desc">${targetName}'s win rate in games where at least one opposing deck had each color.</div></div>
+            <div><h2>Color matchups</h2><div class="section-desc">Win rate when any opponent's deck had that color.</div></div>
             <div class="idx">03 / COLORS</div>
           </div>
           <div class="panel" style="padding:20px 20px 8px;">
@@ -666,11 +665,11 @@ async function renderAsync(data){
       <section id="mana">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Mana development</h2><div class="section-desc">How fast ${targetName} builds mana: (lands + rocks + dorks at the end of each game) ÷ the turns its pilot survived, averaged over its games.</div>${basisHTML('Only games where end-of-game counts were entered. Games that went infinite are counted separately, not averaged in.')}</div>
+            <div><h2>Mana development</h2><div class="section-desc">Lands + rocks + dorks ÷ turns survived.</div></div>
             <div class="idx">04 / MANA</div>
           </div>
           <div class="grid grid-3">
-            <div class="hero-stat"><div class="num">${fmt1(avgManaPerTurn)}</div><div class="lbl">Mana / turn</div><div class="sub2">average of ${manaRows.length} game${manaRows.length===1?'':'s'} with end-of-game counts</div></div>
+            <div class="hero-stat"><div class="num">${fmt1(avgManaPerTurn)}</div><div class="lbl">Mana / turn</div><div class="sub2">${manaRows.length} game${manaRows.length===1?'':'s'}</div></div>
             ${infiniteGames ? `<div class="hero-stat"><div class="num">∞ <span style="font-size:20px;">×${infiniteGames}</span></div><div class="lbl">Went infinite</div></div>` : ''}
           </div>
         </div>
@@ -679,7 +678,7 @@ async function renderAsync(data){
       <section id="pilots">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Pilots</h2><div class="section-desc">Everyone who's played ${targetName}, and their record with it - guests included.</div></div>
+            <div><h2>Pilots</h2><div class="section-desc">Everyone who's played it.</div></div>
             <div class="idx">05 / PILOTS</div>
           </div>
           <div class="panel rowlist">
@@ -701,7 +700,7 @@ async function renderAsync(data){
       <section id="rivalries">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Rivalries</h2><div class="section-desc">${targetName}'s record against every other deck it's shared a table with, most shared games first.</div>${basisHTML("<b>Decisive</b> = games one of the two decks won; games a third deck won don't count either way. Shown as this deck's wins-their wins. Retired decks are behind the button.")}</div>
+            <div><h2>Rivalries</h2><div class="section-desc">Decisive games only. 50% is even.</div></div>
             <div class="idx">06 / RIVALRIES</div>
           </div>
           ${hiddenRivalryCount ? `<button class="inactive-toggle" onclick="toggleInactive('rivalriesList', this, ${hiddenRivalryCount}, 'Show retired decks (${hiddenRivalryCount})', 'Hide retired decks')">Show retired decks (${hiddenRivalryCount})</button>` : ''}
@@ -728,7 +727,7 @@ async function renderAsync(data){
       <section id="recent">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Recent games</h2><div class="section-desc">The last ${recentGames.length} games ${targetName} was played in, newest first. <b>T5</b> = its pilot was eliminated on turn 5.</div></div>
+            <div><h2>Recent games</h2><div class="section-desc">T5 = out on turn 5.</div></div>
             <div class="idx">07 / RECENT</div>
           </div>
           <div class="panel game-log">
