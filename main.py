@@ -7,15 +7,35 @@ import uuid
 from datetime import datetime
 import os
 import hmac
-import pytz
+from zoneinfo import ZoneInfo
 from urllib.parse import unquote
 
 app = Flask(__name__)
+
+# All game times are recorded in the group's local timezone.
+LOCAL_TZ = ZoneInfo('America/Denver')
 
 # The frontend sends this string instead of a number when a deck "went infinite" on
 # lands/rocks/dorks. Stored as count NULL + <field>_infinite TRUE, so a huge sentinel
 # number never ends up in the integer column and skews averages.
 INFINITE = 'infinite'
+
+def is_link_or_blank(value):
+    """Art/profile URLs must be real http(s) links or blank. A deck once had its name
+    saved as its art URL, which rendered as a broken relative image everywhere."""
+    v = (value or '').strip()
+    return v == '' or ((v.startswith('http://') or v.startswith('https://')) and ' ' not in v)
+
+
+def bad_url_response(field):
+    return jsonify({"error": f"{field} must be a link starting with https:// (or blank)."}), 400
+
+
+def server_error():
+    """Generic 500 body - the real exception is printed to the Render log by the caller;
+    raw database/driver errors shouldn't be sent to whoever made the request."""
+    return jsonify({"error": "Something went wrong on the server."}), 500
+
 
 def split_mana_count(raw):
     """Returns (count, is_infinite) for a lands/rocks/dorks value from /submit."""
@@ -51,6 +71,13 @@ def get_db_connection():
         # Fallback for local laptop dev
         database_url = "postgresql://postgres:postgres@localhost:5432/edh_tracker"
     return psycopg.connect(database_url, row_factory=dict_row)
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Keep-warm target. Deliberately DB-free: pinging it keeps Render's free instance
+    awake without also keeping Neon compute running (and burning its monthly hours)."""
+    return jsonify({"status": "ok"})
+
 
 @app.route('/players', methods=['GET'])
 def get_players():
@@ -88,7 +115,7 @@ def get_players():
         return jsonify(ordered_data)
     except Exception as e:
         print(f"Error fetching players: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/stats/data', methods=['GET'])
 def get_stats_data():
@@ -140,21 +167,21 @@ def get_stats_data():
         return jsonify({"games": games_out, "performance": performance_out})
     except Exception as e:
         print(f"Error fetching stats data: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/submit', methods=['POST'])
 def submit_stats():
     try:
         data = request.json
-        game_id = f"G-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
 
         raw_ts = data.get('timestamp', '')
         try:
-            dt = datetime.fromisoformat(raw_ts.replace('Z', '+00:00'))
-            local_tz = pytz.timezone('America/Denver')
-            played_at = dt.astimezone(local_tz)
-        except:
-            played_at = datetime.now(pytz.timezone('America/Denver'))
+            played_at = datetime.fromisoformat(raw_ts.replace('Z', '+00:00')).astimezone(LOCAL_TZ)
+        except (ValueError, TypeError, AttributeError):
+            played_at = datetime.now(LOCAL_TZ)
+        # Date part from the game's own local time - the server clock is UTC, which used
+        # to stamp evening games with the next day's date.
+        game_id = f"G-{played_at.strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
 
         # Find the winner (turn_died == 'win')
         winner = next((p for p in data['players'] if p['turn_died'] == 'win'), data['players'][0])
@@ -224,7 +251,7 @@ def submit_stats():
 
     except Exception as e:
         print(f"Error submitting game: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/add_player', methods=['POST'])
 def add_player():
@@ -245,7 +272,7 @@ def add_player():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding player: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/delete_player', methods=['POST'])
 def delete_player():
@@ -263,12 +290,16 @@ def delete_player():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error deleting player: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/add_deck', methods=['POST'])
 def add_deck():
     try:
         data = request.json
+        if not is_link_or_blank(data.get('art_url')):
+            return bad_url_response('Art URL')
+        if data.get('art_url_partner') != 'partner' and not is_link_or_blank(data.get('art_url_partner')):
+            return bad_url_response('Partner art URL')
         player_name = data.get('player_name', '')
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -298,12 +329,16 @@ def add_deck():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error adding deck: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/update_deck', methods=['POST'])
 def update_deck():
     try:
         data = request.json
+        if not is_link_or_blank(data.get('art_url')):
+            return bad_url_response('Art URL')
+        if data.get('art_url_partner') != 'partner' and not is_link_or_blank(data.get('art_url_partner')):
+            return bad_url_response('Partner art URL')
         player_name = data.get('player_name', '')
         original_deck = data.get('original_deck', '')
         with get_db_connection() as conn:
@@ -334,7 +369,7 @@ def update_deck():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error updating deck: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/delete_deck', methods=['POST'])
 def delete_deck():
@@ -359,12 +394,14 @@ def delete_deck():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error deleting deck: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 @app.route('/players/update_pfp', methods=['POST'])
 def update_pfp():
     try:
         data = request.json
+        if not is_link_or_blank(data.get('art_url')):
+            return bad_url_response('Profile picture')
         player_name = data.get('player_name', '')
         art_url = data.get('art_url', '')
         with get_db_connection() as conn:
@@ -376,7 +413,7 @@ def update_pfp():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error updating pfp: {e}")
-        return jsonify({"error": str(e)}), 500
+        return server_error()
 
 if __name__ == '__main__':
     app.run(port=8000, debug=True, use_reloader=False)

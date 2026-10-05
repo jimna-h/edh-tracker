@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sylvan Library — Stats</title>
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <style>
 :root{
   --bg:#000000;
@@ -274,6 +276,16 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
   .nav-links a{ flex-shrink:0; }
   .rowlist .r{ grid-template-columns: 20px 1fr auto; padding:12px 16px; }
   .hbar-label{ width:88px; font-size:10.5px; }
+  /* Deck tiles: two square columns on phones instead of one full-width 4:3 tile each -
+     with ~60 decks the single column alone was ~16,000px of scrolling. */
+  #deckGrid{ grid-template-columns:1fr 1fr; gap:10px; }
+  #deckGrid .deck-tile{ aspect-ratio:1/1; }
+  #deckGrid .deck-tile .tile-top{ padding:7px; }
+  #deckGrid .deck-tile .tile-bottom{ padding:8px 10px 10px; }
+  #deckGrid .deck-tile .tile-pos{ font-size:10px; padding:2px 7px; }
+  #deckGrid .deck-tile .tile-pct{ font-size:12px; padding:2px 8px; }
+  #deckGrid .deck-tile .tile-name{ font-size:13px; line-height:1.2; }
+  #deckGrid .deck-tile .tile-meta{ font-size:10px; }
 }
 
 /* ---------- Active/inactive deck toggle ---------- */

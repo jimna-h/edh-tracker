@@ -1,105 +1,11 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { LIVE_GAME_KEY, loadCachedGame, loadJSONArray, safeSetItem, safeGetItem, safeRemoveItem } from './lib/storage.js';
+import { API_BASE, SUBMIT_URL, PASSCODE_KEY, loadPasscode, writeHeaders, isPermanentRejection, writeBlockReason, isLinkOrBlank, readJSON, readErrorMessage } from './lib/api.js';
+import { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER, BTN_DANGER_SOFT, DialogContext, useDialog, AppDialog } from './components/AppDialog.jsx';
 
 // --- STYLING CONSTANTS ---
 const textShadowStyle = { 
   textShadow: '0px 2px 10px rgba(0,0,0,0.9), 0px 0px 20px rgba(0,0,0,0.5)' 
-};
-
-// --- LIVE GAME PERSISTENCE ---
-// Caches the in-progress game (seats, turn, life totals, commander damage, setup-wizard
-// progress, etc.) so it survives navigating away (e.g. to the stats pages) or closing and
-// reopening the app - none of this lives anywhere except React state otherwise, so a full
-// page reload would silently wipe it.
-const LIVE_GAME_KEY = 'mtg_live_game';
-const loadCachedGame = () => {
-  try {
-    const raw = localStorage.getItem(LIVE_GAME_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return (parsed && typeof parsed === 'object') ? parsed : null;
-  } catch (e) {
-    return null;
-  }
-};
-
-// Safely reads a JSON array out of localStorage. Used for pendingGames/pendingEdits, which
-// were previously read with a bare JSON.parse(localStorage.getItem(...) || '[]') - if that
-// value is ever malformed for any reason (a previous crash mid-write, storage corruption,
-// anything), that throws during the very first render and the entire app fails to load,
-// which is a far worse failure mode than losing track of one pending item.
-const loadJSONArray = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    return [];
-  }
-};
-
-// Safe localStorage write: if this throws (quota exceeded, private-browsing restrictions,
-// etc.) it fails silently rather than propagating out of a React state updater, which - with
-// no error boundary in this app - would otherwise blank the entire screen over a storage
-// write failing, even though the in-memory state update itself would have been fine.
-const safeSetItem = (key, value) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    console.error('localStorage write failed:', key, e);
-  }
-};
-
-// Shared write passcode: every POST to the backend must carry it (see main.py's
-// require_write_passcode). Stored per device in localStorage and entered via a prompt -
-// deliberately NOT a URL param, since a home-screen icon's start_url is frozen at install
-// time (the old ?key=toski failure mode). A missing/wrong passcode gets a 401, which the
-// sync code treats as "keep queued + ask for the passcode", never as success.
-const PASSCODE_KEY = 'mtg_write_passcode';
-const loadPasscode = () => {
-  try {
-    return localStorage.getItem(PASSCODE_KEY) || '';
-  } catch (e) {
-    return '';
-  }
-};
-// URI-encoded so a non-ASCII passcode can't make fetch() throw on an invalid header value.
-const writeHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-Write-Passcode': encodeURIComponent(loadPasscode()),
-});
-
-// A 4xx the server returned on purpose (409 deck/player has logged games, 404 not found,
-// 400 bad input) - resending the same request will never succeed, so it must not be
-// queued for retry. 401 (passcode), 408 and 429 are excluded since those can succeed later.
-const isPermanentRejection = (status) =>
-  status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429;
-
-// Why the server refused a write, if it's one of the two "saving is blocked" cases:
-// 'passcode' (401 - this device's passcode is missing/wrong) or 'server' (503 - the
-// backend has no WRITE_PASSCODE set). Anything else (offline, cold start, 5xx) -> null.
-// The error-string match covers a backend deployed before the `code` field existed.
-const writeBlockReason = (status, body) => {
-  if (status === 401) return 'passcode';
-  if (status === 503 && body && (body.code === 'passcode_not_configured' || body.error === 'Server write passcode not configured')) return 'server';
-  return null;
-};
-
-const readJSON = async (r) => {
-  try {
-    return await r.json();
-  } catch (e) {
-    return null;
-  }
-};
-
-const readErrorMessage = async (r) => {
-  try {
-    const body = await r.json();
-    return (body && body.error) || null;
-  } catch (e) {
-    return null;
-  }
 };
 
 // --- RESPONSIVE HELPER ---
@@ -196,6 +102,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
     mountTime.current = Date.now();
     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
     scheduleFadeUpdate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the options change
   }, [options]);
 
   const mouseStartX = useRef(0);
@@ -286,7 +193,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
                   <button
                     key={`${title}-${globalIdx}`}
                     data-option-index={globalIdx}
-                    onClick={(e) => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
+                    onClick={() => { if (handledTouch.current) return; if (!didScroll.current) onSelect(opt); }}
                     className={`relative shrink-0 w-[100px] md:w-[130px] h-[54px] md:h-[70px] border border-white/10 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center px-2 snap-center transition-all overflow-hidden active:scale-90 active:opacity-70 ${buttonColor ? '' : 'bg-white/[0.06] backdrop-blur-md'}`}
                     style={buttonColor ? { backgroundColor: buttonColor } : {}}
                   >
@@ -305,7 +212,7 @@ const SelectionCarousel = ({ options = [], onSelect, onBack, title, showBack = t
             <button
   key={`${title}-${i}`}
   data-option-index={i}
-  onClick={(e) => {
+  onClick={() => {
     if (handledTouch.current) return;
     if (!didScroll.current) onSelect(opt);
   }}
@@ -386,45 +293,6 @@ const QuadrantWrapper = ({ children, isFlipped, isOut, artUrl, artUrlPartner, is
   );
 };
 
-// --- GRID PICKER ---
-// Two-row grid replacing carousel for players/decks
-const GridPicker = ({ title, options, onSelect, onBack }) => {
-  const mid = Math.ceil(options.length / 2);
-  const row1 = options.slice(0, mid);
-  const row2 = options.slice(mid);
-
-  const btnStyle = (hasArt) => ({
-    flex: 1, minWidth: 0, height: 52, borderRadius: 12, fontWeight: 900, fontSize: 11,
-    color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em',
-    backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
-    position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap',
-  });
-
-  const renderBtn = (opt, i) => {
-    const isObj = typeof opt === 'object' && opt !== null;
-    const label = isObj ? (opt.name || opt.deck || 'Unnamed') : String(opt);
-    const art = isObj ? opt.artUrl : null;
-    return (
-      <button key={i} onClick={() => onSelect(opt)} style={btnStyle(!!art)}>
-        {art && <img src={art} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />}
-        <span style={{ position: 'relative', zIndex: 1, textShadow: art ? '0 1px 4px rgba(0,0,0,0.9)' : 'none', padding: '0 6px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-      </button>
-    );
-  };
-
-  return (
-    <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-500" style={{ gap: 8, padding: '0 10px' }}>
-      {title && <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.4em]">{title}</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%' }}>
-        <div style={{ display: 'flex', gap: 7 }}>{row1.map((opt, i) => renderBtn(opt, i))}</div>
-        {row2.length > 0 && <div style={{ display: 'flex', gap: 7 }}>{row2.map((opt, i) => renderBtn(opt, mid + i))}</div>}
-      </div>
-      <button onClick={onBack} className="mt-4 md:mt-8 px-6 md:px-8 py-3 md:py-4 bg-white/10 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-colors backdrop-blur-sm whitespace-nowrap">- Back</button>
-    </div>
-  );
-};
-
-
 const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDataMap, onUpdate, onSetFirst, firstSeatIndex, onResetAll, mulliganType, onSetMulligan }) => {
   const dialogs = useDialog();
   const [step, setStep] = useState(0); 
@@ -447,6 +315,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
     } else if (firstSeatIndex === null) {
       setStep(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `step` deliberately excluded: this only reacts to the first-player/order being set or cleared
   }, [firstSeatIndex, seat.order]);
 
   const handleBack = () => {
@@ -667,7 +536,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
                     <button key={n} onClick={() => { onUpdate(id, 'startLands', n); setStep(7); }}
                       style={{
                         flex: 1, height: 52, borderRadius: 12,
-                        fontSize: 20, fontWeight: 900, color: '#fff',
+                        fontSize: 20, fontWeight: 900,
                         backgroundColor: 'rgba(255,255,255,0.55)',
                         border: '1px solid rgba(255,255,255,0.7)',
                         color: '#000',
@@ -717,16 +586,21 @@ const SetupQuadrant = React.memo(SetupQuadrantInner, (prev, next) => (
 ));
 
 // --- CMD DAMAGE CELL ---
-const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, onChange, onChange2, held, onHold }) => {
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, name, splitAxis = 'row', onChange, onChange2, held, onHold }) => {
   const [activeHalfA, setActiveHalfA] = useState(null);
   const [activeHalfB, setActiveHalfB] = useState(null);
   const holdTimer = useRef(null);
   const tapRepeat = useRef(null);
   const tapTimer = useRef(null);
 
+  // A tiny haptic tick per change where supported (Android); no-op elsewhere (iOS Safari
+  // has no vibrate API).
+  const tick = () => { try { navigator.vibrate?.(8); } catch (e) { /* unsupported */ } };
+
   const startHold = () => {
     holdTimer.current = setTimeout(() => {
       onHold(true);
+      tick();
       holdTimer.current = null;
     }, 400);
   };
@@ -736,9 +610,9 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
   };
 
   const startTap = (fn, delta) => {
-    fn(delta);
+    fn(delta); tick();
     tapTimer.current = setTimeout(() => {
-      tapRepeat.current = setInterval(() => fn(delta * 10), 300);
+      tapRepeat.current = setInterval(() => { fn(delta * 10); tick(); }, 300);
       tapTimer.current = null;
     }, 400);
   };
@@ -750,64 +624,68 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
     setHalf(null);
   };
 
+  const zoneSign = { fontSize: 30, fontWeight: 900, color: 'rgba(255,255,255,0.9)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: 1 };
   const tapZones = (fn, activeHalf, setHalf) => (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 8, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 10, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.35)' : 'transparent', transition: 'background-color 0.08s' }}
         onPointerDown={(e) => { e.stopPropagation(); setHalf('left'); startTap(fn, -1); }}
         onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
         onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
       >
-        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>-</span>
+        <span style={zoneSign}>−</span>
       </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.3)' : 'transparent', transition: 'background-color 0.08s' }}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.35)' : 'transparent', transition: 'background-color 0.08s' }}
         onPointerDown={(e) => { e.stopPropagation(); setHalf('right'); startTap(fn, 1); }}
         onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
         onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
       >
-        <span style={{ fontSize: 18, fontWeight: 900, color: 'rgba(255,255,255,0.8)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>+</span>
+        <span style={zoneSign}>+</span>
       </div>
     </div>
   );
 
-  const subCell = (art, val, isDanger, isSelfCell, onTap, activeHalf, setHalf) => (
-    <div
-      style={{
-        flex: 1, position: 'relative', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer',
-        backgroundImage: art && art !== 'partner' ? `url(${art})` : 'none',
-        backgroundSize: 'cover', backgroundPosition: 'center',
-        backgroundColor: art && art !== 'partner' ? 'transparent' : (isDanger ? 'rgba(180,20,20,0.9)' : 'rgba(255,255,255,0.10)'),
-        WebkitTapHighlightColor: held ? 'transparent' : undefined,
-      }}
-      onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
-      onPointerUp={(e) => {
-        e.stopPropagation();
-        if (holdTimer.current) { cancelHold(); if (!held) onTap(1); }
-      }}
-      onPointerLeave={cancelHold} onPointerCancel={cancelHold}
-    >
-      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.55)' : 'rgba(0,0,0,0.45)' }} />
-      {held && tapZones(onTap, activeHalf, setHalf)}
-      {isSelfCell && val === 0
-        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>me</span>
-        : <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(14px, 4vw, 24px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none' }}>{val}</span>
-      }
-    </div>
-  );
-
-  if (hasPartner) {
+  // One commander. Each gets its own rounded border (red once lethal at 21+), so partners
+  // read as two separate commanders, not one split tile.
+  const subCell = (art, val, isDanger, onTap, activeHalf, setHalf) => {
+    const hasArt = art && art !== 'partner';
     return (
-      <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'row', border: '1px solid rgba(255,255,255,0.2)' }}>
-        {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
-        {subCell(artUrlPartner, value2, danger2, isSelf, onChange2, activeHalfB, setActiveHalfB)}
+      <div
+        style={{
+          flex: 1, minWidth: 0, minHeight: 0, position: 'relative', overflow: 'hidden', borderRadius: 14,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+          backgroundImage: hasArt ? `url(${art})` : 'none',
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          backgroundColor: hasArt ? '#111' : 'rgba(255,255,255,0.08)',
+          border: isDanger ? '2px solid #f87171' : '2px solid rgba(255,255,255,0.28)',
+          boxShadow: isDanger ? '0 0 18px rgba(248,113,113,0.45)' : '0 2px 10px rgba(0,0,0,0.45)',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+        // Your own cell works like any other: you can take commander damage from your own
+        // commander (e.g. when an opponent has gained control of it).
+        onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
+        onPointerUp={(e) => {
+          e.stopPropagation();
+          if (holdTimer.current) { cancelHold(); if (!held) { onTap(1); tick(); } }
+        }}
+        onPointerLeave={cancelHold} onPointerCancel={cancelHold}
+      >
+        <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(160,20,20,0.6)' : 'rgba(0,0,0,0.5)' }} />
+        {held && tapZones(onTap, activeHalf, setHalf)}
+        <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(30px, 9vw, 52px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 2px 10px rgba(0,0,0,0.9)', userSelect: 'none', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+        {(isSelf || name) && (
+          <span style={{ position: 'relative', zIndex: 1, marginTop: 4, maxWidth: '90%', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: isSelf ? '#fde68a' : 'rgba(255,255,255,0.75)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>{isSelf ? 'You' : name}</span>
+        )}
       </div>
     );
-  }
+  };
 
+  // Partners split along the cell's LONGER side (splitAxis, chosen per grid area by the
+  // caller), so each half stays close to square instead of becoming a thin sliver.
   return (
-    <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.2)' }}>
-      {subCell(artUrl, value, danger, isSelf, onChange, activeHalfA, setActiveHalfA)}
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: hasPartner ? splitAxis : 'row', gap: hasPartner ? 6 : 0 }}>
+      {subCell(artUrl, value, danger, onChange, activeHalfA, setActiveHalfA)}
+      {hasPartner && subCell(artUrlPartner, value2, danger2, onChange2, activeHalfB, setActiveHalfB)}
     </div>
   );
 };
@@ -916,15 +794,21 @@ const getSeatCmdInfo = (seatIndex, tableLayout) => {
 
 // Shared commander-damage cell renderer, usable both by Quadrant's in-quadrant modal (large
 // screens) and the top-level full-screen modal (small screens) so they can't drift apart.
-const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld }) => {
+const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR = false, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld }) => {
   return (tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
     const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
     const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
     const val1 = hasPartner ? ((player.stats.cmdDamage || {})[`${op.id}_1`] ?? 0) : 0;
     const isSelf = op.id === id;
+    const area = tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined;
+    // For a side seat (isMidLR) the top/bot opponents are tall CSS columns (they render as
+    // wide strips once rotated), so their partner halves stack along CSS height instead.
+    const splitAxis = isMidLR && (area === 'top' || area === 'bot') ? 'column' : 'row';
     return (
-      <div key={op.id} style={{ width: '100%', height: '100%', gridArea: tableLayout === 'cross' ? cmdAreaFor(op.id) : undefined }}>
+      <div key={op.id} style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0, gridArea: area }}>
         <CmdCell
+          name={op.name}
+          splitAxis={splitAxis}
           value={val0}
           value2={val1}
           hasPartner={hasPartner}
@@ -960,21 +844,27 @@ const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdArea
 // Grid-area layout and sizing for a seat's commander-damage grid, shared between the in-quadrant
 // (large screen) and full-screen (small screen) modal variants.
 const getCmdGridLayout = (isMidLR, tableLayout) => {
+  // Equal tracks + a 3:2 overall box, so the middle cells come out ~square and the full-
+  // width top/bottom cells ~2:1. (They used to get 0.8fr of 3fr - long, thin strips.)
   const gridAreaStyle = isMidLR
-    ? { gridTemplateColumns: '0.8fr 1.4fr 0.8fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
+    ? { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"' }
     : tableLayout === 'cross'
-    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '0.8fr 1.4fr 0.8fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
+    ? { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr 1fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"' }
     : { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
   const largeScreenSize = isMidLR
-    ? { width: 'clamp(240px, 58vw, 320px)', height: 'clamp(200px, 52vw, 280px)' }
+    ? { width: 'clamp(270px, 60vw, 360px)', height: 'clamp(180px, 40vw, 240px)' }
     : tableLayout === 'cross'
-    ? { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(240px, 58vw, 320px)' }
-    : { width: 'clamp(200px, 52vw, 280px)', height: 'clamp(200px, 52vw, 280px)' };
+    ? { width: 'clamp(180px, 40vw, 240px)', height: 'clamp(270px, 60vw, 360px)' }
+    : { width: 'clamp(220px, 56vw, 300px)', height: 'clamp(200px, 50vw, 270px)' };
+  // Small screens: sized against the real viewport. Side seats (and grid seats) read
+  // across the phone's long axis, so their box is limited by the phone's WIDTH (vw);
+  // cross top/bottom seats read along it, limited by width the other way round.
+  const sideH = 'min(70vw, 340px)';
   const smallScreenSize = isMidLR
-    ? { width: 'clamp(300px, 88vw, 480px)', height: 'clamp(240px, 72vw, 380px)' }
+    ? { width: `calc(${sideH} * 1.5)`, height: sideH }
     : tableLayout === 'cross'
-    ? { width: 'clamp(240px, 72vw, 380px)', height: 'clamp(300px, 88vw, 480px)' }
-    : { width: 'clamp(260px, 82vw, 460px)', height: 'clamp(260px, 82vw, 460px)' };
+    ? { width: 'min(84vw, 400px)', height: 'calc(min(84vw, 400px) * 1.5)' }
+    : { width: `calc(${sideH} * 1.3)`, height: sideH };
   return { gridAreaStyle, largeScreenSize, smallScreenSize };
 };
 
@@ -1021,7 +911,7 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
   const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
   const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
   const { deg, flipped, swapped } = getSeatOrientation(seatId, tableLayout);
-  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
+  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
   const closeModal = () => { onClose(); setCmdHeld(false); };
 
   return (
@@ -1043,16 +933,16 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
           onClick={(e) => { e.stopPropagation(); closeModal(); }}
           style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >×</button>
-        <span style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 20, userSelect: 'none' }}>Commander Damage</span>
+        <span style={{ fontSize: 13, fontWeight: 900, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 16, userSelect: 'none' }}>Commander Damage</span>
         <div
-          style={{ display: 'grid', gap: 12, ...smallScreenSize, ...gridAreaStyle }}
+          style={{ display: 'grid', gap: 10, ...smallScreenSize, ...gridAreaStyle }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
         >
           {cells}
         </div>
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 20, userSelect: 'none' }}>Tap to increment · Hold for +10</span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: cmdHeld ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 16, userSelect: 'none' }}>{cmdHeld ? 'Tap − / + · Hold for ±10' : 'Tap +1 · Hold to adjust'}</span>
       </div>
     </div>
   );
@@ -1092,7 +982,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
       lifeTimerRef.current = null;
     }, 400);
   };
-  const stopLifeRepeat = (delta) => {
+  const stopLifeRepeat = () => {
     clearTimeout(lifeTimerRef.current);
     clearInterval(lifeRepeatRef.current);
     lifeTimerRef.current = null;
@@ -1117,7 +1007,6 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
   const isLow = life <= 10;
   const isDead = life <= 0;
   const lifeColor = isDead ? '#ef4444' : isLow ? '#f97316' : (hasArt ? '#ffffff' : '#111111');
-  const allOpponents = opponents || [];
 
   return (
     <div className="w-full h-full flex items-center justify-center">
@@ -1269,7 +1158,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
             {/* CMD DAMAGE MODAL - large screens only; small screens use App-level SmallScreenCmdModal */}
             {cmdModal === 'grid' && isLargeScreen && (() => {
               const { gridAreaStyle, largeScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
-              const cells = renderCmdCells({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
+              const cells = renderCmdCells({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
               const closeModal = () => { setCmdModal(null); setCmdHeld(false); };
               return (
                 <div
@@ -1278,7 +1167,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                   onPointerUp={(e) => e.stopPropagation()}
                   onClick={closeModal}
                 >
-                  <span style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: 12, userSelect: 'none' }}>Commander Damage</span>
                   <div
                     style={{ display: 'grid', gap: 8, ...largeScreenSize, ...gridAreaStyle }}
                     onClick={(e) => e.stopPropagation()}
@@ -1329,91 +1218,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
   );
 };
 
-// --- MAIN APP ---
-const SUBMIT_URL = 'https://edh-backend.onrender.com/submit';
-
-// --- IN-APP DIALOGS ---
-// Styled replacements for window.alert/confirm/prompt, so every popup matches the app
-// instead of the browser's own chrome. The App owns one dialog at a time (others queue)
-// and hands this API down via context so deeply nested components (the setup wizard)
-// can use it too. Each call returns a Promise:
-//   alert   -> resolves when dismissed
-//   confirm -> true / false
-//   prompt  -> the entered string, or null if cancelled
-// Always upright for someone holding the phone in portrait (same as Settings) - the
-// on-screen keyboard always appears in portrait, so text entry has to read that way.
-// Inline (not Tailwind classes) on purpose: index.css's global, unlayered `button` rule
-// beats Tailwind's bg-/text-/border- utilities on every <button> - see the note there.
-const BTN_PRIMARY = { backgroundColor: '#ffffff', color: '#000000', border: 'none' };
-const BTN_SECONDARY = { backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)' };
-const BTN_DANGER = { backgroundColor: '#f87171', color: '#000000', border: 'none' };
-const BTN_DANGER_SOFT = { backgroundColor: 'rgba(239,68,68,0.1)', color: '#f87171', border: 'none' };
-
-const DialogContext = createContext(null);
-const useDialog = () => useContext(DialogContext);
-
-const AppDialog = ({ dialog, onClose }) => {
-  const isPrompt = dialog.kind === 'prompt';
-  const [text, setText] = useState(dialog.defaultValue || '');
-  const inputRef = useRef(null);
-  useEffect(() => {
-    if (!isPrompt) return;
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [isPrompt]);
-
-  const accept = () => onClose(isPrompt ? text : dialog.kind === 'confirm' ? true : undefined);
-  const cancel = () => onClose(isPrompt ? null : dialog.kind === 'confirm' ? false : undefined);
-
-  return (
-    <>
-      {/* Closes on click (end of tap), never pointerdown - see the main backdrop's comment. */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 700000, backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }} onClick={cancel} />
-      <form
-        className="pointer-events-auto flex flex-col items-stretch"
-        style={{ backgroundColor: 'rgba(18,18,20,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', padding: '28px 24px 22px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 710000, width: 'min(86vw, 380px)', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onSubmit={(e) => { e.preventDefault(); accept(); }}
-        onKeyDown={(e) => { if (e.key === 'Escape') cancel(); }}
-      >
-        {dialog.title && (
-          <span className="text-white font-black text-sm uppercase tracking-widest text-center">{dialog.title}</span>
-        )}
-        {dialog.message && (
-          <span className="text-white/60 font-bold text-[13px] text-center leading-snug mt-3" style={{ whiteSpace: 'pre-line' }}>{dialog.message}</span>
-        )}
-        {isPrompt && (
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={dialog.placeholder || ''}
-            type={dialog.inputType || 'text'}
-            autoComplete="off" autoCorrect="off" autoCapitalize={dialog.autoCapitalize || 'off'} spellCheck={false}
-            // 16px+ keeps iOS from auto-zooming the page when the input gets focus.
-            className="text-white font-bold mt-4 px-4 py-3 outline-none"
-            style={{ fontSize: 16, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 14 }}
-            onFocus={(e) => { e.target.style.borderColor = '#38bdf8'; }}
-            onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-          />
-        )}
-        <div className="flex gap-3 mt-5 justify-center">
-          {dialog.kind !== 'alert' && (
-            <button type="button" onClick={cancel}
-              className="flex-1 font-black uppercase text-xs px-5 py-3 rounded-full"
-              style={BTN_SECONDARY}
-            >{dialog.cancelLabel || 'Cancel'}</button>
-          )}
-          <button type="submit"
-            className="flex-1 font-black uppercase text-xs px-5 py-3 rounded-full"
-            style={{ ...(dialog.destructive ? BTN_DANGER : BTN_PRIMARY), maxWidth: dialog.kind === 'alert' ? 160 : undefined }}
-          >{dialog.confirmLabel || 'OK'}</button>
-        </div>
-      </form>
-    </>
-  );
-};
-
+// --- MAIN APP --- (backend URL/helpers now live in lib/api.js)
 // --- SETTINGS ROW ---
 // `warning` = amber attention state (e.g. sync blocked on a passcode) - distinct from
 // `destructive` red so "something needs you" never reads as "this deletes something".
@@ -1527,31 +1332,18 @@ export default function App() {
 
   useEffect(() => {
     const CACHE_VERSION = 'v2_artUrlPartner';
-    const cachedVersion = localStorage.getItem('mtg_cache_version');
-    
     // Clear stale cache if version doesn't match
-    if (cachedVersion !== CACHE_VERSION) {
-      localStorage.removeItem('mtg_player_cache');
-      localStorage.setItem('mtg_cache_version', CACHE_VERSION);
-    }
-    
-    const cachedData = localStorage.getItem('mtg_player_cache');
-    if (cachedData) {
-      try {
-        setPlayerDataMap(JSON.parse(cachedData));
-      } catch (e) {
-        console.error("Cache corrupted:", e);
-      }
+    if (safeGetItem('mtg_cache_version') !== CACHE_VERSION) {
+      safeRemoveItem('mtg_player_cache');
+      safeSetItem('mtg_cache_version', CACHE_VERSION);
     }
 
-    fetch('https://edh-backend.onrender.com/players')
-      .then(r => r.json())
-      .then(d => {
-        if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
-        setPlayerDataMap(d);
-        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
-      })
-      .catch(() => console.log("Offline: Using cached player data"));
+    const cachedPlayers = loadJSONArray('mtg_player_cache');
+    if (cachedPlayers.length) setPlayerDataMap(cachedPlayers);
+
+    // Also wakes the Render backend early, so a game submitted later is less likely to
+    // hit a cold start. Offline -> the cached player list above stays in place.
+    refetchPlayers();
 
     if (pendingGames.some(g => !g.synced)) syncPending();
     if (pendingEdits.length > 0) syncPendingEdits();
@@ -1559,61 +1351,43 @@ export default function App() {
     const handleOnline = () => { syncPendingRef.current(); syncPendingEditsRef.current(); };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; later runs go through the refs
   }, []);
 
+  // Keep the screen on during a game. Screen Wake Lock only (iOS 16.4+, Chrome/Android):
+  // the old silent-audio fallback didn't actually stop the screen sleeping, and opened a
+  // new AudioContext on every return to the app without closing the last one. The lock
+  // is released automatically when the page is hidden, so re-acquire it on return.
   useEffect(() => {
+    if (!('wakeLock' in navigator)) return;
     let wakeLock = null;
-    let audioContext = null;
-    let silentSource = null;
-
-    const startSilentAudio = () => {
-      try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
-        silentSource = audioContext.createBufferSource();
-        silentSource.buffer = buffer;
-        silentSource.loop = true;
-        silentSource.connect(audioContext.destination);
-        silentSource.start();
-      } catch (err) {
-        console.log('Silent audio failed:', err);
-      }
-    };
+    let cancelled = false;
 
     const requestWakeLock = async () => {
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLock = await navigator.wakeLock.request('screen');
-          console.log('Wake lock acquired');
-          return;
-        } catch (err) {
-          console.log('Wake lock failed, using audio fallback');
-        }
-      }
-      startSilentAudio();
-    };
-
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        await requestWakeLock();
-        if (audioContext?.state === 'suspended') audioContext.resume();
+      if (cancelled || document.visibilityState !== 'visible' || (wakeLock && !wakeLock.released)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) {
+        // Denied (e.g. low battery mode) - nothing to fall back to; the screen just sleeps.
       }
     };
 
+    const handleVisibilityChange = () => { if (document.visibilityState === 'visible') requestWakeLock(); };
+    // Some browsers only grant it after a user gesture, so also try on the first tap.
     const handleFirstInteraction = () => {
       requestWakeLock();
       document.removeEventListener('pointerdown', handleFirstInteraction);
     };
 
+    requestWakeLock();
     document.addEventListener('pointerdown', handleFirstInteraction);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      cancelled = true;
       document.removeEventListener('pointerdown', handleFirstInteraction);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLock) wakeLock.release();
-      if (silentSource) silentSource.stop();
-      if (audioContext) audioContext.close();
+      if (wakeLock) wakeLock.release().catch(() => {});
     };
   }, []);
 
@@ -1668,42 +1442,33 @@ export default function App() {
   const handleSetFirst = (idx) => {
     if (idx === null) { handleResetAll(); return; }
     setFirstSeatIndex(idx);
-    setSeats(prev => {
-      const ns = [...prev];
-      const startPos = clockwiseOrder.indexOf(idx);
-      clockwiseOrder.forEach((seatId, i) => { ns[seatId].order = ((i - startPos + 4) % 4) + 1; });
-      return ns;
-    });
+    // New seat objects (never mutate state in place): SetupQuadrant is memoized on `seat`
+    // identity, so an in-place `order` change would look like "no change" to it.
+    const startPos = clockwiseOrder.indexOf(idx);
+    setSeats(prev => prev.map((s, seatId) => ({ ...s, order: ((clockwiseOrder.indexOf(seatId) - startPos + 4) % 4) + 1 })));
   };
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [tableLayout, setTableLayout] = useState(() => localStorage.getItem('mtg_table_layout') || 'grid');
+  const [tableLayout, setTableLayout] = useState(() => safeGetItem('mtg_table_layout') || 'grid');
   const [showPlayerEditor, setShowPlayerEditor] = useState(false);
   const [showGameLog, setShowGameLog] = useState(false);
   const [expandedPlayer, setExpandedPlayer] = useState(null);
   const [editingDeck, setEditingDeck] = useState(null); // { isNew, originalDeck, deck, artUrl, artUrlPartner, hasPartner, colors[] }
   const [editorBusy, setEditorBusy] = useState(false);
 
-  const toggleTableLayout = () => {
-    setTableLayout(prev => {
-      const next = prev === 'grid' ? 'cross' : 'grid';
-      localStorage.setItem('mtg_table_layout', next);
-      return next;
-    });
-  };
   const selectTableLayout = (mode) => {
     setTableLayout(mode);
-    localStorage.setItem('mtg_table_layout', mode);
+    safeSetItem('mtg_table_layout', mode);
   };
 
   const refetchPlayers = () => {
-    fetch('https://edh-backend.onrender.com/players')
+    fetch(`${API_BASE}/players`)
       .then(r => r.json())
       .then(d => {
         if (!Array.isArray(d)) return; // backend returned an error object, don't corrupt state
         setPlayerDataMap(d);
-        localStorage.setItem('mtg_player_cache', JSON.stringify(d));
+        safeSetItem('mtg_player_cache', JSON.stringify(d));
       })
       .catch(() => {});
   };
@@ -1735,7 +1500,7 @@ export default function App() {
       } else if (path === '/players/update_pfp') {
         next = prev.map(p => p.player_name === body.player_name ? { ...p, pfp: body.art_url } : p);
       }
-      localStorage.setItem('mtg_player_cache', JSON.stringify(next));
+      safeSetItem('mtg_player_cache', JSON.stringify(next));
       return next;
     });
   };
@@ -1792,7 +1557,7 @@ export default function App() {
     // Apply locally right away - the UI never waits on the network for this.
     applyEditOptimistically(path, body);
     try {
-      const r = await fetch(`https://edh-backend.onrender.com${path}`, {
+      const r = await fetch(`${API_BASE}${path}`, {
         method: 'POST', headers: writeHeaders(), body: JSON.stringify(body)
       });
       if (r.status === 401 || r.status === 503) {
@@ -1833,7 +1598,7 @@ export default function App() {
     const rejected = [];
     for (const edit of edits) {
       try {
-        const r = await fetch(`https://edh-backend.onrender.com${edit.path}`, {
+        const r = await fetch(`${API_BASE}${edit.path}`, {
           method: 'POST', headers: writeHeaders(), body: JSON.stringify(edit.body)
         });
         // Success, or a permanent rejection (which would otherwise sit at the front of the
@@ -1938,28 +1703,29 @@ export default function App() {
     });
   };
 
+  // Win: every still-active seat moves to the end-of-game questions (the winner marked
+  // 'win'). Lose: that seat moves to the questions, or - if already answering - records
+  // the current answer (lands -> rocks -> dorks) and advances. Always new objects.
   const handleLose = (id, val = null, isWin = false) => {
-    const ns = [...seats];
-    if (isWin) { 
-      ns.forEach((p, idx) => { 
-        if (p.status === 'active') { 
-          p.status = 'questionnaire'; 
-          p.stats.turnDied = (idx === id) ? 'win' : turn; 
-        } 
-      }); 
-    } else {
-      const p = ns[id];
-      if (p.status === 'active') { p.status = 'questionnaire'; p.stats.turnDied = turn; }
-      else { p.stats[['lands', 'rocks', 'dorks'][p.step]] = val; p.step += 1; if (p.step > 2) p.status = 'done'; }
-    }
-    setSeats(ns);
+    setSeats(prev => prev.map((p, idx) => {
+      if (isWin) {
+        if (p.status !== 'active') return p;
+        return { ...p, status: 'questionnaire', stats: { ...p.stats, turnDied: idx === id ? 'win' : turn } };
+      }
+      if (idx !== id) return p;
+      if (p.status === 'active') return { ...p, status: 'questionnaire', stats: { ...p.stats, turnDied: turn } };
+      const step = p.step + 1;
+      return { ...p, step, status: step > 2 ? 'done' : p.status, stats: { ...p.stats, [['lands', 'rocks', 'dorks'][p.step]]: val } };
+    }));
   };
 
   const handleBackStep = (id) => {
-    const ns = [...seats];
-    const p = ns[id];
-    if (p.step === 0) { p.status = 'active'; p.stats.turnDied = 0; } else p.step -= 1;
-    setSeats(ns);
+    setSeats(prev => prev.map((p, idx) => {
+      if (idx !== id) return p;
+      return p.step === 0
+        ? { ...p, status: 'active', stats: { ...p.stats, turnDied: 0 } }
+        : { ...p, step: p.step - 1 };
+    }));
   };
 
   const syncPending = async () => {
@@ -2479,6 +2245,8 @@ export default function App() {
           {/* Player / Deck editor - drill-down: list view -> player detail view */}
           {showPlayerEditor && (() => {
             const detailPlayer = playerDataMap.find(p => p.player_name === expandedPlayer);
+            const deckFormValid = !!editingDeck && !!editingDeck.deck.trim() && isLinkOrBlank(editingDeck.artUrl)
+              && (!editingDeck.hasPartner || isLinkOrBlank(editingDeck.artUrlPartner));
             return (
               <div
                 className="pointer-events-auto flex flex-col items-stretch overflow-hidden"
@@ -2539,9 +2307,23 @@ export default function App() {
                           onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrl: e.target.value }))}
                           placeholder="https://..."
                           className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-1"
-                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                          style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: `1px solid ${isLinkOrBlank(editingDeck.artUrl) ? 'rgba(255,255,255,0.15)' : '#f87171'}`, outline: 'none' }}
                         />
-                        <span className="text-[9px] font-semibold text-white/30 mb-4">Tip: use Scryfall's "Download Art Crop" link</span>
+                        {isLinkOrBlank(editingDeck.artUrl)
+                          ? <span className="text-[9px] font-semibold text-white/30 mb-2">Tip: use Scryfall's "Download Art Crop" link</span>
+                          : <span className="text-[10px] font-bold mb-2" style={{ color: '#f87171' }}>Must be a link starting with https://</span>}
+                        {editingDeck.artUrl.trim() && isLinkOrBlank(editingDeck.artUrl) && (
+                          // Live preview so a wrong/broken link is obvious before saving.
+                          <img
+                            key={editingDeck.artUrl.trim()}
+                            src={editingDeck.artUrl.trim()}
+                            alt=""
+                            className="w-full rounded-xl mb-4 object-cover"
+                            style={{ aspectRatio: '16 / 9', backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                        {!(editingDeck.artUrl.trim() && isLinkOrBlank(editingDeck.artUrl)) && <div className="mb-2" />}
 
                         <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Archidekt Link</span>
                         <input
@@ -2601,9 +2383,12 @@ export default function App() {
                             value={editingDeck.artUrlPartner}
                             onChange={(e) => setEditingDeck(prev => ({ ...prev, artUrlPartner: e.target.value }))}
                             placeholder="Partner art URL..."
-                            className="w-full text-white font-bold text-sm rounded-xl px-4 py-3 mb-4 mt-2"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', outline: 'none' }}
+                            className={`w-full text-white font-bold text-sm rounded-xl px-4 py-3 mt-2 ${isLinkOrBlank(editingDeck.artUrlPartner) ? 'mb-4' : 'mb-1'}`}
+                            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: `1px solid ${isLinkOrBlank(editingDeck.artUrlPartner) ? 'rgba(255,255,255,0.15)' : '#f87171'}`, outline: 'none' }}
                           />
+                        )}
+                        {editingDeck.hasPartner && !isLinkOrBlank(editingDeck.artUrlPartner) && (
+                          <span className="text-[10px] font-bold mb-4" style={{ color: '#f87171' }}>Must be a link starting with https://</span>
                         )}
                         {!editingDeck.hasPartner && <div className="mb-4" />}
 
@@ -2619,7 +2404,7 @@ export default function App() {
                         </div>
 
                         <button
-                          disabled={editorBusy || !editingDeck.deck.trim()}
+                          disabled={editorBusy || !deckFormValid}
                           onClick={() => {
                             const payload = {
                               player_name: detailPlayer.player_name,
@@ -2638,7 +2423,7 @@ export default function App() {
                             setEditingDeck(null);
                           }}
                           className="font-black uppercase text-sm px-6 py-3.5 rounded-full self-center"
-                          style={{ ...BTN_PRIMARY, opacity: (!editingDeck.deck.trim()) ? 0.4 : 1 }}
+                          style={{ ...BTN_PRIMARY, opacity: deckFormValid ? 1 : 0.4 }}
                         >Save Deck</button>
                       </>
                     ) : !detailPlayer ? (
@@ -2688,6 +2473,10 @@ export default function App() {
                               placeholder: 'https://…', defaultValue: detailPlayer.pfp || '', inputType: 'url', confirmLabel: 'Save',
                             });
                             if (url === null) return;
+                            if (!isLinkOrBlank(url)) {
+                              dialogs.alert({ title: 'Not a Link', message: 'The profile picture has to be an image link starting with https://' });
+                              return;
+                            }
                             editorCall('/players/update_pfp', { player_name: detailPlayer.player_name, art_url: url.trim() });
                           }}
                           className="flex flex-col items-center gap-2 self-center mb-6"

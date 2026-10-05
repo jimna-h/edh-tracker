@@ -1,5 +1,8 @@
-const CACHE_NAME = 'mtg-tracker-v6';
-const IMAGE_CACHE = 'mtg-images-v1';
+const CACHE_NAME = 'mtg-tracker-v7';
+// v2: the old image cache stored responses without checking them, so a single failed
+// load (e.g. a bad art URL or a network blip) stayed broken forever - bumping flushes it.
+const IMAGE_CACHE = 'mtg-images-v2';
+const IMAGE_CACHE_MAX = 200;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -7,6 +10,8 @@ self.addEventListener('install', (event) => {
       '/',
       '/index.html',
       '/manifest.json',
+      '/icon-192.png',
+      '/favicon-48.png',
       '/stats/index.html',
       '/stats/player.html',
       '/stats/deck.html',
@@ -37,16 +42,23 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.hostname === 'edh-backend.onrender.com') return;
 
-  // Cache-first for images
+  // Images: stale-while-revalidate. Serve the cached copy instantly (art works offline)
+  // but always refresh it in the background, so a bad cached copy heals itself on the
+  // next view instead of sticking forever. Only successful responses are stored - or
+  // opaque ones (cross-origin art loaded without CORS), whose status can't be read.
   if (request.destination === 'image' || url.hostname.includes('scryfall')) {
     event.respondWith(
       caches.open(IMAGE_CACHE).then((cache) =>
-        cache.match(request).then((cached) =>
-          cached || fetch(request).then((response) => {
-            cache.put(request, response.clone());
+        cache.match(request).then((cached) => {
+          const network = fetch(request).then((response) => {
+            if (response.ok || response.type === 'opaque') {
+              cache.put(request, response.clone()).then(() => trimCache(cache)).catch(() => {});
+            }
             return response;
-          })
-        )
+          }).catch(() => cached);
+          if (cached) event.waitUntil(network);
+          return cached || network;
+        })
       )
     );
     return;
@@ -93,3 +105,10 @@ self.addEventListener('fetch', (event) => {
     )
   );
 });
+
+// Keeps the image cache bounded (Scryfall art adds up). Cache keys come back in insertion
+// order, so deleting from the front drops the oldest entries first.
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - IMAGE_CACHE_MAX; i++) await cache.delete(keys[i]);
+}

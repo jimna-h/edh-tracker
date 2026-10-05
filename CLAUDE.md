@@ -33,6 +33,19 @@ menu. See "The stats pages" below.
 ## Repo structure
 
 - `src/App.jsx`, `src/main.jsx`, `src/index.css` — the real, live frontend (Vite).
+  Self-contained, non-visual pieces were split out of `App.jsx`:
+  `src/lib/storage.js` (live-game cache + safe localStorage helpers),
+  `src/lib/api.js` (`API_BASE`, passcode headers, response classification,
+  `isLinkOrBlank`), `src/components/AppDialog.jsx` (in-app dialogs + `BTN_*`
+  styles), `src/ErrorBoundary.jsx` (wraps `<App/>` in `main.jsx`). The
+  rotation-sensitive game components deliberately stayed in `App.jsx`.
+- `.github/workflows/ci.yml` — lint + build + backend smoke test on every push.
+  `npm run lint` is now **clean (0 problems)**, so keep it that way; the
+  React-Compiler rules that flag this codebase's deliberate patterns are turned
+  off in `eslint.config.js` with the reason written there.
+- `.github/workflows/keep-warm.yml` — pings `GET /health` (DB-free) every 10 min,
+  8am–1am Mountain, so Render's free instance doesn't cold-start (30–60s) while
+  Neon still scales to zero.
 - `main.py` — Flask backend, deployed on Render. Talks to Postgres via `psycopg`.
 - `schema.sql` — the Postgres schema (`players`, `decks`, `games`,
   `game_performance`). Run once against a fresh Neon database.
@@ -43,12 +56,16 @@ menu. See "The stats pages" below.
 - `neon.ts` — Neon's own declarative project/branch config (provisioning-level:
   which services are enabled, branch TTL policy), unrelated to the app's own
   Postgres schema in `schema.sql`. Applied via `neon deploy`.
-- `index.html` (repo root) — the Vite entry HTML. Was recently simplified: it used
-  to read a `?key=` URL param to dynamically build the PWA manifest's `start_url`;
-  that logic is gone now (see "The `?key=toski` removal" below) and it just emits a
-  static manifest.
+- `index.html` (repo root) — the Vite entry HTML. Links the static
+  `public/manifest.json`. (It used to build a manifest in an inline script — a
+  leftover of the `?key=` era — whose icon paths were `/public/icon.png`, a 404 in
+  production, so Android/desktop installs had no icon. Don't reintroduce `/public/`
+  in URLs: Vite serves `public/` at the site root.)
+- Icons: `public/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`,
+  `favicon-48.png`, all generated from the Sylvan Library art. (`favicon.svg` was
+  Vite's default logo and is gone.)
 - `public/sw.js` (served from domain root) — service worker. Currently at
-  `CACHE_NAME = 'mtg-tracker-v6'`.
+  `CACHE_NAME = 'mtg-tracker-v7'`.
 - `public/stats/index.html`, `public/stats/player.html`, `public/stats/deck.html` —
   the stats pages, living inside this same repo/deployment (moved here
   specifically so the Tracker's service worker can cache them and so linking to
@@ -57,8 +74,8 @@ menu. See "The stats pages" below.
 - `public/stats/stats-shared.js` — the fetch/normalize logic shared by all three
   stats pages (see "The stats pages" below) — extracted into one file during the
   Postgres migration instead of staying hand-duplicated three times.
-- The root also has stray, **dead/unused** `app.jsx`/`app.py` files left over from
-  early repo setup. Ignore them; the real files are `src/App.jsx` and `main.py`.
+- The old dead root `app.jsx`/`app.py`, `src/App.css` and Vite template assets
+  have been deleted.
 - **Confirmed this session**: `life-totals` is the actual default/main branch for
   this repo (not `main`) — the earlier uncertainty about this is resolved.
 
@@ -333,7 +350,15 @@ not by re-deriving the transform math a fourth time.
   `/delete_deck`, `/update_pfp` — same routes/request shapes as before the
   Postgres migration; internals rewritten, external contract unchanged
   (confirmed byte-for-byte against the live Sheets-backed backend before
-  cutover, so `src/App.jsx` needed zero changes).
+  cutover, so `src/App.jsx` needed zero changes). Deck/pfp writes now reject a
+  non-link art URL with a `400` (a deck once had its *name* saved as its art URL;
+  the deck editor also validates inline and previews the art).
+- `GET /health` — `{"status":"ok"}`, never touches the DB. Keep-warm target.
+- 500 responses return a generic message; the real exception goes to the Render
+  log only. Timestamps use `zoneinfo` (`LOCAL_TZ`, America/Denver) and the
+  `G-YYYYMMDD` game ID takes its date from the game's local time (the server
+  clock is UTC, which used to give evening games the next day's date).
+  `requirements.txt` uses compatible-release pins (`~=`).
 
 ### Write passcode (all POSTs)
 
@@ -592,6 +617,21 @@ overlay instead, with larger tap targets.
   can't drift apart.
 - See "The commander damage modal rotation saga" above for how its actual
   orientation math was debugged.
+- **Cell layout (redesigned, screenshot-verified in both layouts, all seats)**:
+  equal grid tracks plus a 3:2 overall box (`getCmdGridLayout`), so middle cells are
+  ~square and full-width top/bottom cells ~2:1 — they used to get 0.8fr of 3fr and
+  were long thin strips. Every commander has its own bordered tile (red + glow at
+  21+), large numbers, and the opponent's name ("YOU" for your own cell).
+- **Partner split axis**: partners split along the cell's *longer* side via
+  `CmdCell`'s `splitAxis`. For a side seat (`isMidLR`) the `top`/`bot` areas are tall
+  CSS columns that render as wide strips after rotation, so they split with
+  `column`; everything else uses `row`. Splitting along the short side made each
+  half a sliver.
+- **Your own cell stays fully interactive** — explicitly requested: you *can* take
+  commander damage from your own commander (e.g. an opponent controls it). An
+  attempt to make it inert was reverted; don't re-try.
+- Hint text reflects the real gestures: "Tap +1 · Hold to adjust" → after a hold,
+  "Tap − / + · Hold for ±10".
 
 ## In-app dialogs (no native alert/confirm/prompt)
 
@@ -761,13 +801,18 @@ otherwise have silently disagreed with what it was supposed to be guarding.
 
 ## Service worker (`sw.js`)
 
-Currently `CACHE_NAME = 'mtg-tracker-v6'` (bumped to `v6` for the infinite-mana stats change; earlier bumped from `v4` when
+Currently `CACHE_NAME = 'mtg-tracker-v7'` (v7: new icons precached; v6 was the infinite-mana stats change; earlier bumped from `v4` when
 `stats-shared.js` was added to the precache list during the Postgres
 migration — a version bump is what actually triggers the install/activate
 cycle that deletes stale cache keys; just changing cached *content* without
 bumping the name doesn't reliably do that).
 
-- Cache-first for images (Scryfall art etc.), `IMAGE_CACHE = 'mtg-images-v1'`.
+- Images (Scryfall art etc.): **stale-while-revalidate**, `IMAGE_CACHE =
+  'mtg-images-v2'`, capped at 200 entries. It used to be cache-first and stored
+  responses without checking them, so one failed load stayed broken forever. Now
+  only `ok`/opaque responses are stored and every view refreshes in the
+  background — cheap, because Scryfall sends `max-age` of a year, so that refresh
+  is answered by the browser's HTTP cache.
 - **Network-first for the app shell** (`request.mode === 'navigate'`, `/`, or
   `/index.html`) — intentional, because `index.html` references hashed JS/CSS
   bundle filenames from the current build, so it must always be fetched fresh
@@ -806,6 +851,17 @@ bumping the name doesn't reliably do that).
   reachable backend. As before, only the page *shell* is meaningfully
   offline-first; the data itself is never written offline, only read from
   whatever was last successfully fetched.
+  - If the live data is **identical** to the cached render, the page is not
+    re-rendered (a re-render replaces the whole page, resetting sort/"show
+    inactive" toggles — and with a cold start it lands 30s+ after reading
+    began). The comparison uses a snapshot taken *before* normalizing, because
+    `normalizeStatsData` rewrites fields on the objects it's given.
+  - Once fresh, the badge fades out after ~3.5s instead of permanently covering
+    the bottom-right corner.
+  - Non-link `ArtURL`/pfp values are ignored (`isLink`), never rendered as
+    broken relative images.
+  - On phones (≤640px) the overview's deck grid is two square columns — the
+    single full-width column made the page ~21,000px tall (now ~12,500).
 
 ## Postgres migration — completed
 

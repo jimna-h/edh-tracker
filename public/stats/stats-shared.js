@@ -22,6 +22,8 @@ const COLOR_NAMES = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Col
 // but letters+digits.
 function normKey(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
+function isLink(v){ return typeof v === 'string' && /^https?:\/\/\S+$/i.test(v.trim()); }
+
 async function fetchStatsJSON(){
   const [statsRes, playersRes] = await Promise.all([
     fetch(`${STATS_API_BASE}/stats/data`),
@@ -56,7 +58,7 @@ function buildPlayerDeckMaps(playersData){
   const deckNameById = {};
   playersData.forEach(p => {
     const name = p.player_name;
-    if (p.pfp && p.pfp.trim()) map[name] = p.pfp.trim();
+    if (isLink(p.pfp)) map[name] = p.pfp.trim();
     const activeSet = new Set();
     const ownedList = [];
     (p.decks || []).forEach(d => {
@@ -203,7 +205,9 @@ function normalizeStatsData(statsData, playersData){
     p.isWin = winnerPairs.has(pairKey(p.GameID, p.Player));
     p.turnDiedNum = p.isWin ? null : (parseFloat(turnDiedRaw) || null);
     p.SeatNum = parseFloat(p.SeatNum) || null;
-    p.ArtURL = p.ArtURL || '';
+    // Only real links count as art - a non-link value (e.g. a deck name typed into the
+    // art field) would otherwise render as a broken relative-URL image.
+    p.ArtURL = isLink(p.ArtURL) ? p.ArtURL.trim() : '';
     p.gameEndTurn = gamesById[p.GameID]?.End_Turn ?? null;
     p.Owner = p.Owner || '';
     p.Color_ID = p.Color_ID || '';
@@ -316,16 +320,23 @@ function ensureFetchedBadge(){
       'font-size:10.5px; font-weight:700; letter-spacing:.04em; ' +
       'color:var(--text-dim,#8a8578); background:var(--panel,#1c1a16); ' +
       'border:1px solid var(--line,#332f28); border-radius:999px; ' +
-      'padding:6px 12px; opacity:.9; pointer-events:none;';
+      'padding:6px 12px; opacity:.9; pointer-events:none; transition:opacity .6s ease;';
     document.body.appendChild(el);
   }
   return el;
 }
 
-function setFetchedBadge(fetchedAt, note){
+// `autoHide`: once the data is fresh there's nothing to act on, so the badge fades out
+// rather than permanently covering the bottom-right corner of the page. It stays put
+// while refreshing or when showing cached data after a failed refresh.
+let badgeHideTimer = null;
+function setFetchedBadge(fetchedAt, note, autoHide){
   const el = ensureFetchedBadge();
   const when = fetchedAt ? formatFetchedAt(fetchedAt) : null;
   el.textContent = when ? `Last fetched ${when}${note ? ' · ' + note : ''}` : (note || '');
+  clearTimeout(badgeHideTimer);
+  el.style.opacity = '.9';
+  if (autoHide) badgeHideTimer = setTimeout(() => { el.style.opacity = '0'; }, 3500);
 }
 
 // Drives the loading-spinner / error-screen swap and hands the normalized
@@ -336,6 +347,9 @@ function setFetchedBadge(fetchedAt, note){
 async function initStatsPage(renderFn){
   const cached = loadStatsCache();
   let renderedFromCache = false;
+  // Snapshot BEFORE normalizing - normalizeStatsData rewrites fields on the objects it's
+  // given, so cached.statsData no longer matches the raw server shape afterwards.
+  const cachedRaw = cached ? JSON.stringify([cached.statsData, cached.playersData]) : null;
 
   if (cached) {
     try {
@@ -348,10 +362,19 @@ async function initStatsPage(renderFn){
 
   try{
     const { statsData, playersData } = await fetchStatsJSON();
-    const data = normalizeStatsData(statsData, playersData);
-    await renderFn(data);
+    // If the live data matches what's already on screen, don't re-render: a re-render
+    // replaces the whole page, which would reset sort/"show inactive" toggles and can
+    // jump the scroll position - and with Render's cold start it can land 30s+ after
+    // the person has started reading the cached version.
+    const unchanged = renderedFromCache && JSON.stringify([statsData, playersData]) === cachedRaw;
+    if (!unchanged) {
+      const scrollY = window.scrollY;
+      const data = normalizeStatsData(statsData, playersData);
+      await renderFn(data);
+      if (renderedFromCache) window.scrollTo(0, scrollY);
+    }
     saveStatsCache(statsData, playersData);
-    setFetchedBadge(Date.now());
+    setFetchedBadge(Date.now(), null, true);
   } catch(e){
     if (renderedFromCache) {
       setFetchedBadge(cached.fetchedAt, "couldn't refresh — showing cached data");

@@ -1,5 +1,7 @@
-flask
-flask-cors
-gunicorn
-pytz
-psycopg[binary]
+# Compatible-release pins: picks up bug-fix/minor releases, never a breaking major.
+flask~=3.1
+flask-cors~=6.0
+gunicorn~=26.2
+psycopg[binary]~=3.3
+# zoneinfo's timezone data, for hosts whose OS image doesn't ship /usr/share/zoneinfo.
+tzdata

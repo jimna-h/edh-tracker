@@ -1,0 +1,42 @@
+# Catches a broken build/lint/backend before Vercel and Render deploy it - both deploy
+# straight from life-totals, so this is the only check between a push and production.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      # Import the app and hit the DB-free endpoints - no database needed.
+      - name: Smoke test
+        env:
+          WRITE_PASSCODE: ci
+        run: |
+          python - <<'EOF'
+          import main
+          c = main.app.test_client()
+          assert c.get('/health').status_code == 200
+          assert c.post('/submit', json={}).status_code == 401  # passcode still enforced
+          print('backend smoke test passed')
+          EOF
