@@ -811,13 +811,20 @@ const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, a
 };
 
 // --- STAT PICKER ---
+// Sent (and stored in seat.stats) instead of a number when a count "went infinite" -
+// main.py turns it into count NULL + a <field>_infinite flag, so a huge number never
+// skews anyone's averages.
+const INFINITE_COUNT = 'infinite';
+
 const StatPicker = ({ label, color, onConfirm, onBack }) => {
   const [value, setValue] = useState(0);
+  const [isInfinite, setIsInfinite] = useState(false);
   const [activeHalf, setActiveHalf] = useState(null);
   const timerRef = useRef(null);
   const repeatRef = useRef(null);
 
-  const change = (delta) => setValue(prev => Math.max(0, prev + delta));
+  // Any +/- tap drops back out of infinite mode to a normal number.
+  const change = (delta) => { setIsInfinite(false); setValue(prev => Math.max(0, prev + delta)); };
 
   const startRepeat = (delta) => {
     change(delta);
@@ -853,7 +860,7 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
 
       {/* Number + edge hints, pointerEvents none */}
       <div style={{ flex: '1 1 0', position: 'relative', zIndex: 1, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{value}</span>
+        <span style={{ fontSize: 'clamp(52px, 18vw, 100px)', fontWeight: 900, lineHeight: 1, color: '#fff', userSelect: 'none', textShadow: '0 2px 20px rgba(0,0,0,0.8)' }}>{isInfinite ? '∞' : value}</span>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
           <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>-</span>
           <span style={{ fontSize: 22, fontWeight: 900, color: 'rgba(255,255,255,0.75)', userSelect: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>+</span>
@@ -875,7 +882,10 @@ const StatPicker = ({ label, color, onConfirm, onBack }) => {
         <button onClick={() => onConfirm(null)}
           style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 9, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', pointerEvents: 'auto' }}
         >Skip</button>
-        <button onClick={() => onConfirm(value)}
+        <button onClick={() => setIsInfinite(v => !v)}
+          style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 18, lineHeight: 1, color: isInfinite ? '#000' : 'rgba(255,255,255,0.75)', backgroundColor: isInfinite ? color : 'rgba(255,255,255,0.1)', border: isInfinite ? 'none' : '1px solid rgba(255,255,255,0.2)', pointerEvents: 'auto' }}
+        >∞</button>
+        <button onClick={() => onConfirm(isInfinite ? INFINITE_COUNT : value)}
           style={{ flex: 1, height: 34, borderRadius: 999, fontWeight: 900, fontSize: 10, color: '#fff', textTransform: 'uppercase', backgroundColor: color, border: 'none', pointerEvents: 'auto' }}
         >Next</button>
       </div>
@@ -2124,7 +2134,10 @@ export default function App() {
         {(showSettings || showPlayerEditor || showResetConfirm || showGameLog) && (
           <div
             style={{ position: 'absolute', inset: 0, zIndex: 600000, pointerEvents: 'auto' }}
-            onPointerDown={(e) => {
+            // Close on click (end of the tap), NOT pointerdown: closing on pointerdown unmounts
+            // this backdrop mid-tap, so the rest of the tap (pointerup/click) lands on whatever
+            // is underneath - e.g. a seat's WIN button, ending the game by accident.
+            onClick={() => {
               if (showResetConfirm) { setShowResetConfirm(false); return; }
               if (showSettings || showPlayerEditor || showGameLog) { setShowSettings(false); setShowPlayerEditor(false); setExpandedPlayer(null); setShowGameLog(false); }
             }}

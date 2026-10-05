@@ -196,6 +196,9 @@ function normalizeStatsData(statsData, playersData){
     p.End_Lands = parseFloat(p.End_Lands) || null;
     p.End_Rocks = (p.End_Rocks === null || p.End_Rocks === undefined) ? null : parseFloat(p.End_Rocks);
     p.End_Dorks = (p.End_Dorks === null || p.End_Dorks === undefined) ? null : parseFloat(p.End_Dorks);
+    // "Went infinite" on lands/rocks/dorks this game - the count itself is null then.
+    // Pages leave these games out of mana averages and count them separately instead.
+    p.wentInfinite = !!(p.Lands_Infinite || p.Rocks_Infinite || p.Dorks_Infinite);
     const turnDiedRaw = p.Turn_Died;
     p.isWin = winnerPairs.has(pairKey(p.GameID, p.Player));
     p.turnDiedNum = p.isWin ? null : (parseFloat(turnDiedRaw) || null);

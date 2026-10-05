@@ -11,6 +11,17 @@ import pytz
 from urllib.parse import unquote
 
 app = Flask(__name__)
+
+# The frontend sends this string instead of a number when a deck "went infinite" on
+# lands/rocks/dorks. Stored as count NULL + <field>_infinite TRUE, so a huge sentinel
+# number never ends up in the integer column and skews averages.
+INFINITE = 'infinite'
+
+def split_mana_count(raw):
+    """Returns (count, is_infinite) for a lands/rocks/dorks value from /submit."""
+    if isinstance(raw, str) and raw.strip().lower() == INFINITE:
+        return None, True
+    return raw, False
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Every POST (game submission + all player/deck edits) requires the shared write
@@ -91,7 +102,8 @@ def get_stats_data():
                 games = cur.fetchall()
 
                 cur.execute("""
-                    SELECT game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url
+                    SELECT game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks,
+                           lands_infinite, rocks_infinite, dorks_infinite, turn_died, seat_position, colors, art_url
                     FROM game_performance
                 """)
                 performance = cur.fetchall()
@@ -116,6 +128,9 @@ def get_stats_data():
             "End_Lands": p['lands'],
             "End_Rocks": p['rocks'],
             "End_Dorks": p['dorks'],
+            "Lands_Infinite": p['lands_infinite'],
+            "Rocks_Infinite": p['rocks_infinite'],
+            "Dorks_Infinite": p['dorks_infinite'],
             "Turn_Died": p['turn_died'],
             "SeatNum": p['seat_position'],
             "Color_ID": p['colors'],
@@ -175,10 +190,15 @@ def submit_stats():
                     deck_row = cur.fetchone()
                     deck_id = deck_row['id'] if deck_row else None
 
+                    lands, lands_inf = split_mana_count(stats.get('lands'))
+                    rocks, rocks_inf = split_mana_count(stats.get('rocks'))
+                    dorks, dorks_inf = split_mana_count(stats.get('dorks'))
+
                     cur.execute("""
                         INSERT INTO game_performance
-                            (game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks, turn_died, seat_position, colors, art_url)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            (game_id, deck_id, player, deck, deck_owner, start_lands, lands, rocks, dorks,
+                             lands_infinite, rocks_infinite, dorks_infinite, turn_died, seat_position, colors, art_url)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         game_id,
                         deck_id,
@@ -186,9 +206,12 @@ def submit_stats():
                         deck_name,
                         deck_owner,
                         stats.get('startLands'),
-                        stats.get('lands'),
-                        stats.get('rocks'),
-                        stats.get('dorks'),
+                        lands,
+                        rocks,
+                        dorks,
+                        lands_inf,
+                        rocks_inf,
+                        dorks_inf,
                         p.get('turn_died'),
                         p.get('seat_position'),
                         p.get('colors', ''),

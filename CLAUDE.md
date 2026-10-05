@@ -47,8 +47,8 @@ menu. See "The stats pages" below.
   to read a `?key=` URL param to dynamically build the PWA manifest's `start_url`;
   that logic is gone now (see "The `?key=toski` removal" below) and it just emits a
   static manifest.
-- `sw.js` (repo root, served from domain root) — service worker. Currently at
-  `CACHE_NAME = 'mtg-tracker-v5'`.
+- `public/sw.js` (served from domain root) — service worker. Currently at
+  `CACHE_NAME = 'mtg-tracker-v6'`.
 - `public/stats/index.html`, `public/stats/player.html`, `public/stats/deck.html` —
   the stats pages, living inside this same repo/deployment (moved here
   specifically so the Tracker's service worker can cache them and so linking to
@@ -305,6 +305,15 @@ not by re-deriving the transform math a fourth time.
     later create a new "Deck A" — under the old text-only identity, their
     histories would silently merge; now the old deck can't be deleted at all
     once played, so the collision can't happen.
+  - `lands_infinite`/`rocks_infinite`/`dorks_infinite` (BOOLEAN, default
+    FALSE): a deck "went infinite" on that count. The frontend's end-of-game
+    picker has an ∞ toggle that sends the string `'infinite'` instead of a
+    number; `/submit` stores count `NULL` + flag `TRUE`, so a huge sentinel
+    number never skews averages. Stats pages exclude any infinite game from
+    "Mana / turn" and show a separate "Went infinite ×N" tile (player + deck
+    pages). Added via `scripts/migrations/001_infinite_mana.sql` — the
+    migration must run **before** deploying the `main.py` that reads these
+    columns, since `/stats/data` and `/submit` both reference them.
   - Renaming a deck (`update_deck`) doesn't fork its stats history, since
     `deck_id` stays the same even though the `deck` text column on old rows
     keeps the pre-rename name (confirmed via direct test during the
@@ -729,7 +738,7 @@ otherwise have silently disagreed with what it was supposed to be guarding.
 
 ## Service worker (`sw.js`)
 
-Currently `CACHE_NAME = 'mtg-tracker-v5'` (bumped from `v4` when
+Currently `CACHE_NAME = 'mtg-tracker-v6'` (bumped to `v6` for the infinite-mana stats change; earlier bumped from `v4` when
 `stats-shared.js` was added to the precache list during the Postgres
 migration — a version bump is what actually triggers the install/activate
 cycle that deletes stale cache keys; just changing cached *content* without

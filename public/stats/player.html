@@ -503,11 +503,13 @@ async function renderAsync(data){
     });
 
     const manaRows = rows.map(r => {
+      if (r.wentInfinite) return null; // an infinite game has no meaningful per-turn number
       const turnsAlive = r.isWin ? r.gameEndTurn : r.turnDiedNum;
       const manaTotal = (r.End_Lands!=null || r.End_Rocks!=null || r.End_Dorks!=null) ? (r.End_Lands||0)+(r.End_Rocks||0)+(r.End_Dorks||0) : null;
       return (manaTotal!=null && turnsAlive) ? manaTotal/turnsAlive : null;
     }).filter(x=>x!=null);
     const avgManaPerTurn = mean(manaRows);
+    const infiniteGames = rows.filter(r => r.wentInfinite).length;
 
     // Playing as [color]: this player's own win rate broken out by which
     // colors THEIR deck ran that game (a WU deck's game counts toward both).
@@ -740,11 +742,12 @@ async function renderAsync(data){
       <section id="mana">
         <div class="wrap">
           <div class="section-head">
-            <div><h2>Mana development</h2><div class="section-desc">Total mana sources (lands + rocks + dorks) per turn survived.</div></div>
+            <div><h2>Mana development</h2><div class="section-desc">Total mana sources (lands + rocks + dorks) per turn survived. Games that went infinite are counted separately, not averaged in.</div></div>
             <div class="idx">04 / MANA</div>
           </div>
           <div class="grid grid-3">
             <div class="hero-stat"><div class="num">${fmt1(avgManaPerTurn)}</div><div class="lbl">Mana / turn</div></div>
+            ${infiniteGames ? `<div class="hero-stat"><div class="num">∞ <span style="font-size:20px;">×${infiniteGames}</span></div><div class="lbl">Went infinite</div></div>` : ''}
           </div>
         </div>
       </section>

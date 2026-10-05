@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtg-tracker-v5';
+const CACHE_NAME = 'mtg-tracker-v6';
 const IMAGE_CACHE = 'mtg-images-v1';
 
 self.addEventListener('install', (event) => {

@@ -339,6 +339,7 @@ async function renderAsync(data){
     const allTurns = rows.map(r=>r.gameEndTurn).filter(x=>x!=null);
     const openingLands = rows.map(r=>r.Opening_Lands).filter(x=>x!=null);
     const manaRows = rows.map(r => {
+      if (r.wentInfinite) return null; // an infinite game has no meaningful per-turn number
       const turnsAlive = r.isWin ? r.gameEndTurn : r.turnDiedNum;
       const manaTotal = (r.End_Lands!=null || r.End_Rocks!=null || r.End_Dorks!=null) ? (r.End_Lands||0)+(r.End_Rocks||0)+(r.End_Dorks||0) : null;
       return (manaTotal!=null && turnsAlive) ? manaTotal/turnsAlive : null;

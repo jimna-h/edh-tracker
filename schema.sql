@@ -50,6 +50,11 @@ CREATE TABLE game_performance (
     lands INT,
     rocks INT,
     dorks INT,
+    -- TRUE = that count "went infinite" this game; the count itself is then NULL,
+    -- so a huge number never lands in the integer column and skews averages.
+    lands_infinite BOOLEAN NOT NULL DEFAULT FALSE,
+    rocks_infinite BOOLEAN NOT NULL DEFAULT FALSE,
+    dorks_infinite BOOLEAN NOT NULL DEFAULT FALSE,
     turn_died TEXT,
     seat_position TEXT,
     colors TEXT NOT NULL DEFAULT '',
