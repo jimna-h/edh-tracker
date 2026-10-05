@@ -340,6 +340,13 @@ passcode is entered. This is deliberately **not** a URL param — that's exactly
 what broke `?key=toski` (see below). Note iOS home-screen apps have storage
 separate from Safari, so the installed app asks once on its own.
 
+Both refusals also set a persistent `writeBlock` state ('passcode' | 'server'),
+shown as an amber gear dot plus amber Settings rows ("Enter Passcode to Sync" /
+"Server Not Accepting Saves") until a write succeeds. This exists because the
+first deploy shipped without `WRITE_PASSCODE` set on Render: the 503 path was
+silent by design, so a game sat pending with no explanation at all. A one-time
+prompt/alert alone isn't enough — sync-blocking states need a persistent indicator.
+
 ### The `?key=toski` removal — full story, in case it's ever proposed again
 
 **Original design**: the frontend read `?key=` from the URL; `key === 'toski'`

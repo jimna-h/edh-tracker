@@ -28,10 +28,10 @@ def require_write_passcode():
     expected = os.environ.get("WRITE_PASSCODE", "").strip()
     if not expected:
         print("Rejected write: WRITE_PASSCODE is not configured on the server.")
-        return jsonify({"error": "Server write passcode not configured"}), 503
+        return jsonify({"error": "Server write passcode not configured", "code": "passcode_not_configured"}), 503
     provided = unquote(request.headers.get("X-Write-Passcode", "")).strip()
     if not hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8")):
-        return jsonify({"error": "passcode_required"}), 401
+        return jsonify({"error": "passcode_required", "code": "passcode_required"}), 401
     return None
 
 def get_db_connection():

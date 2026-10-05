@@ -75,6 +75,24 @@ const writeHeaders = () => ({
 const isPermanentRejection = (status) =>
   status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429;
 
+// Why the server refused a write, if it's one of the two "saving is blocked" cases:
+// 'passcode' (401 - this device's passcode is missing/wrong) or 'server' (503 - the
+// backend has no WRITE_PASSCODE set). Anything else (offline, cold start, 5xx) -> null.
+// The error-string match covers a backend deployed before the `code` field existed.
+const writeBlockReason = (status, body) => {
+  if (status === 401) return 'passcode';
+  if (status === 503 && body && (body.code === 'passcode_not_configured' || body.error === 'Server write passcode not configured')) return 'server';
+  return null;
+};
+
+const readJSON = async (r) => {
+  try {
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+};
+
 const readErrorMessage = async (r) => {
   try {
     const body = await r.json();
@@ -1303,20 +1321,22 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 const SUBMIT_URL = 'https://edh-backend.onrender.com/submit';
 
 // --- SETTINGS ROW ---
-const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last }) => (
+// `warning` = amber attention state (e.g. sync blocked on a passcode) - distinct from
+// `destructive` red so "something needs you" never reads as "this deletes something".
+const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, warning, last }) => (
   <button
     onClick={onClick}
     disabled={disabled}
     className={`w-full flex items-center gap-3 px-4 py-3.5 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/10'} ${!last ? 'mb-2.5' : ''}`}
     style={{
-      background: destructive ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.06)',
-      border: destructive ? '1px solid rgba(248,113,113,0.2)' : '1px solid rgba(255,255,255,0.1)',
+      background: destructive ? 'rgba(248,113,113,0.08)' : warning ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.06)',
+      border: destructive ? '1px solid rgba(248,113,113,0.2)' : warning ? '1px solid rgba(251,191,36,0.45)' : '1px solid rgba(255,255,255,0.1)',
       borderRadius: 18,
     }}
   >
-    <span style={{ width: 26, height: 26, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : 'rgba(255,255,255,0.65)' }}>{icon}</span>
-    <span className={`flex-1 text-left font-bold text-[16px] ${destructive ? 'text-red-400' : 'text-white'}`}>{label}</span>
-    {value && <span className="text-[13px] font-bold text-white/40 uppercase tracking-wide">{value}</span>}
+    <span style={{ width: 26, height: 26, flexShrink: 0, color: destructive ? 'rgba(248,113,113,0.9)' : warning ? '#fbbf24' : 'rgba(255,255,255,0.65)' }}>{icon}</span>
+    <span className={`flex-1 text-left font-bold text-[16px] ${destructive ? 'text-red-400' : warning ? 'text-amber-300' : 'text-white'}`}>{label}</span>
+    {value && <span className={`text-[13px] font-bold uppercase tracking-wide ${warning ? 'text-amber-300/80' : 'text-white/40'}`}>{value}</span>}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2.5">
       <path d="M9 6l6 6-6 6" />
     </svg>
@@ -1355,6 +1375,11 @@ export default function App() {
   // triggers (online event, manual Sync, next submit) don't nag after someone hits Cancel.
   // Re-armed only when the person actually enters something, so a typo gets a second chance.
   const passcodePromptedRef = useRef(false);
+  // Why saving is currently blocked ('passcode' | 'server' | null), from the last write
+  // response. Drives the persistent Settings/gear indicators, so a stuck sync always says
+  // why - a one-time prompt/alert alone is easy to dismiss and then forget about.
+  const [writeBlock, setWriteBlock] = useState(null);
+  const serverBlockAlertedRef = useRef(false);
   const [mulliganType, setMulliganType] = useState(() => cachedGame.mulliganType ?? '');
   
   const clockwiseOrder = [0, 1, 3, 2];
@@ -1608,8 +1633,21 @@ export default function App() {
     setTimeout(() => { syncPendingRef.current(); syncPendingEditsRef.current(); }, 100);
   };
 
-  // Called when the server answers a write with 401. The write itself is already kept
-  // queued by the caller; this just asks for the passcode and retries if one is entered.
+  // Called when a write comes back blocked (see writeBlockReason). The write itself is
+  // already kept queued by the caller; this records why, and tells the person.
+  const handleWriteBlocked = (reason) => {
+    setWriteBlock(reason);
+    if (reason === 'passcode') handlePasscodeRejected();
+    else if (reason === 'server' && !serverBlockAlertedRef.current) {
+      serverBlockAlertedRef.current = true;
+      setTimeout(() => window.alert(
+        "Saving is paused: the server isn't set up to accept saves yet (no passcode configured).\n\nNothing is lost - everything stays saved on this device and will sync once that's fixed."
+      ), 0);
+    }
+  };
+
+  // Asks for the passcode once per page load (re-armed whenever one is entered) and
+  // retries both queues if one is entered.
   const handlePasscodeRejected = () => {
     if (passcodePromptedRef.current) return;
     passcodePromptedRef.current = true;
@@ -1634,7 +1672,11 @@ export default function App() {
       const r = await fetch(`https://edh-backend.onrender.com${path}`, {
         method: 'POST', headers: writeHeaders(), body: JSON.stringify(body)
       });
-      if (r.status === 401) handlePasscodeRejected();
+      if (r.status === 401 || r.status === 503) {
+        const reason = writeBlockReason(r.status, await readJSON(r));
+        if (reason) handleWriteBlocked(reason);
+      }
+      if (r.ok) setWriteBlock(null);
       if (isPermanentRejection(r.status)) {
         // e.g. 409 deleting a deck with logged games - retrying can never succeed, so
         // don't queue it (it would block every edit behind it forever). Refetch to undo
@@ -1675,12 +1717,14 @@ export default function App() {
         // queue forever, blocking everything behind it) - either way it leaves the queue.
         const permanent = isPermanentRejection(r.status);
         if (r.ok || permanent) {
+          if (r.ok) setWriteBlock(null);
           if (permanent) rejected.push(await readErrorMessage(r) || `${edit.path} was rejected`);
           remaining = remaining.filter(e => e.id !== edit.id);
           setPendingEdits([...remaining]);
           safeSetItem('pending_mtg_edits', JSON.stringify(remaining));
         } else {
-          if (r.status === 401) handlePasscodeRejected();
+          const reason = writeBlockReason(r.status, await readJSON(r));
+          if (reason) handleWriteBlocked(reason);
           break;
         }
       } catch (e) { break; }
@@ -1804,14 +1848,16 @@ export default function App() {
           headers: writeHeaders(),
           body: JSON.stringify(g)
         });
-        // Wrong/missing passcode - leave this and everything after it queued, and ask.
-        if (r.status === 401) { handlePasscodeRejected(); break; }
-        let body = null;
-        try { body = await r.json(); } catch (e) { body = null; }
+        const body = await readJSON(r);
+        // Passcode missing/wrong, or server has none configured - leave this and everything
+        // after it queued, and say why.
+        const reason = writeBlockReason(r.status, body);
+        if (reason) { handleWriteBlocked(reason); break; }
         // Trust the response body, not just r.ok - a 2xx status alone doesn't prove this
         // reached our Flask app (e.g. Render's cold-start loading page, or a flaky network
         // intermediary, can return 2xx without the game ever being written to the sheet).
         if (r.ok && body && body.status === 'success' && body.game_id) {
+          setWriteBlock(null);
           // Mark synced in place rather than removing it - kept locally as a record until
           // manually cleared (see Settings), instead of auto-deleting on success.
           setPendingGames(prev => {
@@ -1885,6 +1931,8 @@ export default function App() {
   const unsyncedGames = pendingGames.filter(g => !g.synced);
   const syncedGames = pendingGames.filter(g => g.synced);
   const hasPending = unsyncedGames.length > 0;
+  // Something is waiting to sync AND the last attempt was refused for a passcode reason.
+  const syncBlocked = !!writeBlock && (hasPending || pendingEdits.length > 0);
 
   return (
     <div className="min-h-screen w-screen bg-black overflow-hidden">
@@ -1995,10 +2043,14 @@ export default function App() {
               style={{
                 position: 'absolute', width: 34, height: 34,
                 top: 'calc(50% - 17px)', left: tableLayout === 'cross' ? 'calc(50% + 30px)' : 'calc(50% + 95px)',
-                backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                backgroundColor: 'rgba(255,255,255,0.1)', border: syncBlocked ? '1px solid rgba(251,191,36,0.8)' : '1px solid rgba(255,255,255,0.2)',
                 zIndex: 15000,
               }}
             >
+              {/* Amber dot: saving is blocked (passcode needed / server not configured) - details in Settings */}
+              {syncBlocked && (
+                <span style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', backgroundColor: '#fbbf24', boxShadow: '0 0 0 2px #000' }} />
+              )}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -2151,10 +2203,24 @@ export default function App() {
                     </svg>
                   </button>
                   <SettingsRow
-                    label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
+                    label={(isSyncing || isSyncingEdits) ? 'Syncing...'
+                      : syncBlocked && writeBlock === 'passcode' ? 'Enter Passcode to Sync'
+                      : syncBlocked && writeBlock === 'server' ? 'Server Not Accepting Saves'
+                      : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
                     value={(hasPending || pendingEdits.length > 0) ? String(unsyncedGames.length + pendingEdits.length) : null}
+                    warning={syncBlocked && !isSyncing && !isSyncingEdits}
                     disabled={(!hasPending && pendingEdits.length === 0) || isSyncing || isSyncingEdits}
-                    onClick={() => { syncPending(); syncPendingEdits(); }}
+                    onClick={() => {
+                      // Blocked on this device's passcode: ask for it right here, then retry.
+                      if (writeBlock === 'passcode') {
+                        if (promptForPasscode('Enter the table passcode to save games and edits:')) {
+                          passcodePromptedRef.current = false;
+                          retrySyncSoon();
+                        }
+                        return;
+                      }
+                      syncPending(); syncPendingEdits();
+                    }}
                     icon={
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 2v6h-6M3 22v-6h6M3.51 9a9 9 0 0114.85-3.36L21 8M3 16l2.64 2.36A9 9 0 0020.49 15" />
@@ -2225,7 +2291,8 @@ export default function App() {
                   )}
                   <SettingsRow
                     label="Passcode"
-                    value={hasPasscode ? 'Set' : 'Not set'}
+                    value={writeBlock === 'passcode' ? (hasPasscode ? 'Rejected' : 'Needed') : hasPasscode ? 'Set' : 'Not set'}
+                    warning={writeBlock === 'passcode'}
                     onClick={() => {
                       if (promptForPasscode(hasPasscode ? 'Enter a new table passcode:' : 'Enter the table passcode to save games and edits:')) {
                         passcodePromptedRef.current = false;
