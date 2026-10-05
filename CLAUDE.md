@@ -334,7 +334,7 @@ header (URI-encoded) matching the `WRITE_PASSCODE` env var on Render; reads
 (`GET /players`, `GET /stats/data`) stay open. Missing/wrong → `401`; env var
 unset → `503` (fails closed). Frontend stores the passcode per device in
 `localStorage['mtg_write_passcode']`, entered via native `prompt()` (auto-shown
-once per page load on a 401, or via Settings → "Table Passcode"). A rejected
+once per page load on a 401, or via Settings → "Passcode"). A rejected
 write stays queued (`synced: false` / in `pendingEdits`) and retries after a
 passcode is entered. This is deliberately **not** a URL param — that's exactly
 what broke `?key=toski` (see below). Note iOS home-screen apps have storage

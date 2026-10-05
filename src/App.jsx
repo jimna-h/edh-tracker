@@ -1307,7 +1307,7 @@ const SettingsRow = ({ icon, label, value, onClick, disabled, destructive, last 
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-4 px-5 py-5 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/10'} ${!last ? 'mb-3' : ''}`}
+    className={`w-full flex items-center gap-3 px-4 py-3.5 transition-colors ${disabled ? 'opacity-40' : 'active:bg-white/10'} ${!last ? 'mb-2.5' : ''}`}
     style={{
       background: destructive ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.06)',
       border: destructive ? '1px solid rgba(248,113,113,0.2)' : '1px solid rgba(255,255,255,0.1)',
@@ -2108,11 +2108,11 @@ export default function App() {
           {showSettings && !showResetConfirm && !showPlayerEditor && !showGameLog && (
             <div
               className="pointer-events-auto flex flex-col overflow-hidden"
-              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: '82vw', height: '68vh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              style={{ backgroundColor: 'rgba(10,10,12,0.98)', borderRadius: 28, border: '1px solid rgba(255,255,255,0.1)', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)', zIndex: 620000, width: 'min(92vw, 460px)', maxHeight: '90svh', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
               onPointerDown={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-8 pt-7 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <button
                   onClick={() => setShowSettings(false)}
                   className="flex items-center justify-center rounded-full"
@@ -2126,9 +2126,30 @@ export default function App() {
                 <div style={{ width: 34 }} />
               </div>
 
-              <div className="overflow-y-auto flex flex-col items-center" style={{ flex: 1 }}>
+              {/* Sized to its content (capped at maxHeight above) so every row fits without
+                  scrolling on a phone; minHeight: 0 lets it scroll instead if it ever can't. */}
+              <div className="overflow-y-auto flex flex-col items-center px-3" style={{ flex: '1 1 auto', minHeight: 0 }}>
                 <div style={{ width: '100%', maxWidth: 420 }}>
-                <div className="pt-6">
+                <div className="pt-4">
+                  {/* Table Stats - the big feature, so it's first and visually distinct */}
+                  <button
+                    onClick={() => { window.location.href = '/stats/index.html'; }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 mb-2.5 transition-colors active:brightness-125"
+                    style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 18 }}
+                  >
+                    <span style={{ width: 26, height: 26, flexShrink: 0, color: '#38bdf8' }}>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
+                      </svg>
+                    </span>
+                    <span className="flex-1 text-left" style={{ minWidth: 0 }}>
+                      <span className="block font-bold text-[17px] text-white">Table Stats</span>
+                      <span className="block text-[12px] font-semibold text-white/55">Leaderboards, awards &amp; game history</span>
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
                   <SettingsRow
                     label={(isSyncing || isSyncingEdits) ? 'Syncing...' : (hasPending || pendingEdits.length > 0) ? 'Sync Pending Changes' : 'All Changes Synced'}
                     value={(hasPending || pendingEdits.length > 0) ? String(unsyncedGames.length + pendingEdits.length) : null}
@@ -2151,7 +2172,7 @@ export default function App() {
                       }
                     />
                   )}
-                  <div className="w-full flex items-center gap-4 px-5 py-5 mb-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18 }}>
+                  <div className="w-full flex items-center gap-3 px-4 py-2.5 mb-2.5" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18 }}>
                     <span style={{ width: 26, height: 26, flexShrink: 0, color: 'rgba(255,255,255,0.65)' }}>
                       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -2203,7 +2224,7 @@ export default function App() {
                     />
                   )}
                   <SettingsRow
-                    label="Table Passcode"
+                    label="Passcode"
                     value={hasPasscode ? 'Set' : 'Not set'}
                     onClick={() => {
                       if (promptForPasscode(hasPasscode ? 'Enter a new table passcode:' : 'Enter the table passcode to save games and edits:')) {
@@ -2219,7 +2240,7 @@ export default function App() {
                   />
                 </div>
 
-                <div>
+                <div className="pb-4">
                   <SettingsRow
                     label="Reset Game"
                     destructive
@@ -2227,18 +2248,6 @@ export default function App() {
                     icon={
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" /><path d="M3 3v5h5" />
-                      </svg>
-                    }
-                  />
-                </div>
-
-                <div className="pb-6">
-                  <SettingsRow
-                    label="Table Stats"
-                    onClick={() => { window.location.href = '/stats/index.html'; }}
-                    icon={
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
                       </svg>
                     }
                     last
