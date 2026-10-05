@@ -326,6 +326,20 @@ not by re-deriving the transform math a fourth time.
   (confirmed byte-for-byte against the live Sheets-backed backend before
   cutover, so `src/App.jsx` needed zero changes).
 
+### Write passcode (all POSTs)
+
+Added so the app can be linked from a public portfolio without strangers being
+able to write to the real data. Every `POST` must carry an `X-Write-Passcode`
+header (URI-encoded) matching the `WRITE_PASSCODE` env var on Render; reads
+(`GET /players`, `GET /stats/data`) stay open. Missing/wrong → `401`; env var
+unset → `503` (fails closed). Frontend stores the passcode per device in
+`localStorage['mtg_write_passcode']`, entered via native `prompt()` (auto-shown
+once per page load on a 401, or via Settings → "Table Passcode"). A rejected
+write stays queued (`synced: false` / in `pendingEdits`) and retries after a
+passcode is entered. This is deliberately **not** a URL param — that's exactly
+what broke `?key=toski` (see below). Note iOS home-screen apps have storage
+separate from Safari, so the installed app asks once on its own.
+
 ### The `?key=toski` removal — full story, in case it's ever proposed again
 
 **Original design**: the frontend read `?key=` from the URL; `key === 'toski'`
@@ -733,10 +747,26 @@ bumping the name doesn't reliably do that).
 - Note: the stats pages' own *data* (`GET /stats/data` + `GET /players`, both
   hosted on `edh-backend.onrender.com` — explicitly skipped by the fetch
   handler's `if (url.hostname === 'edh-backend.onrender.com') return;` guard)
-  is not, and cannot meaningfully be, offline-first — only the page *shell*
-  can be. Offline, the stats pages will load instantly from cache but show
-  their own "Couldn't reach the server" state, which is correct, expected
-  behavior, not a bug to fix.
+  is fetched fresh on every load, but is no longer *purely*
+  network-or-nothing: `stats-shared.js`'s `initStatsPage` now also keeps a
+  `localStorage` cache (`edh_stats_cache_v1`) of the last successful
+  `{statsData, playersData}` payload, mirroring the pattern already used for
+  `pendingGames`/`mtg_live_game` on the main app. On load it renders that
+  cached payload immediately (if present) for an instant paint, then always
+  still performs the live fetch and re-renders with the fresh result — the
+  cache is only a "show something while waiting" measure, never a substitute
+  for the live fetch. A small fixed-position badge (`#lastFetchedBadge`,
+  created/updated directly by `stats-shared.js`, outside each page's own
+  `html` template string so it doesn't get wiped on re-render) shows "Last
+  fetched {date}", "… refreshing…" while the live fetch is in flight, and
+  "couldn't refresh — showing cached data" if it fails. **This changes the
+  previously-true behavior described below**: offline (or on a failed
+  refresh) with a cache present, the stats pages now show the last-known data
+  instead of the "Couldn't reach the server" error screen — the error screen
+  only still appears on a true first-ever load with no cache and no
+  reachable backend. As before, only the page *shell* is meaningfully
+  offline-first; the data itself is never written offline, only read from
+  whatever was last successfully fetched.
 
 ## Postgres migration — completed
 

@@ -50,6 +50,40 @@ const safeSetItem = (key, value) => {
   }
 };
 
+// Shared write passcode: every POST to the backend must carry it (see main.py's
+// require_write_passcode). Stored per device in localStorage and entered via a prompt -
+// deliberately NOT a URL param, since a home-screen icon's start_url is frozen at install
+// time (the old ?key=toski failure mode). A missing/wrong passcode gets a 401, which the
+// sync code treats as "keep queued + ask for the passcode", never as success.
+const PASSCODE_KEY = 'mtg_write_passcode';
+const loadPasscode = () => {
+  try {
+    return localStorage.getItem(PASSCODE_KEY) || '';
+  } catch (e) {
+    return '';
+  }
+};
+// URI-encoded so a non-ASCII passcode can't make fetch() throw on an invalid header value.
+const writeHeaders = () => ({
+  'Content-Type': 'application/json',
+  'X-Write-Passcode': encodeURIComponent(loadPasscode()),
+});
+
+// A 4xx the server returned on purpose (409 deck/player has logged games, 404 not found,
+// 400 bad input) - resending the same request will never succeed, so it must not be
+// queued for retry. 401 (passcode), 408 and 429 are excluded since those can succeed later.
+const isPermanentRejection = (status) =>
+  status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429;
+
+const readErrorMessage = async (r) => {
+  try {
+    const body = await r.json();
+    return (body && body.error) || null;
+  } catch (e) {
+    return null;
+  }
+};
+
 // --- RESPONSIVE HELPER ---
 // Matches Tailwind's `md:` breakpoint (768px) so "large screen" here means the same
 // thing it means everywhere else in the app's className strings.
@@ -1313,6 +1347,14 @@ export default function App() {
   // this ref is a single shared value every invocation checks/sets regardless of which
   // closure/trigger (manual tap, online event, post-submit timeout) is calling it.
   const syncInProgressRef = useRef(false);
+  // Same idea for syncPendingEdits - it's re-run from deferred callbacks (online event,
+  // the post-passcode retry), so its guard can't be the per-closure isSyncingEdits state.
+  const syncEditsInProgressRef = useRef(false);
+  const [hasPasscode, setHasPasscode] = useState(() => !!loadPasscode());
+  // Auto-prompt for the passcode at most once per page load on a 401, so repeated sync
+  // triggers (online event, manual Sync, next submit) don't nag after someone hits Cancel.
+  // Re-armed only when the person actually enters something, so a typo gets a second chance.
+  const passcodePromptedRef = useRef(false);
   const [mulliganType, setMulliganType] = useState(() => cachedGame.mulliganType ?? '');
   
   const clockwiseOrder = [0, 1, 3, 2];
@@ -1550,14 +1592,58 @@ export default function App() {
     });
   };
 
+  // Returns true if a passcode was saved. Native prompt() on purpose: like the existing
+  // confirm() dialogs, it renders outside the page, so the app's rotation can't affect it.
+  const promptForPasscode = (message) => {
+    const entered = window.prompt(message);
+    if (entered === null || !entered.trim()) return false;
+    safeSetItem(PASSCODE_KEY, entered.trim());
+    setHasPasscode(true);
+    return true;
+  };
+
+  // Retries both queues via refs (this runs later, after the sync loop that hit the 401
+  // has finished, so it must not call a closure from the render that started that loop).
+  const retrySyncSoon = () => {
+    setTimeout(() => { syncPendingRef.current(); syncPendingEditsRef.current(); }, 100);
+  };
+
+  // Called when the server answers a write with 401. The write itself is already kept
+  // queued by the caller; this just asks for the passcode and retries if one is entered.
+  const handlePasscodeRejected = () => {
+    if (passcodePromptedRef.current) return;
+    passcodePromptedRef.current = true;
+    const hadPasscode = !!loadPasscode();
+    // Deferred so the prompt opens after the calling sync loop has released its guard.
+    setTimeout(() => {
+      const msg = hadPasscode
+        ? "That passcode wasn't accepted. Enter the table passcode to save games and edits:"
+        : "Enter the table passcode to save games and edits.\n\nNothing is lost - everything stays saved on this device until then.";
+      if (promptForPasscode(msg)) {
+        passcodePromptedRef.current = false;
+        retrySyncSoon();
+      }
+    }, 0);
+  };
+
   const editorCall = async (path, body) => {
     setEditorBusy(true);
     // Apply locally right away - the UI never waits on the network for this.
     applyEditOptimistically(path, body);
     try {
       const r = await fetch(`https://edh-backend.onrender.com${path}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        method: 'POST', headers: writeHeaders(), body: JSON.stringify(body)
       });
+      if (r.status === 401) handlePasscodeRejected();
+      if (isPermanentRejection(r.status)) {
+        // e.g. 409 deleting a deck with logged games - retrying can never succeed, so
+        // don't queue it (it would block every edit behind it forever). Refetch to undo
+        // the optimistic change, and tell the person why.
+        const msg = await readErrorMessage(r);
+        refetchPlayers();
+        window.alert(msg || "That change couldn't be saved.");
+        return;
+      }
       if (!r.ok) throw new Error('Request failed');
       refetchPlayers(); // reconcile with the server's canonical state
     } catch (e) {
@@ -1574,24 +1660,37 @@ export default function App() {
   };
 
   const syncPendingEdits = async () => {
-    if (isSyncingEdits || pendingEdits.length === 0) return;
+    if (syncEditsInProgressRef.current || pendingEdits.length === 0) return;
+    syncEditsInProgressRef.current = true;
     setIsSyncingEdits(true);
     const edits = [...pendingEdits];
     let remaining = [...pendingEdits];
+    const rejected = [];
     for (const edit of edits) {
       try {
         const r = await fetch(`https://edh-backend.onrender.com${edit.path}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edit.body)
+          method: 'POST', headers: writeHeaders(), body: JSON.stringify(edit.body)
         });
-        if (r.ok) {
+        // Success, or a permanent rejection (which would otherwise sit at the front of the
+        // queue forever, blocking everything behind it) - either way it leaves the queue.
+        const permanent = isPermanentRejection(r.status);
+        if (r.ok || permanent) {
+          if (permanent) rejected.push(await readErrorMessage(r) || `${edit.path} was rejected`);
           remaining = remaining.filter(e => e.id !== edit.id);
           setPendingEdits([...remaining]);
           safeSetItem('pending_mtg_edits', JSON.stringify(remaining));
-        } else { break; }
+        } else {
+          if (r.status === 401) handlePasscodeRejected();
+          break;
+        }
       } catch (e) { break; }
     }
+    syncEditsInProgressRef.current = false;
     setIsSyncingEdits(false);
     refetchPlayers(); // pick up the server's canonical state after syncing
+    if (rejected.length > 0) {
+      window.alert(`${rejected.length === 1 ? 'A queued change' : `${rejected.length} queued changes`} couldn't be saved:\n\n${rejected.join('\n')}`);
+    }
   };
   syncPendingEditsRef.current = syncPendingEdits;
 
@@ -1702,9 +1801,11 @@ export default function App() {
       try {
         const r = await fetch(SUBMIT_URL, { 
           method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify(g) 
+          headers: writeHeaders(),
+          body: JSON.stringify(g)
         });
+        // Wrong/missing passcode - leave this and everything after it queued, and ask.
+        if (r.status === 401) { handlePasscodeRejected(); break; }
         let body = null;
         try { body = await r.json(); } catch (e) { body = null; }
         // Trust the response body, not just r.ok - a 2xx status alone doesn't prove this
@@ -2101,6 +2202,21 @@ export default function App() {
                       }
                     />
                   )}
+                  <SettingsRow
+                    label="Table Passcode"
+                    value={hasPasscode ? 'Set' : 'Not set'}
+                    onClick={() => {
+                      if (promptForPasscode(hasPasscode ? 'Enter a new table passcode:' : 'Enter the table passcode to save games and edits:')) {
+                        passcodePromptedRef.current = false;
+                        retrySyncSoon();
+                      }
+                    }}
+                    icon={
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                      </svg>
+                    }
+                  />
                 </div>
 
                 <div>

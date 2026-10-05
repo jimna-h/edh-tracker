@@ -6,10 +6,33 @@ from psycopg.errors import RestrictViolation
 import uuid
 from datetime import datetime
 import os
+import hmac
 import pytz
+from urllib.parse import unquote
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Every POST (game submission + all player/deck edits) requires the shared write
+# passcode, sent by the frontend as an X-Write-Passcode header (URI-encoded so a
+# non-ASCII passcode can't make fetch() throw client-side). Reads stay open.
+# A missing/wrong passcode is a 401, which the frontend treats as "keep it queued
+# and ask for the passcode" - never as success, never silently dropped.
+# If WRITE_PASSCODE isn't set on the server, writes fail closed with a 503 rather
+# than quietly going unprotected; 503 isn't 401, so clients just keep the write
+# queued without prompting anyone for a passcode that couldn't work anyway.
+@app.before_request
+def require_write_passcode():
+    if request.method != 'POST':
+        return None
+    expected = os.environ.get("WRITE_PASSCODE", "").strip()
+    if not expected:
+        print("Rejected write: WRITE_PASSCODE is not configured on the server.")
+        return jsonify({"error": "Server write passcode not configured"}), 503
+    provided = unquote(request.headers.get("X-Write-Passcode", "")).strip()
+    if not hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8")):
+        return jsonify({"error": "passcode_required"}), 401
+    return None
 
 def get_db_connection():
     database_url = os.environ.get("DATABASE_URL")

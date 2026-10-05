@@ -268,16 +268,92 @@ function normalizeStatsData(statsData, playersData){
   };
 }
 
+// Local cache of the last successfully-fetched stats payload, so a page load
+// can render something instantly (stale-while-revalidate) instead of sitting
+// on the spinner every time - the backend is Render free tier and can take
+// 30-60s to cold-start. This intentionally changes the previously-documented
+// "stats data can't be offline-first" behavior in CLAUDE.md: with a cache
+// present, an offline/failed refresh now re-shows the last good data instead
+// of the error screen.
+const STATS_CACHE_KEY = 'edh_stats_cache_v1';
+
+function loadStatsCache(){
+  try {
+    const raw = localStorage.getItem(STATS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.statsData || !parsed.playersData || !parsed.fetchedAt) return null;
+    return parsed;
+  } catch(e) { return null; }
+}
+
+// Never lets a write failure (quota exceeded, private browsing) throw and
+// blank the page - caching is a nice-to-have, not load-bearing.
+function saveStatsCache(statsData, playersData){
+  try {
+    localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ statsData, playersData, fetchedAt: Date.now() }));
+  } catch(e) { /* ignore - caching is best-effort */ }
+}
+
+function formatFetchedAt(ts){
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
+  return d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+// Small fixed badge, created once and updated in place - kept out of each
+// page's own `html` template string (which gets replaced wholesale on every
+// render) so updating it never requires a full re-render.
+function ensureFetchedBadge(){
+  let el = document.getElementById('lastFetchedBadge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'lastFetchedBadge';
+    el.style.cssText = 'position:fixed; bottom:12px; right:14px; z-index:50; ' +
+      'font-size:10.5px; font-weight:700; letter-spacing:.04em; ' +
+      'color:var(--text-dim,#8a8578); background:var(--panel,#1c1a16); ' +
+      'border:1px solid var(--line,#332f28); border-radius:999px; ' +
+      'padding:6px 12px; opacity:.9; pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function setFetchedBadge(fetchedAt, note){
+  const el = ensureFetchedBadge();
+  const when = fetchedAt ? formatFetchedAt(fetchedAt) : null;
+  el.textContent = when ? `Last fetched ${when}${note ? ' · ' + note : ''}` : (note || '');
+}
+
 // Drives the loading-spinner / error-screen swap and hands the normalized
-// data to the page's own render function.
+// data to the page's own render function. Renders a cached payload first
+// (if one exists) for an instant paint, then always still fetches live data
+// and re-renders with it - the cache is purely a "show something while
+// waiting" measure, never a substitute for the live fetch.
 async function initStatsPage(renderFn){
-  let data;
+  const cached = loadStatsCache();
+  let renderedFromCache = false;
+
+  if (cached) {
+    try {
+      const data = normalizeStatsData(cached.statsData, cached.playersData);
+      await renderFn(data);
+      setFetchedBadge(cached.fetchedAt, 'refreshing…');
+      renderedFromCache = true;
+    } catch(e) { /* corrupted/stale-shape cache - fall through to live fetch */ }
+  }
+
   try{
     const { statsData, playersData } = await fetchStatsJSON();
-    data = normalizeStatsData(statsData, playersData);
+    const data = normalizeStatsData(statsData, playersData);
+    await renderFn(data);
+    saveStatsCache(statsData, playersData);
+    setFetchedBadge(Date.now());
   } catch(e){
-    document.getElementById('app').innerHTML = document.getElementById('errorTemplate').innerHTML;
-    return;
+    if (renderedFromCache) {
+      setFetchedBadge(cached.fetchedAt, "couldn't refresh — showing cached data");
+    } else {
+      document.getElementById('app').innerHTML = document.getElementById('errorTemplate').innerHTML;
+    }
   }
-  await renderFn(data);
 }
