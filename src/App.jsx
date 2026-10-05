@@ -585,107 +585,130 @@ const SetupQuadrant = React.memo(SetupQuadrantInner, (prev, next) => (
   prev.mulliganType === next.mulliganType
 ));
 
+// A tiny haptic tick per counter change, where supported. Android Chrome implements
+// navigator.vibrate; iOS Safari doesn't, so there it's a silent no-op.
+const hapticTick = () => {
+  try { navigator.vibrate?.(8); } catch (e) { /* unsupported */ }
+};
+
 // --- CMD DAMAGE CELL ---
-const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, name, splitAxis = 'row', onChange, onChange2, held, onHold }) => {
-  const [activeHalfA, setActiveHalfA] = useState(null);
-  const [activeHalfB, setActiveHalfB] = useState(null);
+// One commander's half of a tile. Works exactly like a life total: LEFT half = −1,
+// RIGHT half = +1, hold either side to repeat ±1 (commander damage moves in small steps
+// toward 21, so ±10 jumps overshoot). A badge shows the running change ("+3") so a
+// burst of taps is easy to verify.
+const CMD_REPEAT_DELAY = 450;
+const CMD_REPEAT_EVERY = 110;
+const CmdHalf = ({ art, val, isDanger, isSelf, name, onChange, isSecond, splitAxis }) => {
+  const [active, setActive] = useState(null);       // 'minus' | 'plus' | null
+  const [badge, setBadge] = useState(null);          // value at the start of this burst
   const holdTimer = useRef(null);
-  const tapRepeat = useRef(null);
-  const tapTimer = useRef(null);
+  const repeatTimer = useRef(null);
+  const fadeTimer = useRef(null);
+  // Repeats fire from timers, so they must always call the LATEST onChange/value - a
+  // closure from the render that started the hold has a stale value, which used to let
+  // a held "−" keep refunding life after commander damage had already reached 0.
+  const onChangeRef = useRef(onChange);
+  const valRef = useRef(val);
+  onChangeRef.current = onChange;
+  valRef.current = val;
 
-  // A tiny haptic tick per change where supported (Android); no-op elsewhere (iOS Safari
-  // has no vibrate API).
-  const tick = () => { try { navigator.vibrate?.(8); } catch (e) { /* unsupported */ } };
+  useEffect(() => () => {
+    clearTimeout(holdTimer.current); clearInterval(repeatTimer.current); clearTimeout(fadeTimer.current);
+  }, []);
 
-  const startHold = () => {
+  const step = (sign) => {
+    if (sign < 0 && valRef.current <= 0) return;      // nothing to undo
+    setBadge(prev => (prev === null ? valRef.current : prev));
+    onChangeRef.current(sign);
+    hapticTick();
+    clearTimeout(fadeTimer.current);
+    fadeTimer.current = setTimeout(() => setBadge(null), 1600);
+  };
+  const press = (side) => (e) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const sign = side === 'plus' ? 1 : -1;
+    setActive(side);
+    step(sign);
     holdTimer.current = setTimeout(() => {
-      onHold(true);
-      tick();
-      holdTimer.current = null;
-    }, 400);
+      repeatTimer.current = setInterval(() => step(sign), CMD_REPEAT_EVERY);
+    }, CMD_REPEAT_DELAY);
   };
-  const cancelHold = () => {
-    clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  };
-
-  const startTap = (fn, delta) => {
-    fn(delta); tick();
-    tapTimer.current = setTimeout(() => {
-      tapRepeat.current = setInterval(() => { fn(delta * 10); tick(); }, 300);
-      tapTimer.current = null;
-    }, 400);
-  };
-  const stopTap = (setHalf) => {
-    clearTimeout(tapTimer.current);
-    clearInterval(tapRepeat.current);
-    tapTimer.current = null;
-    tapRepeat.current = null;
-    setHalf(null);
+  const release = (e) => {
+    e?.stopPropagation?.();
+    clearTimeout(holdTimer.current); clearInterval(repeatTimer.current);
+    holdTimer.current = null; repeatTimer.current = null;
+    setActive(null);
   };
 
-  const zoneSign = { fontSize: 30, fontWeight: 900, color: 'rgba(255,255,255,0.9)', userSelect: 'none', pointerEvents: 'none', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: 1 };
-  const tapZones = (fn, activeHalf, setHalf) => (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 10 }}>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 10, backgroundColor: activeHalf === 'left' ? 'rgba(220,50,50,0.35)' : 'transparent', transition: 'background-color 0.08s' }}
-        onPointerDown={(e) => { e.stopPropagation(); setHalf('left'); startTap(fn, -1); }}
-        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
-        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
-      >
-        <span style={zoneSign}>−</span>
-      </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, backgroundColor: activeHalf === 'right' ? 'rgba(50,200,100,0.35)' : 'transparent', transition: 'background-color 0.08s' }}
-        onPointerDown={(e) => { e.stopPropagation(); setHalf('right'); startTap(fn, 1); }}
-        onPointerUp={(e) => { e.stopPropagation(); stopTap(setHalf); }}
-        onPointerLeave={() => stopTap(setHalf)} onPointerCancel={() => stopTap(setHalf)}
-      >
-        <span style={zoneSign}>+</span>
-      </div>
+  const hasArt = art && art !== 'partner';
+  const divider = '2px solid rgba(255,255,255,0.28)';
+  const diff = badge === null ? 0 : val - badge;
+  const zone = (side) => (
+    <div
+      style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: side === 'minus' ? 'flex-start' : 'flex-end',
+        padding: '0 10px', touchAction: 'none', cursor: 'pointer',
+        backgroundColor: active === side ? (side === 'minus' ? 'rgba(239,68,68,0.38)' : 'rgba(34,197,94,0.32)') : 'transparent',
+        transition: 'background-color 0.08s',
+      }}
+      onPointerDown={press(side)}
+      onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}
+    >
+      <span style={{ fontSize: 26, fontWeight: 900, lineHeight: 1, color: 'rgba(255,255,255,0.75)', textShadow: '0 1px 6px rgba(0,0,0,0.9)', userSelect: 'none', pointerEvents: 'none' }}>{side === 'minus' ? '−' : '+'}</span>
     </div>
   );
 
-  // One commander. Each gets its own rounded border (red once lethal at 21+), so partners
-  // read as two separate commanders, not one split tile.
-  const subCell = (art, val, isDanger, onTap, activeHalf, setHalf) => {
-    const hasArt = art && art !== 'partner';
-    return (
-      <div
-        style={{
-          flex: 1, minWidth: 0, minHeight: 0, position: 'relative', overflow: 'hidden', borderRadius: 14,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-          backgroundImage: hasArt ? `url(${art})` : 'none',
-          backgroundSize: 'cover', backgroundPosition: 'center',
-          backgroundColor: hasArt ? '#111' : 'rgba(255,255,255,0.08)',
-          border: isDanger ? '2px solid #f87171' : '2px solid rgba(255,255,255,0.28)',
-          boxShadow: isDanger ? '0 0 18px rgba(248,113,113,0.45)' : '0 2px 10px rgba(0,0,0,0.45)',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-        // Your own cell works like any other: you can take commander damage from your own
-        // commander (e.g. when an opponent has gained control of it).
-        onPointerDown={(e) => { e.stopPropagation(); startHold(); }}
-        onPointerUp={(e) => {
-          e.stopPropagation();
-          if (holdTimer.current) { cancelHold(); if (!held) { onTap(1); tick(); } }
-        }}
-        onPointerLeave={cancelHold} onPointerCancel={cancelHold}
-      >
-        <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(160,20,20,0.6)' : 'rgba(0,0,0,0.5)' }} />
-        {held && tapZones(onTap, activeHalf, setHalf)}
-        <span style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(30px, 9vw, 52px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 2px 10px rgba(0,0,0,0.9)', userSelect: 'none', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+  return (
+    <div style={{
+      flex: 1, minWidth: 0, minHeight: 0, position: 'relative', overflow: 'hidden',
+      backgroundImage: hasArt ? `url(${art})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
+      // Opaque even without art - a translucent tile let the turn counter/life total
+      // underneath show through it.
+      backgroundColor: hasArt ? '#111' : '#2a2a30',
+      ...(isSecond ? (splitAxis === 'column' ? { borderTop: divider } : { borderLeft: divider }) : {}),
+      WebkitTapHighlightColor: 'transparent', userSelect: 'none',
+    }}>
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(160,20,20,0.6)' : 'rgba(0,0,0,0.5)', transition: 'background-color 0.2s' }} />
+      {/* Tap zones (below the text, which ignores pointer events). */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', zIndex: 1 }}>
+        {zone('minus')}
+        {zone('plus')}
+      </div>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        {isDanger && (
+          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.2em', color: '#fff', backgroundColor: 'rgba(220,38,38,0.85)', borderRadius: 999, padding: '2px 8px', marginBottom: 4 }}>LETHAL</span>
+        )}
+        <span style={{ fontSize: 'clamp(32px, 10vw, 56px)', fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 2px 10px rgba(0,0,0,0.9)', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
         {(isSelf || name) && (
-          <span style={{ position: 'relative', zIndex: 1, marginTop: 4, maxWidth: '90%', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: isSelf ? '#fde68a' : 'rgba(255,255,255,0.75)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.9)', userSelect: 'none' }}>{isSelf ? 'You' : name}</span>
+          <span style={{ marginTop: 4, maxWidth: '70%', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: isSelf ? '#fde68a' : 'rgba(255,255,255,0.8)', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{isSelf ? 'You' : name}</span>
         )}
       </div>
-    );
-  };
+      {diff !== 0 && (
+        <span style={{ position: 'absolute', top: 6, left: 0, right: 0, textAlign: 'center', zIndex: 3, pointerEvents: 'none', fontSize: 13, fontWeight: 900, color: diff > 0 ? '#fca5a5' : '#86efac', textShadow: '0 1px 4px rgba(0,0,0,0.95)' }}>{diff > 0 ? `+${diff}` : diff}</span>
+      )}
+    </div>
+  );
+};
 
-  // Partners split along the cell's LONGER side (splitAxis, chosen per grid area by the
-  // caller), so each half stays close to square instead of becoming a thin sliver.
+// One commander slot = one bordered tile; a partner pair shares the tile with a divider
+// between them (no gap). Red border + glow once either commander is lethal (21+).
+// Partners split along the cell's LONGER side (splitAxis, chosen per grid area by the
+// caller), so each half stays close to square instead of becoming a thin sliver.
+// Your own cell works like any other: you can take commander damage from your own
+// commander (e.g. when an opponent has gained control of it).
+const CmdCell = ({ value, value2, hasPartner, danger, danger2, isSelf, artUrl, artUrlPartner, name, splitAxis = 'row', onChange, onChange2 }) => {
+  const lethal = danger || (hasPartner && danger2);
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: hasPartner ? splitAxis : 'row', gap: hasPartner ? 6 : 0 }}>
-      {subCell(artUrl, value, danger, onChange, activeHalfA, setActiveHalfA)}
-      {hasPartner && subCell(artUrlPartner, value2, danger2, onChange2, activeHalfB, setActiveHalfB)}
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', flexDirection: hasPartner ? splitAxis : 'row',
+      borderRadius: 14, overflow: 'hidden',
+      border: lethal ? '2px solid #f87171' : '2px solid rgba(255,255,255,0.28)',
+      boxShadow: lethal ? '0 0 18px rgba(248,113,113,0.45)' : '0 2px 10px rgba(0,0,0,0.45)',
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+    }}>
+      <CmdHalf art={artUrl} val={value} isDanger={danger} isSelf={isSelf} name={name} onChange={onChange} isSecond={false} splitAxis={splitAxis} />
+      {hasPartner && <CmdHalf art={artUrlPartner} val={value2} isDanger={danger2} isSelf={isSelf} name={name} onChange={onChange2} isSecond splitAxis={splitAxis} />}
     </div>
   );
 };
@@ -794,7 +817,7 @@ const getSeatCmdInfo = (seatIndex, tableLayout) => {
 
 // Shared commander-damage cell renderer, usable both by Quadrant's in-quadrant modal (large
 // screens) and the top-level full-screen modal (small screens) so they can't drift apart.
-const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR = false, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld }) => {
+const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR = false, onCmdDamage, onLifeChange }) => {
   return (tableLayout === 'cross' ? opponents : (isFlipped ? [...opponents].reverse() : opponents)).map((op) => {
     const hasPartner = !!(op.artUrlPartner && (op.artUrlPartner === 'partner' || op.artUrlPartner.startsWith('http')));
     const val0 = (player.stats.cmdDamage || {})[`${op.id}_0`] ?? (player.stats.cmdDamage || {})[op.id] ?? 0;
@@ -833,8 +856,6 @@ const renderCmdCells = ({ id, player, opponents, isFlipped, tableLayout, cmdArea
             onCmdDamage(id, key2, actual2);
             onLifeChange(id, -actual2);
           }}
-          held={cmdHeld}
-          onHold={setCmdHeld}
         />
       </div>
     );
@@ -855,7 +876,7 @@ const getCmdGridLayout = (isMidLR, tableLayout) => {
     ? { width: 'clamp(270px, 60vw, 360px)', height: 'clamp(180px, 40vw, 240px)' }
     : tableLayout === 'cross'
     ? { width: 'clamp(180px, 40vw, 240px)', height: 'clamp(270px, 60vw, 360px)' }
-    : { width: 'clamp(220px, 56vw, 300px)', height: 'clamp(200px, 50vw, 270px)' };
+    : { width: 'clamp(280px, 66vw, 400px)', height: 'clamp(140px, 33vw, 200px)' };
   // Small screens: sized against the real viewport. Side seats (and grid seats) read
   // across the phone's long axis, so their box is limited by the phone's WIDTH (vw);
   // cross top/bottom seats read along it, limited by width the other way round.
@@ -864,7 +885,10 @@ const getCmdGridLayout = (isMidLR, tableLayout) => {
     ? { width: `calc(${sideH} * 1.5)`, height: sideH }
     : tableLayout === 'cross'
     ? { width: 'min(84vw, 400px)', height: 'calc(min(84vw, 400px) * 1.5)' }
-    : { width: `calc(${sideH} * 1.3)`, height: sideH };
+    // Grid: 2:1 so a partner pair splits into two ~square halves (at 1.3:1 each half was
+    // narrow and the −/+ crowded the number). There's room: this reads along the phone's
+    // long axis.
+    : { width: `calc(${sideH} * 2)`, height: sideH };
   return { gridAreaStyle, largeScreenSize, smallScreenSize };
 };
 
@@ -904,19 +928,18 @@ const getSeatOrientation = (seatIndex, tableLayout) => {
 // content is then rotated to match that seat's own orientation via getSeatOrientation, so it
 // still reads correctly from that specific player's side of the table.
 const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeChange, onClose }) => {
-  const [cmdHeld, setCmdHeld] = useState(false);
   const player = seats[seatId];
   if (!player) return null;
   const opponents = seats.map((seat, idx) => ({ id: idx, name: seat.name, artUrl: seat.artUrl, artUrlPartner: seat.artUrlPartner }));
   const { cmdAreaFor, isMidLR } = getSeatCmdInfo(seatId, tableLayout);
   const { gridAreaStyle, smallScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
   const { deg, flipped, swapped } = getSeatOrientation(seatId, tableLayout);
-  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
-  const closeModal = () => { onClose(); setCmdHeld(false); };
+  const cells = renderCmdCells({ id: seatId, player, opponents, isFlipped: flipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange });
+  const closeModal = () => { onClose(); };
 
   return (
     <div
-      style={{ position: 'absolute', inset: 0, zIndex: 400000, pointerEvents: 'auto', backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(14px)' }}
+      style={{ position: 'absolute', inset: 0, zIndex: 400000, pointerEvents: 'auto', backgroundColor: 'rgba(0,0,0,0.86)', backdropFilter: 'blur(14px)' }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
       onClick={closeModal}
@@ -933,7 +956,11 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
           onClick={(e) => { e.stopPropagation(); closeModal(); }}
           style={{ position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >×</button>
-        <span style={{ fontSize: 13, fontWeight: 900, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 16, userSelect: 'none' }}>Commander Damage</span>
+        <span style={{ fontSize: 13, fontWeight: 900, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.3em', userSelect: 'none' }}>Commander Damage</span>
+        {/* Commander damage also comes off life, so show the result right here. */}
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em', marginTop: 4, marginBottom: 14, userSelect: 'none' }}>
+          {player.name ? `${player.name} · ` : ''}Life <span style={{ color: '#fff', fontWeight: 900 }}>{player.stats.life ?? 40}</span>
+        </span>
         <div
           style={{ display: 'grid', gap: 10, ...smallScreenSize, ...gridAreaStyle }}
           onClick={(e) => e.stopPropagation()}
@@ -942,7 +969,7 @@ const SmallScreenCmdModal = ({ seatId, seats, tableLayout, onCmdDamage, onLifeCh
         >
           {cells}
         </div>
-        <span style={{ fontSize: 11, fontWeight: 800, color: cmdHeld ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 16, userSelect: 'none' }}>{cmdHeld ? 'Tap − / + · Hold for ±10' : 'Tap +1 · Hold to adjust'}</span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 16, userSelect: 'none' }}>Tap − / + · Hold to repeat</span>
       </div>
     </div>
   );
@@ -965,6 +992,7 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 
   const applyLifeChange = (delta) => {
     onLifeChange(id, delta);
+    hapticTick();
     setLifeDelta(prev => prev + delta);
     setShowDelta(true);
     clearTimeout(deltaFadeRef.current);
@@ -999,7 +1027,6 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
 
   const [cmdModal, setCmdModal] = useState(null);
   const isLargeScreen = useIsLargeScreen();
-  const [cmdHeld, setCmdHeld] = useState(false); // when true, all cells show +/- zones
 
   const statColors = ['#1a4a1a', '#5c3d1e', '#4a7a2a'];
 
@@ -1102,10 +1129,10 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                 const isCross = tableLayout === 'cross';
                 const orderedOpponents = (!isCross && isFlipped) ? [...opponents].reverse() : opponents;
                 const gridStyle = isMidLR
-                  ? { display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"', gap: 2, width: 62, height: 46, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
+                  ? { display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gridTemplateRows: '1fr 1fr', gridTemplateAreas: '"top midl bot" "top midr bot"', gap: 2, width: 78, height: 58, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
                   : isCross
-                  ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1.6fr 1fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 2, width: 46, height: 62, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
-                  : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 64, height: 44, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' };
+                  ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1.6fr 1fr', gridTemplateAreas: '"top top" "midl midr" "bot bot"', gap: 2, width: 58, height: 78, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }
+                  : { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 2, width: 80, height: 56, cursor: 'pointer', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 2, border: '2px solid rgba(255,255,255,0.12)', pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' };
                 return (
                   <div
                     onClick={(e) => { e.stopPropagation(); if (isLargeScreen) { setCmdModal('grid'); } else { onOpenCmdModal(id); } }}
@@ -1129,8 +1156,8 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
                     }}>
                       <div style={{ position: 'absolute', inset: 0, backgroundColor: isDanger ? 'rgba(180,20,20,0.65)' : 'rgba(0,0,0,0.55)' }} />
                       {isSelfCell && val === 0
-                        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
-                        : <span style={{ position: 'relative', zIndex: 1, fontSize: 9, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
+                        ? <span style={{ position: 'relative', zIndex: 1, fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', userSelect: 'none' }}>me</span>
+                        : <span style={{ position: 'relative', zIndex: 1, fontSize: 11, fontWeight: 900, color: '#fff', userSelect: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>{val}</span>
                       }
                     </div>
                   );
@@ -1158,11 +1185,11 @@ const Quadrant = ({ id, seatIndex, player, isFlipped, tableLayout = 'grid', onLo
             {/* CMD DAMAGE MODAL - large screens only; small screens use App-level SmallScreenCmdModal */}
             {cmdModal === 'grid' && isLargeScreen && (() => {
               const { gridAreaStyle, largeScreenSize } = getCmdGridLayout(isMidLR, tableLayout);
-              const cells = renderCmdCells({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange, cmdHeld, setCmdHeld });
-              const closeModal = () => { setCmdModal(null); setCmdHeld(false); };
+              const cells = renderCmdCells({ id, player, opponents, isFlipped, tableLayout, cmdAreaFor, isMidLR, onCmdDamage, onLifeChange });
+              const closeModal = () => { setCmdModal(null); };
               return (
                 <div
-                  style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)' }}
+                  style={{ position: 'absolute', top: -4, right: -4, bottom: -4, left: -4, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)' }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                   onClick={closeModal}

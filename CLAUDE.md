@@ -44,7 +44,7 @@ menu. See "The stats pages" below.
   React-Compiler rules that flag this codebase's deliberate patterns are turned
   off in `eslint.config.js` with the reason written there.
 - `.github/workflows/keep-warm.yml` — pings `GET /health` (DB-free) every 10 min,
-  8am–1am Mountain, so Render's free instance doesn't cold-start (30–60s) while
+  4pm–1am Mountain, so Render's free instance doesn't cold-start (30–60s) while
   Neon still scales to zero.
 - `main.py` — Flask backend, deployed on Render. Talks to Postgres via `psycopg`.
 - `schema.sql` — the Postgres schema (`players`, `decks`, `games`,
@@ -617,21 +617,34 @@ overlay instead, with larger tap targets.
   can't drift apart.
 - See "The commander damage modal rotation saga" above for how its actual
   orientation math was debugged.
-- **Cell layout (redesigned, screenshot-verified in both layouts, all seats)**:
-  equal grid tracks plus a 3:2 overall box (`getCmdGridLayout`), so middle cells are
-  ~square and full-width top/bottom cells ~2:1 — they used to get 0.8fr of 3fr and
-  were long thin strips. Every commander has its own bordered tile (red + glow at
-  21+), large numbers, and the opponent's name ("YOU" for your own cell).
+- **Interaction model (same as life totals)**: each commander's LEFT half is −1,
+  RIGHT half is +1, holding either repeats ±1 (110ms after a 450ms delay). ±1 not ±10:
+  commander damage moves in small steps toward 21, and ±10 jumps overshot. A badge
+  shows the running change ("+3") for ~1.6s; every change gets `hapticTick()`
+  (Android only - iOS Safari has no vibrate API; life changes use it too). The old
+  "tap = +1 only, long-press enters a global −/+ adjust mode" design was removed: it
+  hid decrementing behind a gesture and ±10 was the wrong step.
+- **Stale-closure bug fixed here (house rule 3)**: hold-to-repeat used to call the
+  `onChange` closure from the render where the hold *started*, so a held "−" kept
+  refunding life after damage hit 0. `CmdHalf` now calls `onChangeRef.current` and
+  checks `valRef.current`, both refreshed every render.
+- **Cell layout (screenshot-verified in both layouts, all seats, with and without
+  art)**: equal grid tracks; the box is 3:2 for cross seats (middle cells ~square,
+  full-width top/bottom ~2:1) and 2:1 for grid seats (so partner halves come out
+  square - at 1.3:1 they were narrow and −/+ crowded the number). One bordered tile
+  per commander slot; a partner pair shares one tile with a thin divider, no gap
+  (explicitly requested). Red border/glow + "LETHAL" at 21+. Tiles are opaque even
+  without art (translucent ones let the turn counter show through). The header
+  shows the player's current life, since commander damage comes off it.
 - **Partner split axis**: partners split along the cell's *longer* side via
-  `CmdCell`'s `splitAxis`. For a side seat (`isMidLR`) the `top`/`bot` areas are tall
-  CSS columns that render as wide strips after rotation, so they split with
-  `column`; everything else uses `row`. Splitting along the short side made each
-  half a sliver.
+  `splitAxis`. For a side seat (`isMidLR`) the `top`/`bot` areas are tall CSS
+  columns that render as wide strips after rotation, so they split with `column`;
+  everything else uses `row`.
 - **Your own cell stays fully interactive** — explicitly requested: you *can* take
   commander damage from your own commander (e.g. an opponent controls it). An
   attempt to make it inert was reverted; don't re-try.
-- Hint text reflects the real gestures: "Tap +1 · Hold to adjust" → after a hold,
-  "Tap − / + · Hold for ±10".
+- The mini-grid that opens the modal was enlarged ~25% (it's the entry point and was
+  a small tap target).
 
 ## In-app dialogs (no native alert/confirm/prompt)
 
@@ -724,6 +737,25 @@ whole class of "sheet header got retyped/truncated by hand" bug this used to
 guard against structurally can't happen anymore. The bullets below describe
 logic that's still true and was ported verbatim into `stats-shared.js`'s
 `normalizeStatsData`, minus that now-unnecessary header-matching layer.
+
+### Every number explains itself (convention - keep it)
+
+The group shouldn't need to ask what a stat means. So on all three pages:
+- Every percentage shows its sample via `pctN(rate, wins, n)` ("40%" over "2/5"),
+  and each section states its basis with `basisHTML(...)`: what's counted (games,
+  deck appearances, owned decks), who's excluded (guest seats), and any minimums.
+  Win rates reference `EVEN_SHARE` (25% at a 4-player table).
+- Every award card has a `.rule` line saying exactly how it's decided.
+- The overview has a "How these numbers work" `<details>` panel (guests, active vs
+  retired, deck appearances, decisive games, infinite).
+- "Active" = still in the owner's deck list and not Exclude; everything else is
+  called **retired** (not "inactive"). Deck ranks are numbered among active decks
+  only; retired tiles show a "Retired" pill (ranking across hidden decks made the
+  visible numbers skip).
+- `stats-shared.js` is loaded as `stats-shared.js?v=N`, matching the precache
+  entry in `sw.js`. **Bump both together** whenever the pages start using
+  something new from it - otherwise a fresh page can run against an older cached
+  copy (scripts are stale-while-revalidate) and crash on a missing helper.
 
 ### Data-quality defenses, and why they exist
 

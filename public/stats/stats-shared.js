@@ -22,6 +22,17 @@ const COLOR_NAMES = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Col
 // but letters+digits.
 function normKey(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
+// ---------- making numbers self-explanatory ----------
+// Every percentage should carry the sample it came from, so "100%" from one game
+// can't pass for a trend. Renders inside .hbar-val: the % on top, "wins/games" below.
+function pctN(rate, wins, n, unit){
+  const sub = n ? `${wins}/${n}${unit ? ' ' + unit : ''}` : 'no games';
+  return `${rate == null ? '—' : pct(rate)}<span class="hbar-n">${sub}</span>`;
+}
+// A one-line "what this is based on" note under a section description.
+function basisHTML(text){ return `<div class="basis">${text}</div>`; }
+const EVEN_SHARE = 'With 4 players at the table, an even share of wins is 25%.';
+
 function isLink(v){ return typeof v === 'string' && /^https?:\/\/\S+$/i.test(v.trim()); }
 
 async function fetchStatsJSON(){

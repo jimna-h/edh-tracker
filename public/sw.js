@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtg-tracker-v7';
+const CACHE_NAME = 'mtg-tracker-v8';
 // v2: the old image cache stored responses without checking them, so a single failed
 // load (e.g. a bad art URL or a network blip) stayed broken forever - bumping flushes it.
 const IMAGE_CACHE = 'mtg-images-v2';
@@ -15,7 +15,7 @@ self.addEventListener('install', (event) => {
       '/stats/index.html',
       '/stats/player.html',
       '/stats/deck.html',
-      '/stats/stats-shared.js',
+      '/stats/stats-shared.js?v=8',  // must match the ?v= in the stats pages' <script> tags
     ]))
   );
   self.skipWaiting();

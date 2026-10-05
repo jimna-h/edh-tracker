@@ -1,18 +1,20 @@
 # Render's free tier sleeps after ~15 min idle and then takes 30-60s to wake - which looks
 # exactly like being offline. This pings the DB-free /health endpoint every 10 minutes
-# during waking hours (8am-1am Mountain) so the app and stats pages answer instantly.
+# from 4pm to ~1am Mountain (game-night hours) so the app and stats pages answer instantly.
 #
 # - /health never touches the database, so Neon still scales to zero (its free tier has
 #   100 compute-hours/month; keeping it awake 24/7 would exceed that).
-# - ~17h/day of uptime is ~530h/month, inside Render's 750 free instance-hours (shared
-#   across ALL free services on the account - trim the hours below if you add more).
+# - ~9h/day of uptime is ~280h/month, inside Render's 750 free instance-hours (shared
+#   across ALL free services on the account - keep that in mind if you add more).
 # - GitHub may delay scheduled runs, and disables them after 60 days with no repo
 #   activity; re-enable from the Actions tab if that happens.
 name: Keep backend warm
 
 on:
   schedule:
-    - cron: '*/10 0-7,14-23 * * *'   # UTC; = 8am-1am MDT (7am-midnight MST)
+    # UTC. 22:00-06:59 UTC = 4pm-12:59am MDT (3pm-11:59pm MST); the last ping keeps
+    # Render up ~15 more minutes, so roughly 4pm-1am during daylight time.
+    - cron: '*/10 22-23,0-6 * * *'
   workflow_dispatch:
 
 jobs:
