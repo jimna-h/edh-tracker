@@ -741,13 +741,18 @@ logic that's still true and was ported verbatim into `stats-shared.js`'s
 ### Every number explains itself (convention - keep it)
 
 The group shouldn't need to ask what a stat means. So on all three pages:
-- Every percentage shows its sample via `pctN(rate, wins, n)` ("40%" over "2/5"),
-  and each section states its basis with `basisHTML(...)`: what's counted (games,
-  deck appearances, owned decks), who's excluded (guest seats), and any minimums.
-  Win rates reference `EVEN_SHARE` (25% at a 4-player table).
-- Every award card has a `.rule` line saying exactly how it's decided.
-- The overview has a "How these numbers work" `<details>` panel (guests, active vs
-  retired, deck appearances, decisive games, infinite).
+- Every percentage shows its sample via `pctN(rate, wins, n)` ("40%" over "2/5") -
+  that does most of the explaining.
+- **But keep text minimal** (the owner pushed back on a wordier first version):
+  one short line per section, only what changes the meaning (e.g. "Facing = any
+  opponent's deck had that color", "a deck counts each time it's played").
+  Shared definitions live ONLY in the overview's panel, not repeated per section.
+  `basisHTML()` exists but is currently unused - prefer not to bring it back.
+- Award cards get a terse `.rule` phrase ("Fastest avg win · min. 2 wins"), and only
+  when it adds something the card doesn't already say.
+- The overview has a collapsed "How these numbers work" `<details>` panel: six
+  one-line definitions (win rate/25%, wins/games, guests, retired, decisive,
+  infinite).
 - "Active" = still in the owner's deck list and not Exclude; everything else is
   called **retired** (not "inactive"). Deck ranks are numbered among active decks
   only; retired tiles show a "Retired" pill (ranking across hidden decks made the
