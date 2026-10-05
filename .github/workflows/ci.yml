@@ -13,13 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          # Node 24 = npm 11, matching the npm that writes package-lock.json locally.
-          # Node 22's npm 10 rejects this lockfile ("Missing @emnapi/core from lock file"):
-          # it resolves the optional peer deps of the wasm32-only rolldown/tailwind
-          # bindings, which npm 11 correctly leaves out.
           node-version: 24
           cache: npm
-      - run: npm ci
+      # `npm install`, not `npm ci`, on purpose - it's what Vercel runs for the real
+      # deploy. `npm ci` on Linux rejects this Windows-generated lockfile ("Missing
+      # @emnapi/core from lock file": optional peer deps of the wasm32-only rolldown/
+      # tailwind bindings), even though installs and builds are fine.
+      - run: npm install --no-audit --no-fund
       - run: npm run lint
       - run: npm run build
 
