@@ -88,7 +88,7 @@ def get_players():
                 players = cur.fetchall()
 
                 cur.execute("""
-                    SELECT id, owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archidekt
+                    SELECT id, owner_id, deck_name, art_url, art_url_partner, color_id, exclude, archived, archidekt
                     FROM decks
                     ORDER BY owner_id, row_order
                 """)
@@ -103,6 +103,7 @@ def get_players():
                 "artUrlPartner": d['art_url_partner'],
                 "colors": d['color_id'],
                 "exclude": d['exclude'],
+                "archived": d['archived'],
                 "archidekt": d['archidekt'],
             })
 
@@ -281,11 +282,19 @@ def delete_player():
         player_name = data.get('player_name', '').strip()
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM decks
+                        WHERE owner_id = (SELECT id FROM players WHERE name = %s)
+                    ) AS has_decks
+                """, (player_name,))
+                if cur.fetchone()['has_decks']:
+                    return jsonify({"error": "This player still owns decks. Decks are retained permanently, so players with deck records can't be deleted."}), 409
                 try:
                     cur.execute("DELETE FROM players WHERE name = %s", (player_name,))
                 except RestrictViolation:
                     conn.rollback()
-                    return jsonify({"error": "This player has decks with logged games and can't be deleted."}), 409
+                    return jsonify({"error": "This player still owns deck records and can't be deleted."}), 409
             conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
@@ -303,11 +312,19 @@ def add_deck():
         player_name = data.get('player_name', '')
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id FROM players WHERE name = %s", (player_name,))
+                cur.execute("SELECT id FROM players WHERE name = %s FOR UPDATE", (player_name,))
                 row = cur.fetchone()
                 if row is None:
                     return jsonify({"error": "Player not found"}), 404
                 owner_id = row['id']
+
+                cur.execute("""
+                    SELECT 1 FROM decks
+                    WHERE owner_id = %s AND lower(btrim(deck_name)) = lower(btrim(%s))
+                    LIMIT 1
+                """, (owner_id, data.get('deck', '')))
+                if cur.fetchone():
+                    return jsonify({"error": "A deck with this name already exists for this player. Archived decks keep their names reserved to protect game history."}), 409
 
                 cur.execute("SELECT COALESCE(MAX(row_order), -1) + 1 AS next_order FROM decks WHERE owner_id = %s", (owner_id,))
                 next_order = cur.fetchone()['next_order']
@@ -343,6 +360,30 @@ def update_deck():
         original_deck = data.get('original_deck', '')
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                cur.execute("SELECT id FROM players WHERE name = %s FOR UPDATE", (player_name,))
+                player = cur.fetchone()
+                if player is None:
+                    return jsonify({"error": "Player not found"}), 404
+
+                cur.execute("""
+                    SELECT id FROM decks
+                    WHERE owner_id = %s AND deck_name = %s
+                    LIMIT 1
+                """, (player['id'], original_deck))
+                current_deck = cur.fetchone()
+                if current_deck is None:
+                    return jsonify({"error": "Deck not found"}), 404
+
+                cur.execute("""
+                    SELECT 1 FROM decks
+                    WHERE owner_id = %s
+                      AND id <> %s
+                      AND lower(btrim(deck_name)) = lower(btrim(%s))
+                    LIMIT 1
+                """, (player['id'], current_deck['id'], data.get('deck', '')))
+                if cur.fetchone():
+                    return jsonify({"error": "A deck with this name already exists for this player. Archived decks keep their names reserved to protect game history."}), 409
+
                 cur.execute("""
                     UPDATE decks SET
                         deck_name = %s,
@@ -351,8 +392,7 @@ def update_deck():
                         color_id = %s,
                         exclude = %s,
                         archidekt = %s
-                    WHERE owner_id = (SELECT id FROM players WHERE name = %s)
-                      AND deck_name = %s
+                    WHERE id = %s
                 """, (
                     data.get('deck', ''),
                     data.get('art_url', ''),
@@ -360,8 +400,7 @@ def update_deck():
                     data.get('colors', ''),
                     bool(data.get('exclude')),
                     data.get('archidekt', ''),
-                    player_name,
-                    original_deck,
+                    current_deck['id'],
                 ))
                 if cur.rowcount == 0:
                     return jsonify({"error": "Deck not found"}), 404
@@ -372,28 +411,28 @@ def update_deck():
         return server_error()
 
 @app.route('/players/delete_deck', methods=['POST'])
-def delete_deck():
+@app.route('/players/archive_deck', methods=['POST'])
+def archive_deck():
     try:
         data = request.json
         player_name = data.get('player_name', '')
         deck_name = data.get('deck', '')
+        archived = data.get('archived', True)
+        if not isinstance(archived, bool):
+            return jsonify({"error": "archived must be a boolean"}), 400
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                try:
-                    cur.execute("""
-                        DELETE FROM decks
-                        WHERE owner_id = (SELECT id FROM players WHERE name = %s)
-                          AND deck_name = %s
-                    """, (player_name, deck_name))
-                except RestrictViolation:
-                    conn.rollback()
-                    return jsonify({"error": "This deck has logged games and can't be deleted. Use Exclude instead to retire it."}), 409
+                cur.execute("""
+                    UPDATE decks SET archived = %s
+                    WHERE owner_id = (SELECT id FROM players WHERE name = %s)
+                      AND deck_name = %s
+                """, (archived, player_name, deck_name))
                 if cur.rowcount == 0:
                     return jsonify({"error": "Deck not found"}), 404
             conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
-        print(f"Error deleting deck: {e}")
+        print(f"Error archiving deck: {e}")
         return server_error()
 
 @app.route('/players/update_pfp', methods=['POST'])

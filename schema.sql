@@ -11,12 +11,13 @@ CREATE TABLE players (
 
 CREATE TABLE decks (
     id SERIAL PRIMARY KEY,
-    owner_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    owner_id INT NOT NULL CONSTRAINT decks_owner_id_fkey REFERENCES players(id) ON DELETE RESTRICT,
     deck_name TEXT NOT NULL,
     art_url TEXT NOT NULL DEFAULT '',
     art_url_partner TEXT NOT NULL DEFAULT '',
     color_id TEXT NOT NULL DEFAULT '',
     exclude BOOLEAN NOT NULL DEFAULT FALSE,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
     archidekt TEXT NOT NULL DEFAULT '',
     row_order INT NOT NULL
 );
@@ -38,10 +39,9 @@ CREATE TABLE game_performance (
     game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
     -- NULL means "not a tracked deck" (an ad hoc "Other"/proxy deck typed in at
     -- game time, or a legacy row that couldn't be matched during backfill).
-    -- ON DELETE RESTRICT: a deck that has ever been played can't be hard-deleted
-    -- (see /players/delete_deck) - it must be excluded instead, so deck_id stays
-    -- a stable reference and a deleted-then-recreated same-named deck can never
-    -- merge with old history.
+    -- ON DELETE RESTRICT keeps this stable reference attached to its deck.
+    -- Decks are archived, not hard-deleted, so later game history can't merge
+    -- with a recreated same-named deck.
     deck_id INT REFERENCES decks(id) ON DELETE RESTRICT,
     player TEXT NOT NULL,
     deck TEXT NOT NULL,

@@ -65,7 +65,7 @@ menu. See "The stats pages" below.
   `favicon-48.png`, all generated from the Sylvan Library art. (`favicon.svg` was
   Vite's default logo and is gone.)
 - `public/sw.js` (served from domain root) — service worker. Currently at
-  `CACHE_NAME = 'mtg-tracker-v7'`.
+  `CACHE_NAME = 'mtg-tracker-v9'`.
 - `public/stats/index.html`, `public/stats/player.html`, `public/stats/deck.html` —
   the stats pages, living inside this same repo/deployment (moved here
   specifically so the Tracker's service worker can cache them and so linking to
@@ -289,7 +289,7 @@ not by re-deriving the transform math a fourth time.
 - `players(id, name, pfp_url, sort_order)` — `sort_order` exists purely to
   reproduce the old "tab order" behavior on `GET /players`.
 - `decks(id, owner_id -> players.id, deck_name, art_url, art_url_partner,
-  color_id, exclude, archidekt, row_order)`. `archidekt`/`art_url_partner`
+  color_id, exclude, archived, archidekt, row_order)`. `archidekt`/`art_url_partner`
   keep the same semantics as the old Sheets columns (`art_url_partner` is a
   real URL or the literal `'partner'` sentinel). The old checkbox-write gotcha
   and blank-row-hunting logic (`_find_next_blank_row`) no longer exist — real
@@ -313,15 +313,16 @@ not by re-deriving the transform math a fourth time.
     `NULL` for ad hoc "Other"/proxy decks typed in at game time, which never
     had a `decks` row to begin with). It's resolved at `/submit` time by
     matching `(deck_owner, deck)` against `decks(owner_id, deck_name)`
-    case/whitespace-insensitively. Its `ON DELETE RESTRICT` (not `SET NULL` or
-    `CASCADE`) means **a deck that's ever been played can no longer be
-    hard-deleted** — `/players/delete_deck` (and `/players/delete_player`,
-    transitively) now returns a `409` with a message pointing at the existing
-    `Exclude` checkbox instead. This is what actually fixes the original
-    failure mode that prompted adding `deck_id`: delete a played "Deck A",
-    later create a new "Deck A" — under the old text-only identity, their
-    histories would silently merge; now the old deck can't be deleted at all
-    once played, so the collision can't happen.
+    case/whitespace-insensitively. Deck rows are retained permanently:
+    `archived` is reversible and removes a deck from setup without touching
+    its `game_performance` links; `exclude` remains the distinct "Active
+    hidden" status. `/players/archive_deck` archives/restores, and the legacy
+    `/players/delete_deck` route also archives instead of deleting. Player
+    deletion is blocked while any deck records remain, and the owner FK is
+    `ON DELETE RESTRICT`.
+  - Deck names remain reserved for an owner after archiving. Reusing the name
+    could merge the old and new deck's stats because those are grouped by
+    display name; keeping names reserved preserves distinct game histories.
   - `lands_infinite`/`rocks_infinite`/`dorks_infinite` (BOOLEAN, default
     FALSE): a deck "went infinite" on that count. The frontend's end-of-game
     picker has an ∞ toggle that sends the string `'infinite'` instead of a
@@ -347,10 +348,11 @@ not by re-deriving the transform math a fourth time.
   endpoint** — `/submit-demo` and the `STATS_ID_DEMO` sheet constant were both
   fully removed this conversation (see "The `?key=toski` removal" below).
 - `POST /players/add_player`, `/delete_player`, `/add_deck`, `/update_deck`,
-  `/delete_deck`, `/update_pfp` — same routes/request shapes as before the
+  `/archive_deck`, `/delete_deck`, `/update_pfp` — same routes/request shapes as before the
   Postgres migration; internals rewritten, external contract unchanged
   (confirmed byte-for-byte against the live Sheets-backed backend before
-  cutover, so `src/App.jsx` needed zero changes). Deck/pfp writes now reject a
+  cutover). `/delete_deck` is retained as a compatibility alias that archives,
+  never deletes. Deck/pfp writes now reject a
   non-link art URL with a `400` (a deck once had its *name* saved as its art URL;
   the deck editor also validates inline and previews the art).
 - `GET /health` — `{"status":"ok"}`, never touches the DB. Keep-warm target.
@@ -753,10 +755,11 @@ The group shouldn't need to ask what a stat means. So on all three pages:
 - The overview has a collapsed "How these numbers work" `<details>` panel: six
   one-line definitions (win rate/25%, wins/games, guests, retired, decisive,
   infinite).
-- "Active" = still in the owner's deck list and not Exclude; everything else is
-  called **retired** (not "inactive"). Deck ranks are numbered among active decks
-  only; retired tiles show a "Retired" pill (ranking across hidden decks made the
-  visible numbers skip).
+- "Active" = still in the owner's deck list, not Exclude, and not archived.
+  Exclude is presented as **Active hidden**; archived decks are separately
+  marked **Archived**. Both stay in historical stats but are excluded from
+  active counts and owned-deck devotion. Deck ranks are numbered among active
+  decks only.
 - `stats-shared.js` is loaded as `stats-shared.js?v=N`, matching the precache
   entry in `sw.js`. **Bump both together** whenever the pages start using
   something new from it - otherwise a fresh page can run against an older cached
@@ -838,7 +841,7 @@ otherwise have silently disagreed with what it was supposed to be guarding.
 
 ## Service worker (`sw.js`)
 
-Currently `CACHE_NAME = 'mtg-tracker-v7'` (v7: new icons precached; v6 was the infinite-mana stats change; earlier bumped from `v4` when
+Currently `CACHE_NAME = 'mtg-tracker-v9'` (v9: archived-deck support; v8 preceded this; v7: new icons precached; v6 was the infinite-mana stats change; earlier bumped from `v4` when
 `stats-shared.js` was added to the precache list during the Postgres
 migration — a version bump is what actually triggers the install/activate
 cycle that deletes stale cache keys; just changing cached *content* without
@@ -956,6 +959,11 @@ none of these deliberate decisions gets accidentally re-litigated or reverted.
   or had its sharing/service-account access revoked — it's kept as a
   read-only historical fallback until the Postgres-backed app has some real
   usage behind it. Revisit this later, not as an accident of cleanup.
+- **Deck archiving migration**: before deploying backend code that reads
+  `decks.archived`, run `scripts/migrations/002_archive_decks.sql` against the
+  unpooled Neon connection. It adds the archive flag and changes player
+  deletion's owner FK to `RESTRICT`; the API also refuses deleting players
+  who still own decks.
 
 ## House rules for working on this codebase
 

@@ -350,14 +350,14 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
 
 <!-- Versioned so a page never runs against an older cached copy of the shared script
      (the service worker serves scripts stale-while-revalidate). Bump with sw.js CACHE_NAME. -->
-<script src="stats-shared.js?v=8"></script>
+<script src="stats-shared.js?v=9"></script>
 <script>
 async function init(){ await initStatsPage(renderAsync); }
 
 async function renderAsync(data){
   const {
     games, perf, perfForDecks, gamesById, totalGames, players, decks,
-    pfpMap, activeDecksByOwner, ownedDecksByOwner,
+    pfpMap, activeDecksByOwner, archivedDecksByOwner, ownedDecksByOwner,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
   } = data;
@@ -424,7 +424,8 @@ async function renderAsync(data){
       winRate: gamesPlayed ? wins/gamesPlayed : 0,
       avgWinTurn: mean(winTurns),
       colorId, artUrl,
-      isActive: isDeckActive(activeDecksByOwner, owner, name) && owner.trim().toLowerCase() !== 'precons'
+      isActive: isDeckActive(activeDecksByOwner, owner, name) && owner.trim().toLowerCase() !== 'precons',
+      isArchived: isDeckArchived(archivedDecksByOwner, owner, name)
     };
   }).filter(d => d.gamesPlayed > 0)
     // Tie-break priority: win % → wins → avg win turn (fewer is better) → name.
@@ -432,7 +433,7 @@ async function renderAsync(data){
   const inactiveDeckCount = deckStats.filter(d => !d.isActive).length;
   const activeDeckCount = deckStats.length - inactiveDeckCount;
   // Ranks are numbered among ACTIVE decks only - ranking across hidden retired decks
-  // too made the visible list skip numbers. Retired decks show a "Retired" pill instead.
+  // too made the visible list skip numbers. Archived/retired decks remain available.
   const activeDeckStats = deckStats.filter(d => d.isActive);
   const activeRankList = rankItems(activeDeckStats, d => [Math.round(d.winRate*10000), d.wins, d.avgWinTurn==null?'null':Math.round(d.avgWinTurn*100)].join('_'));
   const activeRankByName = Object.fromEntries(activeDeckStats.map((d, i) => [d.name, activeRankList[i]]));
@@ -619,7 +620,7 @@ async function renderAsync(data){
           <li><b>Win rate</b> = wins ÷ games. 25% is an even share at a 4-player table.</li>
           <li><b>3/12</b> under a % = wins/games.</li>
           <li><b>Guests</b> count toward table totals, not personal stats.</li>
-          <li><b>Retired</b> decks (excluded or removed) are hidden until you show them.</li>
+          <li><b>Retired</b> decks (active hidden or archived) are hidden until you show them. Archived decks keep their game history.</li>
           <li><b>Decisive</b> = games one of the two won.</li>
           <li><b>Infinite</b> games are left out of mana averages.</li>
         </ul>
@@ -865,7 +866,7 @@ async function renderAsync(data){
           return `
           <a href="${deckUrl(d.name)}" class="deck-tile${hasArt ? '' : ' no-art'}" style="${bgStyle}text-decoration:none;"${d.isActive ? '' : ' data-inactive="1"'}>
             <div class="tile-top">
-              ${d.isActive ? `<span class="tile-pos">#${activeRankByName[d.name]}</span>` : `<span class="retired-pill">Retired</span>`}
+              ${d.isActive ? `<span class="tile-pos">#${activeRankByName[d.name]}</span>` : `<span class="retired-pill">${d.isArchived ? 'Archived' : 'Retired'}</span>`}
               <span class="tile-pct">${pct(d.winRate)}</span>
             </div>
             <div class="tile-bottom">

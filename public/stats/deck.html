@@ -383,7 +383,7 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
 
 <!-- Versioned so a page never runs against an older cached copy of the shared script
      (the service worker serves scripts stale-while-revalidate). Bump with sw.js CACHE_NAME. -->
-<script src="stats-shared.js?v=8"></script>
+<script src="stats-shared.js?v=9"></script>
 <script>
 
 async function init(){ await initStatsPage(renderAsync); }
@@ -391,7 +391,7 @@ async function init(){ await initStatsPage(renderAsync); }
 async function renderAsync(data){
   const {
     games, perf, perfForDecks, gamesById, totalGames, players, decks,
-    pfpMap, activeDecksByOwner,
+    pfpMap, activeDecksByOwner, archivedDecksByOwner,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
   } = data;
@@ -432,7 +432,8 @@ async function renderAsync(data){
       winRate: gamesPlayed ? wins/gamesPlayed : 0,
       avgWinTurn: mean(winTurns),
       colorId, artUrl,
-      isActive: isDeckActive(activeDecksByOwner, owner, name)
+      isActive: isDeckActive(activeDecksByOwner, owner, name),
+      isArchived: isDeckArchived(archivedDecksByOwner, owner, name)
     };
   }).filter(d => d.gamesPlayed > 0)
     // Tie-break priority: win % → wins → avg win turn (fewer is better) → name.
@@ -441,6 +442,7 @@ async function renderAsync(data){
   const deckColorById = Object.fromEntries(deckStats.map(d => [d.name, d.colorId]));
   const deckArtById = Object.fromEntries(deckStats.map(d => [d.name, d.artUrl]));
   const deckActiveById = Object.fromEntries(deckStats.map(d => [d.name, d.isActive]));
+  const deckArchivedById = Object.fromEntries(deckStats.map(d => [d.name, d.isArchived]));
   // pfpMap already fetched in the normalize block above (used for pilot avatars/links elsewhere if needed).
 
   // ---------- resolve which deck this page is for ----------
@@ -475,7 +477,7 @@ async function renderAsync(data){
               return `
               <a href="${deckUrl(d.name)}" class="deck-tile${hasArt ? '' : ' no-art'}" style="${bgStyle}text-decoration:none;"${d.isActive ? '' : ' data-inactive="1"'}>
                 <div class="tile-top">
-                  ${d.isActive ? `<span class="tile-pos">#${rankByName[d.name]}</span>` : `<span class="retired-pill">Retired</span>`}
+                  ${d.isActive ? `<span class="tile-pos">#${rankByName[d.name]}</span>` : `<span class="retired-pill">${d.isArchived ? 'Archived' : 'Retired'}</span>`}
                   <span class="tile-pct">${pct(d.winRate)}</span>
                 </div>
                 <div class="tile-bottom">
@@ -597,7 +599,7 @@ async function renderAsync(data){
         <div class="profile-avatar deck-avatar" style="${avatarStyle}">${hasArt ? '' : `<div class="n">${targetName.trim().charAt(0).toUpperCase()}</div>`}</div>
         <div class="profile-title">
           <h1>${pipsHTML(colorId)} ${targetName}</h1>
-          <div class="sub">Owned by ${owner} · played in ${gamesPlayed} game${gamesPlayed===1?'':'s'}${deckActiveById[targetName] === false ? ' · retired' : ''} · <a href="index.html">← Back to overview</a></div>
+          <div class="sub">Owned by ${owner} · played in ${gamesPlayed} game${gamesPlayed===1?'':'s'}${deckArchivedById[targetName] ? ' · archived' : deckActiveById[targetName] === false ? ' · retired' : ''} · <a href="index.html">← Back to overview</a></div>
         </div>
         <div class="profile-record">
           <div class="pct">${pct(winRate)}</div>

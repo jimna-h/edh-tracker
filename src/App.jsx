@@ -305,7 +305,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
   const players = playerOptions;
 
   const playerEntry = playerDataMap.find(p => p.player_name === seat.name) || { decks: [], pfp: '' };
-  const rawDecks = (playerEntry.decks || []).filter(d => !d.exclude);
+  const rawDecks = (playerEntry.decks || []).filter(d => !d.exclude && !d.archived);
   const decks = rawDecks;
   const mulliganOptions = ["London", "Vegas", "3 Piles of 4", "10 Put Back 3", "Other"];
 
@@ -514,7 +514,7 @@ const SetupQuadrantInner = ({ id, seat, isFlipped, axisSwapped = false, playerDa
           <SelectionCarousel axisSwapped={axisSwapped}
             title={`${seat.deckOwner}'s Decks`} 
             isFlipped={isFlipped} 
-            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks || []).filter(d => !d.exclude)}
+            options={(playerDataMap.find(p => p.player_name === seat.deckOwner)?.decks || []).filter(d => !d.exclude && !d.archived)}
             twoRows
             onBack={handleBack} 
             onSelect={(val) => { 
@@ -1512,17 +1512,17 @@ export default function App() {
         next = prev.filter(p => p.player_name !== body.player_name);
       } else if (path === '/players/add_deck') {
         next = prev.map(p => p.player_name === body.player_name
-          ? { ...p, decks: [...(p.decks || []), { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }] }
+          ? { ...p, decks: [...(p.decks || []), { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archived: false, archidekt: body.archidekt || '' }] }
           : p);
       } else if (path === '/players/update_deck') {
         next = prev.map(p => p.player_name === body.player_name
           ? { ...p, decks: (p.decks || []).map(d => d.deck === body.original_deck
-              ? { deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archidekt: body.archidekt || '' }
+              ? { ...d, deck: body.deck, artUrl: body.art_url, artUrlPartner: body.art_url_partner, colors: body.colors, exclude: !!body.exclude, archived: !!d.archived, archidekt: body.archidekt || '' }
               : d) }
           : p);
-      } else if (path === '/players/delete_deck') {
+      } else if (path === '/players/archive_deck' || path === '/players/delete_deck') {
         next = prev.map(p => p.player_name === body.player_name
-          ? { ...p, decks: (p.decks || []).filter(d => d.deck !== body.deck) }
+          ? { ...p, decks: (p.decks || []).map(d => d.deck === body.deck ? { ...d, archived: body.archived !== false } : d) }
           : p);
       } else if (path === '/players/update_pfp') {
         next = prev.map(p => p.player_name === body.player_name ? { ...p, pfp: body.art_url } : p);
@@ -2364,8 +2364,8 @@ export default function App() {
 
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Exclude from Setup</span>
-                            <span className="text-[9px] font-semibold text-white/25">Hides this deck from the game setup screen</span>
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Active hidden</span>
+                            <span className="text-[9px] font-semibold text-white/25">Hides the deck from setup without archiving it</span>
                           </div>
                           <button
                             onClick={() => setEditingDeck(prev => ({ ...prev, exclude: !prev.exclude }))}
@@ -2542,18 +2542,13 @@ export default function App() {
                                 position: 'absolute', inset: 0,
                                 backgroundImage: d.artUrl ? `url(${d.artUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
                                 backgroundColor: d.artUrl ? 'transparent' : 'rgba(255,255,255,0.06)',
-                                filter: d.exclude ? 'grayscale(1) brightness(0.45)' : 'none',
+                                filter: d.exclude || d.archived ? 'grayscale(1) brightness(0.45)' : 'none',
                               }} />
                               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)' }} />
-                              {d.exclude && (
-                                <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-                                    <line x1="1" y1="1" x2="23" y2="23" />
-                                  </svg>
-                                </div>
-                              )}
-                              <span style={{ position: 'absolute', top: 8, left: 10, right: d.exclude ? 34 : 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <span style={{ position: 'absolute', top: 8, left: 10, right: 10, color: '#fff', fontSize: 12, fontWeight: 900, textShadow: '0 1px 4px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deck}</span>
+                              <span style={{ position: 'absolute', top: 28, left: 10, color: d.archived ? '#fbbf24' : d.exclude ? '#fca5a5' : '#86efac', backgroundColor: 'rgba(0,0,0,0.62)', borderRadius: 999, padding: '3px 7px', fontSize: 8, fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                {d.archived ? 'Archived' : d.exclude ? 'Active hidden' : 'Active'}
+                              </span>
                               <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', gap: 6 }}>
                                 <button
                                   disabled={editorBusy}
@@ -2566,6 +2561,7 @@ export default function App() {
                                       artUrlPartner: (d.artUrlPartner && d.artUrlPartner !== 'partner') ? d.artUrlPartner : '',
                                       colors: (d.colors || '').split('').filter(Boolean),
                                       exclude: !!d.exclude,
+                                      archived: !!d.archived,
                                       archidekt: d.archidekt || '',
                                     });
                                   }}
@@ -2575,11 +2571,12 @@ export default function App() {
                                   disabled={editorBusy}
                                   onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (!(await dialogs.confirm({ title: 'Delete Deck?', message: `"${d.deck}" will be removed. Decks with logged games can't be deleted - use Exclude to retire them instead.`, confirmLabel: 'Delete', destructive: true }))) return;
-                                    editorCall('/players/delete_deck', { player_name: detailPlayer.player_name, deck: d.deck });
+                                    const nextArchived = !d.archived;
+                                    if (nextArchived && !(await dialogs.confirm({ title: 'Archive Deck?', message: `"${d.deck}" will be removed from game setup, but its deck record and all game history will be kept. You can restore it later.`, confirmLabel: 'Archive', destructive: true }))) return;
+                                    editorCall('/players/archive_deck', { player_name: detailPlayer.player_name, deck: d.deck, archived: nextArchived });
                                   }}
-                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fca5a5', padding: '5px 0', borderRadius: 999, backgroundColor: 'rgba(220,38,38,0.35)', backdropFilter: 'blur(4px)' }}
-                                >Del</button>
+                                  style={{ flex: 1, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: d.archived ? '#bae6fd' : '#fcd34d', padding: '5px 0', borderRadius: 999, backgroundColor: d.archived ? 'rgba(14,165,233,0.28)' : 'rgba(217,119,6,0.3)', backdropFilter: 'blur(4px)' }}
+                                >{d.archived ? 'Restore' : 'Archive'}</button>
                               </div>
                             </div>
                           ))}
@@ -2593,14 +2590,20 @@ export default function App() {
 
                         <button
                           disabled={editorBusy}
+                          disabled={editorBusy || (detailPlayer.decks || []).length > 0}
                           onClick={async () => {
-                            if (!(await dialogs.confirm({ title: 'Delete Player?', message: `${detailPlayer.player_name} and all their decks will be removed.`, confirmLabel: 'Delete', destructive: true }))) return;
+                            if (!(await dialogs.confirm({ title: 'Delete Player?', message: `${detailPlayer.player_name} will be removed. Players with deck records cannot be deleted because deck history is retained.`, confirmLabel: 'Delete', destructive: true }))) return;
                             editorCall('/players/delete_player', { player_name: detailPlayer.player_name });
                             setExpandedPlayer(null);
                           }}
                           className="text-[13px] font-black uppercase px-6 py-3 rounded-full self-center mt-3 mb-2"
-                          style={BTN_DANGER_SOFT}
-                        >Delete Player</button>
+                          style={{ ...BTN_DANGER_SOFT, opacity: (detailPlayer.decks || []).length ? 0.45 : 1 }}
+                        >{(detailPlayer.decks || []).length ? 'Player Has Decks' : 'Delete Player'}</button>
+                        {(detailPlayer.decks || []).length > 0 && (
+                          <span className="text-[9px] font-semibold text-white/30 text-center mb-2">
+                            Deck records are retained permanently, so players with decks cannot be deleted.
+                          </span>
+                        )}
                       </>
                     )}
 

@@ -380,7 +380,7 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
 
 <!-- Versioned so a page never runs against an older cached copy of the shared script
      (the service worker serves scripts stale-while-revalidate). Bump with sw.js CACHE_NAME. -->
-<script src="stats-shared.js?v=8"></script>
+<script src="stats-shared.js?v=9"></script>
 <script>
 
 // Re-sorts a rowlist by swapping which precomputed order/rank each row uses
@@ -405,7 +405,7 @@ async function init(){ await initStatsPage(renderAsync); }
 async function renderAsync(data){
   const {
     games, perf, perfForDecks, gamesById, totalGames, players, decks,
-    pfpMap, activeDecksByOwner, ownedDecksByOwner,
+    pfpMap, activeDecksByOwner, archivedDecksByOwner, ownedDecksByOwner,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
   } = data;
@@ -570,9 +570,10 @@ async function renderAsync(data){
       const owner = dRows.find(r=>r.Owner)?.Owner || targetName;
       const borrowed = normKey(owner) !== normKey(targetName);
       const inactive = !isDeckActive(activeDecksByOwner, owner, dn);
+      const archived = isDeckArchived(archivedDecksByOwner, owner, dn);
       return {
         name:dn, games:dRows.length, wins:w, winRate: dRows.length ? w/dRows.length : 0,
-        artUrl, owner, borrowed,
+        artUrl, owner, borrowed, archived,
         hide: borrowed || inactive
       };
     }).sort((a,b)=> b.games - a.games);
@@ -799,7 +800,7 @@ async function renderAsync(data){
                 ${d.artUrl ? `<img class="deck-thumb" src="${escUrl(d.artUrl)}" alt="" style="width:42px;height:42px;min-width:42px;max-width:42px;object-fit:cover;border-radius:8px;">` : `<div class="deck-thumb" style="width:42px;height:42px;min-width:42px;"></div>`}
                 <div class="main">
                   <div class="name">${pipsHTML(deckColorById[d.name])} &nbsp;${d.name}</div>
-                  <div class="meta">${d.games} game${d.games===1?'':'s'}${d.borrowed ? ' · not owned' : ''}</div>
+                  <div class="meta">${d.games} game${d.games===1?'':'s'}${d.archived ? ' · archived' : d.hide ? ' · retired' : ''}${d.borrowed ? ' · not owned' : ''}</div>
                 </div>
                 <div class="stat"><div class="big">${pct(d.winRate)}</div><div class="small">${d.wins}W</div></div>
                 <div class="bar-track"><div class="bar-fill" style="width:${d.winRate*100}%"></div></div>

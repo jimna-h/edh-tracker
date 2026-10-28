@@ -53,7 +53,7 @@ async function fetchStatsJSON(){
 // directly from the GET /players response (the same one the live Tracker app
 // itself uses) - this replaces fetching each player's own Sheet tab
 // individually. A deck instance is "active" if its owner's decks list
-// doesn't have it excluded; "owned" mirrors that same not-excluded set. The
+// doesn't have it excluded or archived; "owned" mirrors that same active set. The
 // Players table (via GET /players) is the authoritative deck registry, so
 // its Color_ID should win over whatever Player_Performance's own Color_ID
 // has for that deck, and its deck_name is the canonical display name for a
@@ -64,6 +64,7 @@ async function fetchStatsJSON(){
 function buildPlayerDeckMaps(playersData){
   const map = {};
   const activeDecksByOwner = {};
+  const archivedDecksByOwner = {};
   const ownedDecksByOwner = {};
   const deckColorFromSheet = {};
   const deckNameById = {};
@@ -71,12 +72,16 @@ function buildPlayerDeckMaps(playersData){
     const name = p.player_name;
     if (isLink(p.pfp)) map[name] = p.pfp.trim();
     const activeSet = new Set();
+    const archivedSet = new Set();
     const ownedList = [];
     (p.decks || []).forEach(d => {
       const dn = d.deck;
       if (!dn) return;
       const colorId = d.colors || '';
-      if (!d.exclude){
+      if (d.archived){
+        archivedSet.add(normKey(dn));
+      }
+      if (!d.exclude && !d.archived){
         activeSet.add(normKey(dn));
         ownedList.push({ name: dn.trim(), colorId: colorId.trim() });
       }
@@ -84,19 +89,24 @@ function buildPlayerDeckMaps(playersData){
       if (d.id != null) deckNameById[d.id] = dn.trim();
     });
     activeDecksByOwner[name] = activeSet;
+    archivedDecksByOwner[name] = archivedSet;
     ownedDecksByOwner[name] = ownedList;
   });
-  return { map, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById };
+  return { map, activeDecksByOwner, archivedDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById };
 }
 
 // A deck instance is "active" if its owner's deck list includes it
-// (un-excluded). If we have no data at all for that owner (no matching
+// (un-excluded and not archived). If we have no data at all for that owner (no matching
 // player), fail open and treat it as active rather than silently hiding
 // decks because of a data hiccup.
 function isDeckActive(activeDecksByOwner, owner, deckName){
   const set = activeDecksByOwner[owner];
   if (!set) return true;
   return set.has(normKey(deckName));
+}
+
+function isDeckArchived(archivedDecksByOwner, owner, deckName){
+  return !!archivedDecksByOwner[owner]?.has(normKey(deckName));
 }
 
 // Toggles a "show inactive" class on the given container and updates the
@@ -202,7 +212,7 @@ function normalizeStatsData(statsData, playersData){
   // Needed before the per-row loop below so the DeckId -> canonical-name and
   // Color_ID overrides can happen in one pass over every row (guest-piloted
   // rows included), not just the guest-filtered subset.
-  const { map: pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById } = buildPlayerDeckMaps(playersData);
+  const { map: pfpMap, activeDecksByOwner, archivedDecksByOwner, ownedDecksByOwner, deckColorFromSheet, deckNameById } = buildPlayerDeckMaps(playersData);
 
   perf.forEach(p => {
     p.Opening_Lands = parseFloat(p.Opening_Lands) || null;
@@ -280,7 +290,7 @@ function normalizeStatsData(statsData, playersData){
 
   return {
     games, perf, perfForDecks, gamesById, totalGames, players, decks,
-    pfpMap, activeDecksByOwner, ownedDecksByOwner, deckColorFromSheet,
+    pfpMap, activeDecksByOwner, archivedDecksByOwner, ownedDecksByOwner, deckColorFromSheet,
     avgTurn, longest, shortest, dateSorted, dateSortedNonGuestWin, mostRecent,
     gamesNonGuestWin,
   };
