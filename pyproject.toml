@@ -1,0 +1,22 @@
+[project]
+name = "edh-tracker"
+version = "0.1.0"
+description = "Flask backend for the EDH Tracker"
+requires-python = ">=3.12"
+dependencies = [
+    "flask~=3.1",
+    "flask-cors~=6.0",
+    "gunicorn~=26.2; sys_platform != 'win32'",
+    "psycopg[binary]~=3.3",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+backfill = [
+    "google-auth",
+    "gspread",
+    "pytz",
+]
+
+[tool.uv]
+package = false

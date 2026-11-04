@@ -17,6 +17,12 @@ const STATS_API_BASE = 'https://edh-backend.onrender.com';
 const MANA_COLORS = { W:'#F4EFDD', U:'#3E7FC1', B:'#4A4750', R:'#B8402F', G:'#3C7A4C', C:'#9A958A' };
 const COLOR_NAMES = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', C:'Colorless' };
 
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+}
+
 // Normalize a name for tolerant/case-insensitive matching (e.g. matching a
 // deck name against its owner's active-deck set). Lowercase, strip everything
 // but letters+digits.
@@ -30,9 +36,6 @@ function pctN(rate, wins, n, unit){
   return `${rate == null ? '—' : pct(rate)}<span class="hbar-n">${sub}</span>`;
 }
 // A one-line "what this is based on" note under a section description.
-function basisHTML(text){ return `<div class="basis">${text}</div>`; }
-const EVEN_SHARE = 'With 4 players at the table, an even share of wins is 25%.';
-
 function isLink(v){ return typeof v === 'string' && /^https?:\/\/\S+$/i.test(v.trim()); }
 
 async function fetchStatsJSON(){
@@ -124,6 +127,12 @@ function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : nu
 function fmt1(n){ return n === null || n === undefined || isNaN(n) ? '—' : n.toFixed(1); }
 function pct(n){ return n === null || isNaN(n) ? '—' : Math.round(n*100) + '%'; }
 
+function turnCompareAsc(a, b){
+  const av = (a === null || a === undefined) ? Infinity : a;
+  const bv = (b === null || b === undefined) ? Infinity : b;
+  return av - bv;
+}
+
 // Picks the ArtURL from the most recently-played game among these rows, not
 // just the first one found - a deck's art can change (new crop chosen), and
 // old logged games keep whatever art was current when they were submitted.
@@ -168,12 +177,6 @@ function rankItems(items, keyFn){
 
 // Ascending comparator for "average win turn" tie-breaking where fewer turns
 // is better. null (nobody's won yet) sorts last, as if it were +Infinity.
-function turnCompareAsc(a, b){
-  const av = (a === null || a === undefined) ? Infinity : a;
-  const bv = (b === null || b === undefined) ? Infinity : b;
-  return av - bv;
-}
-
 // Links to the per-entity profile pages.
 function playerUrl(name){ return `player.html?name=${encodeURIComponent(name)}`; }
 function deckUrl(name){ return `deck.html?name=${encodeURIComponent(name)}`; }
@@ -300,7 +303,7 @@ function normalizeStatsData(statsData, playersData){
 // can render something instantly (stale-while-revalidate) instead of sitting
 // on the spinner every time - the backend is Render free tier and can take
 // 30-60s to cold-start. This intentionally changes the previously-documented
-// "stats data can't be offline-first" behavior in CLAUDE.md: with a cache
+// "stats data can't be offline-first" behavior in CONTEXT.md: with a cache
 // present, an offline/failed refresh now re-shows the last good data instead
 // of the error screen.
 const STATS_CACHE_KEY = 'edh_stats_cache_v1';

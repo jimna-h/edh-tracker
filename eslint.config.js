@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '.venv']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -28,7 +28,7 @@ export default defineConfig([
       // These four come from eslint-plugin-react-hooks v7's React Compiler checks. This app
       // doesn't use the React Compiler, and they flag deliberate patterns - most notably
       // `someRef.current = latestFn` on every render, which is how deferred callbacks avoid
-      // stale closures (see CLAUDE.md, house rule 3). rules-of-hooks and exhaustive-deps
+      // stale closures (see CONTEXT.md, house rule 3). rules-of-hooks and exhaustive-deps
       // stay on.
       'react-hooks/refs': 'off',
       'react-hooks/purity': 'off',

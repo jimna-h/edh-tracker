@@ -383,7 +383,7 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
 
 <!-- Versioned so a page never runs against an older cached copy of the shared script
      (the service worker serves scripts stale-while-revalidate). Bump with sw.js CACHE_NAME. -->
-<script src="stats-shared.js?v=9"></script>
+<script src="stats-shared.js?v=10"></script>
 <script>
 
 async function init(){ await initStatsPage(renderAsync); }
@@ -458,7 +458,7 @@ async function renderAsync(data){
       <header class="hero" style="padding:56px 24px 24px;">
         <div class="hero-inner">
           <div class="eyebrow"><span class="line"></span>Deck directory</div>
-          <h1 style="font-size:clamp(28px,4.4vw,44px);">${nameParam ? `No deck named "${nameParam}"` : 'Choose a deck'}</h1>
+          <h1 style="font-size:clamp(28px,4.4vw,44px);">${nameParam ? `No deck named "${escapeHTML(nameParam)}"` : 'Choose a deck'}</h1>
           <p class="sub">${nameParam ? "That name doesn't match anything in the sheet. Pick from the list below." : 'Every active deck that has been played, ranked by win rate - tap one for its full profile.'} <a href="index.html" style="color:var(--gold-bright);">← Back to overview</a></p>
         </div>
       </header>
@@ -481,8 +481,8 @@ async function renderAsync(data){
                   <span class="tile-pct">${pct(d.winRate)}</span>
                 </div>
                 <div class="tile-bottom">
-                  <div class="tile-name">${pipsHTML(d.colorId)} &nbsp;${d.name}</div>
-                  <div class="tile-meta">${d.owner} · ${d.wins}/${d.gamesPlayed} game${d.gamesPlayed===1?'':'s'} won</div>
+                  <div class="tile-name">${pipsHTML(d.colorId)} &nbsp;${escapeHTML(d.name)}</div>
+                  <div class="tile-meta">${escapeHTML(d.owner)} · ${d.wins}/${d.gamesPlayed} game${d.gamesPlayed===1?'':'s'} won</div>
                 </div>
               </a>`;
             }).join(''); })()}
@@ -596,10 +596,10 @@ async function renderAsync(data){
 
     bodyHtml = `
       <div class="profile-header">
-        <div class="profile-avatar deck-avatar" style="${avatarStyle}">${hasArt ? '' : `<div class="n">${targetName.trim().charAt(0).toUpperCase()}</div>`}</div>
+        <div class="profile-avatar deck-avatar" style="${avatarStyle}">${hasArt ? '' : `<div class="n">${escapeHTML(targetName.trim().charAt(0).toUpperCase())}</div>`}</div>
         <div class="profile-title">
-          <h1>${pipsHTML(colorId)} ${targetName}</h1>
-          <div class="sub">Owned by ${owner} · played in ${gamesPlayed} game${gamesPlayed===1?'':'s'}${deckArchivedById[targetName] ? ' · archived' : deckActiveById[targetName] === false ? ' · retired' : ''} · <a href="index.html">← Back to overview</a></div>
+          <h1>${pipsHTML(colorId)} ${escapeHTML(targetName)}</h1>
+          <div class="sub">Owned by ${escapeHTML(owner)} · played in ${gamesPlayed} game${gamesPlayed===1?'':'s'}${deckArchivedById[targetName] ? ' · archived' : deckActiveById[targetName] === false ? ' · retired' : ''} · <a href="index.html">← Back to overview</a></div>
         </div>
         <div class="profile-record">
           <div class="pct">${pct(winRate)}</div>
@@ -688,7 +688,7 @@ async function renderAsync(data){
               <a href="${playerUrl(p.name)}" class="r" style="text-decoration:none;color:inherit;">
                 <div class="pos">${ranks[i]}</div>
                 <div class="main">
-                  <div class="name">${p.name}</div>
+                  <div class="name">${escapeHTML(p.name)}</div>
                   <div class="meta">${p.games} game${p.games===1?'':'s'}</div>
                 </div>
                 <div class="stat"><div class="big">${pct(p.winRate)}</div><div class="small">${p.wins}/${p.games} won</div></div>
@@ -715,7 +715,7 @@ async function renderAsync(data){
                 <div class="pos">${ranks[i]}</div>
                 ${o.artUrl ? `<img class="deck-thumb" src="${escUrl(o.artUrl)}" alt="" style="width:42px;height:42px;min-width:42px;max-width:42px;object-fit:cover;border-radius:8px;">` : `<div class="deck-thumb" style="width:42px;height:42px;min-width:42px;"></div>`}
                 <div class="main">
-                  <div class="name">${pipsHTML(deckColorById[o.name])} &nbsp;${o.name}</div>
+                  <div class="name">${pipsHTML(deckColorById[o.name])} &nbsp;${escapeHTML(o.name)}</div>
                   <div class="meta">${o.games} shared game${o.games===1?'':'s'} · ${decisive} decisive</div>
                 </div>
                 <div class="stat"><div class="big">${myRate!=null ? pct(myRate) : '—'}</div><div class="small">${o.myWins}-${o.theirWins}</div></div>
@@ -736,10 +736,10 @@ async function renderAsync(data){
             ${recentGames.map(g => {
               const d = new Date(g.timestamp.replace(' ','T'));
               const dateLabel = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-              const oppLinks = g.opponents.map(o => `<a href="${deckUrl(o)}">${o}</a>`).join(', ');
+              const oppLinks = g.opponents.map(o => `<a href="${deckUrl(o)}">${escapeHTML(o)}</a>`).join(', ');
               return `<div class="row">
                 <div class="date">${dateLabel}</div>
-                <div class="info">piloted by <b>${g.pilot}</b> · seat ${g.seat ?? '—'} vs ${oppLinks || '—'}</div>
+                <div class="info">piloted by <b>${escapeHTML(g.pilot)}</b> · seat ${g.seat ?? '—'} vs ${oppLinks || '—'}</div>
                 <div class="result ${g.isWin ? 'win' : 'loss'}">${g.isWin ? 'WIN' : 'T' + (g.turnDied ?? '—')}</div>
               </div>`;
             }).join('') || '<div class="empty-note">No dated games yet.</div>'}

@@ -30,14 +30,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: pip install -r requirements.txt
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
       # Import the app and hit the DB-free endpoints - no database needed.
       - name: Smoke test
         env:
           WRITE_PASSCODE: ci
         run: |
-          python - <<'EOF'
+          uv run --locked python - <<'EOF'
           import main
           c = main.app.test_client()
           assert c.get('/health').status_code == 200

@@ -3,12 +3,13 @@ from flask_cors import CORS
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.errors import RestrictViolation
+import hmac
+import os
+import re
 import uuid
 from datetime import datetime
-import os
-import hmac
-from zoneinfo import ZoneInfo
 from urllib.parse import unquote
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 
@@ -23,8 +24,10 @@ INFINITE = 'infinite'
 def is_link_or_blank(value):
     """Art/profile URLs must be real http(s) links or blank. A deck once had its name
     saved as its art URL, which rendered as a broken relative image everywhere."""
-    v = (value or '').strip()
-    return v == '' or ((v.startswith('http://') or v.startswith('https://')) and ' ' not in v)
+    if not isinstance(value, str):
+        return False
+    v = value.strip()
+    return v == '' or re.fullmatch(r'https?://\S+', v, re.IGNORECASE) is not None
 
 
 def bad_url_response(field):
@@ -182,7 +185,7 @@ def submit_stats():
             played_at = datetime.now(LOCAL_TZ)
         # Date part from the game's own local time - the server clock is UTC, which used
         # to stamp evening games with the next day's date.
-        game_id = f"G-{played_at.strftime('%Y%m%d')}-{str(uuid.uuid4())[:4]}"
+        game_id = f"G-{played_at.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}"
 
         # Find the winner (turn_died == 'win')
         winner = next((p for p in data['players'] if p['turn_died'] == 'win'), data['players'][0])
