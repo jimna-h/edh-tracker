@@ -1,4 +1,5 @@
-# Compatible-release pins: picks up bug-fix/minor releases, never a breaking major.
+# Render install compatibility list. Keep runtime dependencies in sync with
+# pyproject.toml; use `uv sync` for local development.
 flask~=3.1
 flask-cors~=6.0
 gunicorn~=26.2

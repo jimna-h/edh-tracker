@@ -380,7 +380,7 @@ footer .refresh-btn:hover{ background:var(--panel-hover); }
 
 <!-- Versioned so a page never runs against an older cached copy of the shared script
      (the service worker serves scripts stale-while-revalidate). Bump with sw.js CACHE_NAME. -->
-<script src="stats-shared.js?v=9"></script>
+<script src="stats-shared.js?v=10"></script>
 <script>
 
 // Re-sorts a rowlist by swapping which precomputed order/rank each row uses
@@ -470,7 +470,7 @@ async function renderAsync(data){
       <header class="hero" style="padding:56px 24px 24px;">
         <div class="hero-inner">
           <div class="eyebrow"><span class="line"></span>Player directory</div>
-          <h1 style="font-size:clamp(28px,4.4vw,44px);">${nameParam ? `No player named "${nameParam}"` : 'Choose a player'}</h1>
+          <h1 style="font-size:clamp(28px,4.4vw,44px);">${nameParam ? `No player named "${escapeHTML(nameParam)}"` : 'Choose a player'}</h1>
           <p class="sub">${nameParam ? "That name doesn't match anyone in the sheet. Pick from the list below." : 'Every player who has logged a game — tap one to see their full profile.'} <a href="index.html" style="color:var(--gold-bright);">← Back to overview</a></p>
         </div>
       </header>
@@ -479,13 +479,13 @@ async function renderAsync(data){
           <div class="grid" style="grid-template-columns:1fr;">
             ${(() => { const ranks = rankItems(playerStats, p => [Math.round(p.winRate*10000), p.wins, p.avgWinTurn==null?'null':Math.round(p.avgWinTurn*100)].join('_')); return playerStats.map((p,i) => {
               const pfpUrl = pfpMap[p.name];
-              const initial = (p.name || '?').trim().charAt(0).toUpperCase();
+              const initial = escapeHTML((p.name || '?').trim().charAt(0).toUpperCase());
               const avatarStyle = pfpUrl ? `background-image:url('${escUrl(pfpUrl)}');background-size:cover;background-position:center;` : '';
               return `
               <a href="${playerUrl(p.name)}" class="panel leader-card" style="text-decoration:none;">
                 <div class="life-badge" style="${avatarStyle}">${pfpUrl ? '' : `<div class="n">${initial}</div>`}</div>
                 <div class="leader-info">
-                  <div class="leader-name"><span class="rank-tag">#${ranks[i]}</span>${p.name}</div>
+                  <div class="leader-name"><span class="rank-tag">#${ranks[i]}</span>${escapeHTML(p.name)}</div>
                   <div class="leader-pct">${pct(p.winRate)}</div>
                   <div class="leader-sub">${p.wins}/${p.gamesPlayed} games</div>
                   <div class="bar-track"><div class="bar-fill" style="width:${p.winRate*100}%"></div></div>
@@ -679,14 +679,14 @@ async function renderAsync(data){
     }).filter(g => g.timestamp).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 15);
 
     const pfpUrl = pfpMap[targetName];
-    const initial = targetName.trim().charAt(0).toUpperCase();
+    const initial = escapeHTML(targetName.trim().charAt(0).toUpperCase());
     const avatarStyle = pfpUrl ? `background-image:url('${escUrl(pfpUrl)}');` : '';
 
     bodyHtml = `
       <div class="profile-header">
         <div class="profile-avatar" style="${avatarStyle}">${pfpUrl ? '' : `<div class="n">${initial}</div>`}</div>
         <div class="profile-title">
-          <h1>${targetName}</h1>
+          <h1>${escapeHTML(targetName)}</h1>
           <div class="sub">${gamesPlayed} games played · <a href="index.html">← Back to overview</a></div>
         </div>
         <div class="profile-record">
@@ -799,7 +799,7 @@ async function renderAsync(data){
                 <div class="pos">${sortByGames[d.name].rank}</div>
                 ${d.artUrl ? `<img class="deck-thumb" src="${escUrl(d.artUrl)}" alt="" style="width:42px;height:42px;min-width:42px;max-width:42px;object-fit:cover;border-radius:8px;">` : `<div class="deck-thumb" style="width:42px;height:42px;min-width:42px;"></div>`}
                 <div class="main">
-                  <div class="name">${pipsHTML(deckColorById[d.name])} &nbsp;${d.name}</div>
+                  <div class="name">${pipsHTML(deckColorById[d.name])} &nbsp;${escapeHTML(d.name)}</div>
                   <div class="meta">${d.games} game${d.games===1?'':'s'}${d.archived ? ' · archived' : d.hide ? ' · retired' : ''}${d.borrowed ? ' · not owned' : ''}</div>
                 </div>
                 <div class="stat"><div class="big">${pct(d.winRate)}</div><div class="small">${d.wins}W</div></div>
@@ -878,7 +878,7 @@ async function renderAsync(data){
               <a href="${playerUrl(o.name)}" class="r" style="text-decoration:none;color:inherit;">
                 <div class="pos">${ranks[i]}</div>
                 <div class="main">
-                  <div class="name">${o.name}</div>
+                  <div class="name">${escapeHTML(o.name)}</div>
                   <div class="meta">${o.games} shared game${o.games===1?'':'s'} · ${decisive} decisive</div>
                 </div>
                 <div class="stat"><div class="big">${myRate!=null ? pct(myRate) : '—'}</div><div class="small">${o.myWins}-${o.theirWins}</div></div>
@@ -899,10 +899,10 @@ async function renderAsync(data){
             ${recentGames.map(g => {
               const d = new Date(g.timestamp.replace(' ','T'));
               const dateLabel = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-              const oppLinks = g.opponents.map(o => `<a href="${playerUrl(o)}">${o}</a>`).join(', ');
+              const oppLinks = g.opponents.map(o => `<a href="${playerUrl(o)}">${escapeHTML(o)}</a>`).join(', ');
               return `<div class="row">
                 <div class="date">${dateLabel}</div>
-                <div class="info"><b>${g.deck}</b> · seat ${g.seat ?? '—'} vs ${oppLinks || '—'}</div>
+                <div class="info"><b>${escapeHTML(g.deck)}</b> · seat ${g.seat ?? '—'} vs ${oppLinks || '—'}</div>
                 <div class="result ${g.isWin ? 'win' : 'loss'}">${g.isWin ? 'WIN' : 'T' + (g.turnDied ?? '—')}</div>
               </div>`;
             }).join('') || '<div class="empty-note">No dated games yet.</div>'}

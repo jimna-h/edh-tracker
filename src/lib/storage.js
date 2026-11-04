@@ -1,5 +1,5 @@
 // localStorage helpers. Every access is wrapped: this app has no way to recover from an
-// exception thrown during the first render (house rule 6 in CLAUDE.md), and storage
+// exception thrown during the first render (house rule 6 in CONTEXT.md), and storage
 // access itself can throw in blocked/private-browsing modes.
 
 // --- LIVE GAME PERSISTENCE ---

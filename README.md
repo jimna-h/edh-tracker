@@ -1,16 +1,36 @@
-# React + Vite
+# EDH Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first Commander life and game tracker. The frontend is a React/Vite PWA; the API is Flask with Neon Postgres.
 
-Currently, two official plugins are available:
+## Backend setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install the backend dependencies and start the local API:
 
-## React Compiler
+```sh
+uv sync
+uv run python main.py
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The API listens on port `8000`. Python `3.12` is selected by `.python-version`. The project is an application, not an installable Python package.
 
-## Expanding the ESLint configuration
+The Render deployment still installs from `requirements.txt`; keep its runtime dependencies aligned with `pyproject.toml`. CI checks the uv lockfile with `uv sync --locked`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Historical Sheets backfill
+
+The one-time importer has extra dependencies that are excluded from a normal sync:
+
+```sh
+uv sync --extra backfill
+uv run --extra backfill python scripts/backfill_postgres.py
+```
+
+The backfill truncates the application tables before importing. Do not run it against a database containing production data.
+
+## Frontend setup
+
+```sh
+npm install
+npm run dev
+```
+
+Use `npm run lint` and `npm run build` for the frontend checks.

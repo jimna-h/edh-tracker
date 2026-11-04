@@ -1,13 +1,10 @@
-# EDH Tracker — Project Context for Claude Code
+# EDH Tracker — Engineering Context
 
-This document exists so a fresh Claude Code session (or any fresh chat) can pick up
-exactly where an extremely long prior conversation left off, without re-deriving or
-re-breaking anything that was already solved. Read this in full before touching
-anything — a huge fraction of the bugs fixed over that conversation came from
-re-guessing something that was already known, especially around the rotation math
-and the offline sync logic. Where this document says "confirmed," it means verified
-against actual rendered screenshots or actual server logs, not theory. Where it says
-something was tried and reverted, do not re-try it without new evidence.
+This document preserves architecture decisions and debugging history. Read the
+sections relevant to a task instead of loading the full document for every change.
+Where it says "confirmed," that means verified against rendered screenshots or
+server logs. Where it says something was tried and reverted, do not retry it
+without new evidence.
 
 ## What this is
 
@@ -65,7 +62,7 @@ menu. See "The stats pages" below.
   `favicon-48.png`, all generated from the Sylvan Library art. (`favicon.svg` was
   Vite's default logo and is gone.)
 - `public/sw.js` (served from domain root) — service worker. Currently at
-  `CACHE_NAME = 'mtg-tracker-v9'`.
+  `CACHE_NAME = 'mtg-tracker-v10'`.
 - `public/stats/index.html`, `public/stats/player.html`, `public/stats/deck.html` —
   the stats pages, living inside this same repo/deployment (moved here
   specifically so the Tracker's service worker can cache them and so linking to
@@ -116,7 +113,7 @@ was. The whole app is visually rotated 90° via CSS transform so a phone held in
 portrait shows a landscape "tabletop" view. CSS axes and visual/screen axes are
 different. Getting this wrong turns every "move X left/right/up/down" instruction
 into a 50/50 guess, and this happened repeatedly across the whole conversation this
-document summarizes — including by Claude, more than once, despite having this
+document summarizes — including by prior coding agents, more than once, despite having this
 exact warning available. **When axis/rotation reasoning conflicts with an actual
 screenshot or actual described symptom, trust the screenshot, not the theory.**
 Several fixes this conversation were reached only by treating a hypothesis as
@@ -296,7 +293,7 @@ not by re-deriving the transform math a fourth time.
   columns and real primary keys replace both workarounds.
 - `games(id, mulligan_type, winner_seat_position, winner_player, winner_deck,
   turn_count, played_at)` — `id` keeps the old human-readable
-  `G-YYYYMMDD-xxxx` format. Being a real primary key means a duplicate
+  `G-YYYYMMDD-xxxxxxxx` format. Being a real primary key means a duplicate
   submission now fails cleanly with a `UniqueViolation` instead of silently
   double-logging — this is the exact structural fix the Sheets era couldn't
   have.
@@ -604,8 +601,7 @@ overlay instead, with larger tap targets.
   those seats' `Quadrant` only ever covered that seat's own local rotated box, not
   the real screen.
 - **Also tried and reverted**: using `ReactDOM.createPortal` to escape this. The
-  artifact/deployment environment this app's Claude-assisted sessions run in does
-  not support a `react-dom` import (`createPortal` unavailable) — confirmed by an
+  build environment does not support a `react-dom` import (`createPortal` unavailable) — confirmed by an
   actual build failure, not assumption.
 - **Actual fix**: lifted the small-screen modal (`SmallScreenCmdModal`) to the
   top-level `App` component entirely, rendered as a sibling of the seat grid,
@@ -841,7 +837,7 @@ otherwise have silently disagreed with what it was supposed to be guarding.
 
 ## Service worker (`sw.js`)
 
-Currently `CACHE_NAME = 'mtg-tracker-v9'` (v9: archived-deck support; v8 preceded this; v7: new icons precached; v6 was the infinite-mana stats change; earlier bumped from `v4` when
+Currently `CACHE_NAME = 'mtg-tracker-v10'` (v10: escape database-backed text in stats pages; v9: archived-deck support; v8 preceded this; v7: new icons precached; v6 was the infinite-mana stats change; earlier bumped from `v4` when
 `stats-shared.js` was added to the precache list during the Postgres
 migration — a version bump is what actually triggers the install/activate
 cycle that deletes stale cache keys; just changing cached *content* without
